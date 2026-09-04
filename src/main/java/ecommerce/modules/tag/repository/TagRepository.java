@@ -1,9 +1,9 @@
 package ecommerce.modules.tag.repository;
 
-import ecommerce.common.base.BaseRepository;
 import ecommerce.modules.tag.entity.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,10 +11,9 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
-public interface TagRepository extends BaseRepository<Tag, UUID> {
+public interface TagRepository extends JpaRepository<Tag, Long> {
 
     Optional<Tag> findByName(String name);
 
@@ -27,11 +26,11 @@ public interface TagRepository extends BaseRepository<Tag, UUID> {
 
     @Modifying
     @Query("UPDATE Tag t SET t.usageCount = t.usageCount + 1 WHERE t.id = :tagId")
-    void incrementUsageCount(@Param("tagId") UUID tagId);
+    void incrementUsageCount(@Param("tagId") Long tagId);
 
     @Modifying
     @Query("UPDATE Tag t SET t.usageCount = t.usageCount - 1 WHERE t.id = :tagId AND t.usageCount > 0")
-    void decrementUsageCount(@Param("tagId") UUID tagId);
+    void decrementUsageCount(@Param("tagId") Long tagId);
 
     boolean existsByName(String name);
 }
