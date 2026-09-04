@@ -1,4 +1,4 @@
-package ecommerce.modules.admin.dto;
+package ecommerce.modules.analytics.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,20 +10,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
-/**
- * DashboardResponse
- * 
- * DTOs for returning aggregated analytics data to the frontend.
- * Contains dashboard metrics for admins, sellers, and customers.
- */
 public class DashboardResponse {
 
-    // ==================== Admin Dashboard ====================
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class AdminDashboard {
         private long totalUsers;
         private long totalOrders;
@@ -37,10 +26,7 @@ public class DashboardResponse {
         private SystemHealth systemHealth;
     }
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class SellerPerformance {
         private String sellerId;
         private String sellerName;
@@ -50,10 +36,7 @@ public class DashboardResponse {
         private double cancellationRate;
     }
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class SystemHealth {
         private int healthyServices;
         private int degradedServices;
@@ -61,12 +44,7 @@ public class DashboardResponse {
         private Map<String, String> serviceStatus;
     }
 
-    // ==================== Seller Dashboard ====================
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class SellerDashboard {
         private long totalProducts;
         private long totalOrders;
@@ -78,10 +56,7 @@ public class DashboardResponse {
         private List<OrderTrendData> recentOrders;
     }
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class InventoryHealth {
         private long totalProducts;
         private long lowStockCount;
@@ -89,10 +64,7 @@ public class DashboardResponse {
         private List<ProductStockAlert> lowStockAlerts;
     }
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class ProductStockAlert {
         private String productId;
         private String productName;
@@ -100,10 +72,7 @@ public class DashboardResponse {
         private int minimumStock;
     }
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class ProductPerformance {
         private String productId;
         private String productName;
@@ -112,22 +81,14 @@ public class DashboardResponse {
         private double rating;
     }
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class OrderTrendData {
         private LocalDateTime date;
         private long orderCount;
         private BigDecimal revenue;
     }
 
-    // ==================== Customer Dashboard ====================
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class CustomerDashboard {
         private BigDecimal totalSpent;
         private long totalOrders;
@@ -136,10 +97,7 @@ public class DashboardResponse {
         private List<RecentPurchase> recentPurchases;
     }
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class CategoryPreference {
         private String categoryId;
         private String categoryName;
@@ -148,10 +106,7 @@ public class DashboardResponse {
         private double percentage;
     }
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class RecentPurchase {
         private String orderId;
         private LocalDateTime purchaseDate;
@@ -160,34 +115,23 @@ public class DashboardResponse {
         private String status;
     }
 
-    // ==================== Common ====================
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class TrendData {
         private LocalDateTime period;
         private long count;
         private BigDecimal value;
     }
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class ChartData {
         private List<String> labels;
         private List<Long> data;
     }
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class TimeRangeResponse {
         private LocalDateTime startDate;
         private LocalDateTime endDate;
-        private String period; // daily, weekly, monthly
+        private String period;
     }
 }
