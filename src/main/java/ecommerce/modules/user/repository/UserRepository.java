@@ -5,7 +5,6 @@ import ecommerce.common.enums.UserStatus;
 import ecommerce.modules.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
@@ -17,11 +16,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
+public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificationExecutor<User> {
 
     Optional<User> findByEmail(String email);
 
-    Optional<User> findByPublicId(UUID publicId);
+    @Query("SELECT u FROM User u WHERE u.id = :publicId")
+    Optional<User> findByPublicId(@Param("publicId") UUID publicId);
 
     boolean existsByEmail(String email);
 
@@ -45,7 +45,7 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     @Modifying
     @Query("UPDATE User u SET u.isActive = false, u.updatedAt = CURRENT_TIMESTAMP WHERE u.id = :userId")
-    int deactivateUser(@Param("userId") Long userId);
+    int deactivateUser(@Param("userId") UUID userId);
 
     @Query("SELECT u FROM User u WHERE u.role = 'CUSTOMER' " +
            "AND (:query IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) " +

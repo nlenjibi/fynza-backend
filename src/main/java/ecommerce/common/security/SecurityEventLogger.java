@@ -12,7 +12,7 @@ import java.util.UUID;
 @Slf4j
 public class SecurityEventLogger {
 
-    @Async("taskExecutor")
+    @Async("securityEventExecutor")
     public void logLoginAttempt(String email, String ip, String userAgent, 
                                boolean success, String method, String failureReason) {
         if (success) {
@@ -24,12 +24,12 @@ public class SecurityEventLogger {
         }
     }
 
-    @Async("taskExecutor")
+    @Async("securityEventExecutor")
     public void logLogout(UUID userId, String email, String ip) {
         log.info("LOGOUT: userId={}, email={}, ip={}", userId, email, ip);
     }
 
-    @Async("taskExecutor")
+    @Async("securityEventExecutor")
     public void logTokenRefresh(UUID userId, String email, boolean success) {
         if (success) {
             log.info("TOKEN_REFRESH_SUCCESS: userId={}, email={}", userId, email);
@@ -38,17 +38,17 @@ public class SecurityEventLogger {
         }
     }
 
-    @Async("taskExecutor")
+    @Async("securityEventExecutor")
     public void logAccountLockout(String email, String ip, int failedAttempts) {
         log.warn("ACCOUNT_LOCKED: email={}, ip={}, failedAttempts={}", email, ip, failedAttempts);
     }
 
-    @Async("taskExecutor")
+    @Async("securityEventExecutor")
     public void logAccountUnlock(String email) {
         log.info("ACCOUNT_UNLOCKED: email={}", email);
     }
 
-    @Async("taskExecutor")
+    @Async("securityEventExecutor")
     public void logPasswordChange(UUID userId, String email, boolean success, String reason) {
         if (success) {
             log.info("PASSWORD_CHANGED: userId={}, email={}", userId, email);

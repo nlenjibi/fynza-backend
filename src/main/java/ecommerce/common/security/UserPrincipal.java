@@ -17,10 +17,7 @@ import java.util.UUID;
 public class UserPrincipal implements UserDetails {
 
     @Getter
-    private final Long id;         // internal BIGINT PK — used for DB joins, never in API responses
-
-    @Getter
-    private final UUID publicId;   // UUIDv7 — the only identifier exposed in API and audit logs
+    private final UUID id;          // UUID — the only identifier exposed in API and audit logs
 
     @Getter
     private final String email;
@@ -40,7 +37,6 @@ public class UserPrincipal implements UserDetails {
 
     public UserPrincipal(User user) {
         this.id       = user.getId();
-        this.publicId = user.getPublicId();
         this.email    = user.getEmail();
         this.password = user.getPassword();
         this.isActive = user.getIsActive();
@@ -60,6 +56,8 @@ public class UserPrincipal implements UserDetails {
     public static UserPrincipal create(User user) {
         return new UserPrincipal(user);
     }
+
+    public UUID getPublicId() { return id; }
 
     public boolean isAccountLocked() {
         return Boolean.TRUE.equals(isLocked);
