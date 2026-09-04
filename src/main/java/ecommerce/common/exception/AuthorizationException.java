@@ -1,10 +1,10 @@
 package ecommerce.common.exception;
 
-/**
- * Exception thrown when user doesn't have required role
- */
-public class AuthorizationException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class AuthorizationException extends FynzaException {
+
     public AuthorizationException(String message) {
-        super(message);
+        super(message, HttpStatus.FORBIDDEN);
     }
 }

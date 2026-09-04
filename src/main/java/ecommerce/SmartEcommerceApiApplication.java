@@ -7,6 +7,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 
 @SpringBootApplication
+@EnableScheduling
+@EnableAsync
 @EnableJpaAuditing
 @EnableTransactionManagement
 public class SmartEcommerceApiApplication {
