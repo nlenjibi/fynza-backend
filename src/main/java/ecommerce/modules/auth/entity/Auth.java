@@ -23,11 +23,8 @@ import java.util.UUID;
 public class Auth {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
-    private UUID publicId;
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
 
     @Column(nullable = false)
     @Builder.Default
@@ -73,7 +70,7 @@ public class Auth {
 
     @PrePersist
     protected void onCreate() {
-        publicId = UUID.randomUUID();
+        if (id == null) id = UUID.randomUUID();
         createdAt = Instant.now();
         updatedAt = Instant.now();
         if (isActive == null) isActive = true;
@@ -84,11 +81,13 @@ public class Auth {
         updatedAt = Instant.now();
     }
 
+    public UUID getPublicId() { return id; }
+
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(expiresAt);
     }
 
     public boolean isValid() {
-        return isActive && !isExpired();
+        return Boolean.TRUE.equals(isActive) && !isExpired();
     }
 }

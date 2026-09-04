@@ -12,21 +12,23 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface AuthRepository extends JpaRepository<Auth, Long> {
+public interface AuthRepository extends JpaRepository<Auth, UUID> {
 
-        Optional<Auth> findByRefreshToken(String refreshToken);
+    Optional<Auth> findByRefreshToken(String refreshToken);
 
-        @Query("SELECT a FROM Auth a WHERE a.user.id = :userId AND a.isActive = true ORDER BY a.lastActivityAt DESC LIMIT 1")
-        Optional<Auth> findTopByUserIdAndIsActiveTrueOrderByLastActivityAtDesc(@Param("userId") UUID userId);
+    Optional<Auth> findByRefreshTokenAndIsActiveTrue(String refreshToken);
 
-        @Modifying
-        @Query("UPDATE Auth a SET a.isActive = false, a.loggedOutAt = :logoutTime " +
-                        "WHERE a.user.id = :userId AND a.isActive = true")
-        int invalidateAllUserSessions(@Param("userId") UUID userId,
-                        @Param("logoutTime") LocalDateTime logoutTime);
+    @Query("SELECT a FROM Auth a WHERE a.user.id = :userId AND a.isActive = true ORDER BY a.lastActivityAt DESC LIMIT 1")
+    Optional<Auth> findTopByUserIdAndIsActiveTrueOrderByLastActivityAtDesc(@Param("userId") UUID userId);
 
-        @Modifying
-        @Query("UPDATE Auth a SET a.isActive = false " +
-                        "WHERE a.isActive = true AND a.expiresAt <= :now")
-        int invalidateExpiredSessions(@Param("now") LocalDateTime now);
+    @Modifying
+    @Query("UPDATE Auth a SET a.isActive = false, a.loggedOutAt = :logoutTime " +
+            "WHERE a.user.id = :userId AND a.isActive = true")
+    int invalidateAllUserSessions(@Param("userId") UUID userId,
+            @Param("logoutTime") LocalDateTime logoutTime);
+
+    @Modifying
+    @Query("UPDATE Auth a SET a.isActive = false " +
+            "WHERE a.isActive = true AND a.expiresAt <= :now")
+    int invalidateExpiredSessions(@Param("now") LocalDateTime now);
 }

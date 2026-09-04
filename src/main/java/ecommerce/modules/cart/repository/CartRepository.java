@@ -14,10 +14,14 @@ import java.util.UUID;
 @Repository
 public interface CartRepository extends JpaRepository<Cart, Long> {
 
-    Optional<Cart> findByUser_PublicId(UUID publicId);
+    Optional<Cart> findByUser_Id(UUID userId);
 
-    @Query("SELECT c FROM Cart c LEFT JOIN FETCH c.items WHERE c.user.publicId = :publicId")
-    Optional<Cart> findByUserPublicIdWithItems(@Param("publicId") UUID publicId);
+    default Optional<Cart> findByUserId(UUID userId) { return findByUser_Id(userId); }
+
+    @Query("SELECT c FROM Cart c LEFT JOIN FETCH c.items WHERE c.user.id = :userId")
+    Optional<Cart> findByUserPublicIdWithItems(@Param("userId") UUID userId);
+
+    default Optional<Cart> findByUserIdWithItems(UUID userId) { return findByUserPublicIdWithItems(userId); }
 
     // Abandoned cart queries
     @Query("SELECT c FROM Cart c WHERE c.isCheckedOut = false " +
