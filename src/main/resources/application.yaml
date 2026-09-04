@@ -114,6 +114,9 @@ management:
   endpoint:
     health:
       show-details: when_authorized
+  health:
+    redis:
+      enabled: true
   metrics:
     tags:
       application: fynza-backend
