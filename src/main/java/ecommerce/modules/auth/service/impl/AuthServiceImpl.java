@@ -106,8 +106,8 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String accessToken = jwtTokenProvider.generateAccessToken(
-                user.getId(), user.getEmail(), user.getRole().name(), AUTH_PROVIDER_PASSWORD);
-        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
+                user.getPublicId(), user.getEmail(), user.getRole().name(), AUTH_PROVIDER_PASSWORD);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getPublicId());
 
         persistSession(user, accessToken, refreshToken);
 
@@ -145,8 +145,8 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
 
         String accessToken = jwtTokenProvider.generateAccessToken(
-                user.getId(), user.getEmail(), user.getRole().name(), AUTH_PROVIDER_PASSWORD);
-        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
+                user.getPublicId(), user.getEmail(), user.getRole().name(), AUTH_PROVIDER_PASSWORD);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getPublicId());
 
         persistSession(user, accessToken, refreshToken);
         securityEventLogger.logLoginAttempt(request.getEmail(), ip, extractUserAgent(req), true, AUTH_PROVIDER_PASSWORD, null);
@@ -187,11 +187,11 @@ public class AuthServiceImpl implements AuthService {
         authRepository.save(session);
 
         String newAccessToken = jwtTokenProvider.generateAccessToken(
-                user.getId(), user.getEmail(), user.getRole().name(), AUTH_PROVIDER_PASSWORD);
-        String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
+                user.getPublicId(), user.getEmail(), user.getRole().name(), AUTH_PROVIDER_PASSWORD);
+        String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getPublicId());
 
         persistSession(user, newAccessToken, newRefreshToken);
-        securityEventLogger.logTokenRefresh(user.getId(), user.getEmail(), true);
+        securityEventLogger.logTokenRefresh(user.getPublicId(), user.getEmail(), true);
 
         return buildAuthResponse(user, newAccessToken, newRefreshToken);
     }
@@ -239,8 +239,8 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
 
         String accessToken = jwtTokenProvider.generateAccessToken(
-                user.getId(), user.getEmail(), user.getRole().name(), "GOOGLE");
-        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
+                user.getPublicId(), user.getEmail(), user.getRole().name(), "GOOGLE");
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getPublicId());
 
         Auth session = Auth.builder()
                 .user(user)
@@ -278,7 +278,7 @@ public class AuthServiceImpl implements AuthService {
 
     private AuthResponse buildAuthResponse(User user, String accessToken, String refreshToken) {
         return AuthResponse.builder()
-                .userId(user.getId())
+                .userId(user.getPublicId())
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())

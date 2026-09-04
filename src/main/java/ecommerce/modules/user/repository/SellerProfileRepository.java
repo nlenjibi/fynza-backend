@@ -19,9 +19,9 @@ public interface SellerProfileRepository extends JpaRepository<SellerProfile, Lo
 
     Optional<SellerProfile> findByPublicId(UUID publicId);
 
-    Optional<SellerProfile> findByUser_Id(UUID userId);
+    Optional<SellerProfile> findByUser_PublicId(UUID userPublicId);
 
-    List<SellerProfile> findByUser_IdIn(List<UUID> userIds);
+    List<SellerProfile> findByUser_PublicIdIn(List<UUID> userPublicIds);
 
     @Query("SELECT sp FROM SellerProfile sp WHERE sp.verificationStatus = :status")
     Page<SellerProfile> findByVerificationStatus(VerificationStatus status, Pageable pageable);

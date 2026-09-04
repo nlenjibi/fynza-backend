@@ -28,6 +28,9 @@ public class User {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
+    @Column(name = "id", insertable = false, updatable = false)
+    private UUID publicId;
+
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
@@ -46,7 +49,7 @@ public class User {
         if (isActive == null) isActive = true;
     }
 
-    public UUID getPublicId() { return id; }
+    public UUID getPublicId() { return publicId != null ? publicId : id; }
 
     @PreUpdate
     protected void onUpdate() {
