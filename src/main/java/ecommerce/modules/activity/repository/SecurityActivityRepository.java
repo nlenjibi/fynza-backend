@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface SecurityActivityRepository extends JpaRepository<SecurityActivity, UUID> {
+public interface SecurityActivityRepository extends JpaRepository<SecurityActivity, Long> {
 
     Page<SecurityActivity> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 

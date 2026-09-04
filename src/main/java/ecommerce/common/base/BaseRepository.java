@@ -8,41 +8,31 @@ import org.springframework.data.repository.NoRepositoryBean;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
- * Base repository interface that extends JpaRepository and QuerydslPredicateExecutor
- * with common methods for all entities in the e-commerce system.
- *
- * @param <T>  Entity type
- * @param <ID> Primary key type
+ * Base repository for all Fynza entities.
+ * PK is always Long (BIGINT). API-layer callers resolve publicId → Long id once
+ * at the boundary; all intra-service FK relationships use Long.
  */
 @NoRepositoryBean
-public interface BaseRepository<T extends BaseEntity, ID> extends JpaRepository<T, ID>, QuerydslPredicateExecutor<T> {
+public interface BaseRepository<T extends BaseEntity> extends JpaRepository<T, Long>, QuerydslPredicateExecutor<T> {
 
     Page<T> findByIsActiveTrue(Pageable pageable);
 
-    /**
-     * Find entity by ID if it's active
-     */
-    Optional<T> findByIdAndIsActiveTrue(ID id);
+    Optional<T> findByIdAndIsActiveTrue(Long id);
 
-    /**
-     * Find entities created between dates with pagination
-     */
+    Optional<T> findByPublicId(UUID publicId);
+
+    Optional<T> findByPublicIdAndIsActiveTrue(UUID publicId);
+
     Page<T> findByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
 
-    /**
-     * Find entities updated between dates with pagination
-     */
     Page<T> findByUpdatedAtBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
 
-    /**
-     * Check if active entity exists by ID
-     */
-    boolean existsByIdAndIsActiveTrue(ID id);
+    boolean existsByIdAndIsActiveTrue(Long id);
 
-    /**
-     * Count all active entities
-     */
+    boolean existsByPublicIdAndIsActiveTrue(UUID publicId);
+
     long countByIsActiveTrue();
 }

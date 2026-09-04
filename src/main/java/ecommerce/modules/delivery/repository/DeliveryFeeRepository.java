@@ -1,8 +1,8 @@
 package ecommerce.modules.delivery.repository;
 
-import ecommerce.common.base.BaseRepository;
 import ecommerce.common.enums.DeliveryMethod;
 import ecommerce.modules.delivery.entity.DeliveryFee;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface DeliveryFeeRepository extends BaseRepository<DeliveryFee, UUID> {
+public interface DeliveryFeeRepository extends JpaRepository<DeliveryFee, Long> {
 
     Optional<DeliveryFee> findByTownName(String townName);
 

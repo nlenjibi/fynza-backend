@@ -1,5 +1,6 @@
 package ecommerce.common.base;
 
+import ecommerce.common.util.UuidV7Generator;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,6 +12,11 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * BIGINT id is the internal database primary key — used for all FK relationships and joins.
+ * publicId (UUIDv7) is the only identifier exposed via the API — prevents enumeration attacks
+ * and decouples API identity from database identity.
+ */
 @Data
 @NoArgsConstructor
 @SuperBuilder
@@ -19,9 +25,11 @@ import java.util.UUID;
 public abstract class BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(columnDefinition = "UUID")
-    protected UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    protected Long id;
+
+    @Column(name = "public_id", unique = true, nullable = false, updatable = false, columnDefinition = "UUID")
+    protected UUID publicId;
 
     @Column(nullable = false)
     protected Boolean isActive = true;
@@ -31,28 +39,16 @@ public abstract class BaseEntity {
     protected LocalDateTime createdAt;
 
     @LastModifiedDate
-    @Column(name = "updated_at", nullable = false, updatable = false)
+    @Column(name = "updated_at", nullable = false)
     protected LocalDateTime updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
-        if (updatedAt == null) {
-            updatedAt = LocalDateTime.now();
+        if (publicId == null) {
+            publicId = UuidV7Generator.generate();
         }
         if (isActive == null) {
             isActive = true;
         }
     }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
-
 }
