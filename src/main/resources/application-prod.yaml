@@ -1,0 +1,130 @@
+spring:
+  graphql:
+    graphiql:
+      enabled: false
+    schema:
+      introspection:
+        enabled: false
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: FynzaHikariCP-Prod
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 840000
+      keepalive-time: 30000
+      validation-timeout: 5000
+      auto-commit: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      username: ${REDIS_USERNAME:}
+      password: ${REDIS_PASSWORD}
+      database: ${REDIS_DATABASE:0}
+      lettuce:
+        pool:
+          max-active: ${REDIS_POOL_MAX_ACTIVE:20}
+          max-idle: ${REDIS_POOL_MAX_IDLE:10}
+          min-idle: ${REDIS_POOL_MIN_IDLE:5}
+          max-wait: "${REDIS_POOL_MAX_WAIT:2000ms}"
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  main:
+    banner-mode: "off"
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+  shutdown: graceful
+  compression:
+    enabled: true
+    min-response-size: 1024
+  tomcat:
+    accesslog:
+      directory: ${ACCESS_LOG_DIR:/var/log/fynza/access}
+
+cors:
+  allowed-origins: ${ALLOWED_ORIGINS}
+  allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+  max-age: 3600
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token:
+    expiration: 900000
+  refresh-token:
+    expiration: 604800000
+  blacklist:
+    max-size: 10000
+    expire-after-write-hours: 24
+  cache:
+    max-size: 10000
+    expire-after-write-minutes: 10
+    expire-after-access-minutes: 5
+
+paypal:
+  client-id: ${PAYPAL_CLIENT_ID}
+  client-secret: ${PAYPAL_CLIENT_SECRET}
+  mode: live
+
+paystack:
+  secret-key: ${PAYSTACK_SECRET_KEY}
+  public-key: ${PAYSTACK_PUBLIC_KEY}
+  base-url: https://api.paystack.co
+  webhook-secret: ${PAYSTACK_WEBHOOK_SECRET}
+
+fynza:
+  notification:
+    email:
+      provider: ${MAIL_PROVIDER:gmail}
+
+rate-limit:
+  enabled: true
+  api:
+    max-requests: 100
+    window-seconds: 60
+
+management:
+  server:
+    port: 8081
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+logging:
+  file:
+    name: ${LOG_FILE_NAME:/var/log/fynza/fynza-backend.log}
+  level:
+    root: WARN
+    ecommerce: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: INFO
+    com.zaxxer.hikari: INFO
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: alpha
+    tags-sorter: alpha
