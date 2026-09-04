@@ -30,7 +30,6 @@
         <java.version>21</java.version>
         <!-- Add explicit Lombok version so plugin and dependency use the same version -->
         <lombok.version>1.18.44</lombok.version>
-        <mapstruct.version>1.6.3</mapstruct.version>
         <mockito.version>5.17.0</mockito.version>
     </properties>
     <dependencies>
@@ -99,16 +98,6 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
         <dependency>
-            <artifactId>mapstruct-processor</artifactId>
-            <groupId>org.mapstruct</groupId>
-            <version>${mapstruct.version}</version>
-        </dependency>
-        <dependency>
-            <artifactId>mapstruct</artifactId>
-            <groupId>org.mapstruct</groupId>
-            <version>${mapstruct.version}</version>
-        </dependency>
-        <dependency>
             <artifactId>spring-boot-starter-validation</artifactId>
             <groupId>org.springframework.boot</groupId>
         </dependency>
@@ -123,14 +112,6 @@
             <groupId>me.paulschwarz</groupId>
             <artifactId>spring-dotenv</artifactId>
             <version>4.0.0</version>
-        </dependency>
-
-
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok-mapstruct-binding</artifactId>
-            <version>0.2.0</version>   <!-- latest stable as of 2025/2026 -->
-            <scope>provided</scope>
         </dependency>
 
 
@@ -150,20 +131,6 @@
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
 
-        <!-- QueryDSL Dependencies -->
-        <dependency>
-            <groupId>com.querydsl</groupId>
-            <artifactId>querydsl-jpa</artifactId>
-            <classifier>jakarta</classifier>
-            <version>5.1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.querydsl</groupId>
-            <artifactId>querydsl-apt</artifactId>
-            <classifier>jakarta</classifier>
-            <version>5.1.0</version>
-            <scope>provided</scope>
-        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-client</artifactId>
@@ -248,33 +215,6 @@
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                             <version>${lombok.version}</version>
-                        </path>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok-mapstruct-binding</artifactId>
-                            <version>0.2.0</version>
-                        </path>
-                        <path>
-                            <groupId>org.mapstruct</groupId>
-                            <artifactId>mapstruct-processor</artifactId>
-                            <version>${mapstruct.version}</version>
-                        </path>
-                        <!-- QueryDSL Annotation Processor -->
-                        <path>
-                            <groupId>com.querydsl</groupId>
-                            <artifactId>querydsl-apt</artifactId>
-                            <classifier>jakarta</classifier>
-                            <version>5.1.0</version>
-                        </path>
-                        <path>
-                            <groupId>jakarta.annotation</groupId>
-                            <artifactId>jakarta.annotation-api</artifactId>
-                            <version>2.1.1</version>
-                        </path>
-                        <path>
-                            <groupId>jakarta.persistence</groupId>
-                            <artifactId>jakarta.persistence-api</artifactId>
-                            <version>3.1.0</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
