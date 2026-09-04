@@ -1,4 +1,4 @@
-package ecommerce.modules.admin.entity;
+package ecommerce.modules.search.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -8,13 +8,12 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 /**
- * Entity for tracking search analytics data.
- * Records search queries, result counts, and user interactions.
+ * Records search queries, result counts, and user interactions for analytics.
  */
 @Entity
 @Table(name = "search_analytics", indexes = {
-    @Index(name = "idx_search_query", columnList = "search_query"),
-    @Index(name = "idx_search_date", columnList = "search_date")
+        @Index(name = "idx_search_query", columnList = "search_query"),
+        @Index(name = "idx_search_date",  columnList = "search_date")
 })
 @Getter
 @Setter
@@ -79,10 +78,9 @@ public class SearchAnalytics {
 
     @PrePersist
     protected void onCreate() {
-        publicId = UUID.randomUUID();
+        publicId  = UUID.randomUUID();
         createdAt = Instant.now();
         updatedAt = Instant.now();
-        if (isActive == null) isActive = true;
     }
 
     @PreUpdate
