@@ -15,14 +15,14 @@ import java.util.UUID;
 @Repository
 public interface AddressRepository extends JpaRepository<Address, Long>, JpaSpecificationExecutor<Address> {
 
-    List<Address> findByUser_Id(UUID userId);
+    List<Address> findByUser_PublicId(UUID userPublicId);
 
     Optional<Address> findByPublicId(UUID publicId);
 
-    @Query("SELECT a FROM Address a WHERE a.user.id = :userId AND a.isDefault = true")
-    Optional<Address> findDefaultByUserPublicId(@Param("userId") UUID userId);
+    @Query("SELECT a FROM Address a WHERE a.user.publicId = :userPublicId AND a.isDefault = true")
+    Optional<Address> findDefaultByUserPublicId(@Param("userPublicId") UUID userPublicId);
 
     @Modifying
-    @Query("UPDATE Address a SET a.isDefault = false WHERE a.user.id = :userId")
-    void clearDefaultByUserPublicId(@Param("userId") UUID userId);
+    @Query("UPDATE Address a SET a.isDefault = false WHERE a.user.publicId = :userPublicId")
+    void clearDefaultByUserPublicId(@Param("userPublicId") UUID userPublicId);
 }
