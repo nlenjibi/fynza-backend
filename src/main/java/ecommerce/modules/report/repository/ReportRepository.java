@@ -16,7 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface ReportRepository extends JpaRepository<Report, UUID> {
+public interface ReportRepository extends JpaRepository<Report, Long> {
 
     Optional<Report> findByReportNumber(String reportNumber);
 

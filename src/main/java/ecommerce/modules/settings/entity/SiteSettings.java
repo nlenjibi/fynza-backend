@@ -1,10 +1,11 @@
 package ecommerce.modules.settings.entity;
 
-import ecommerce.common.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
+
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "site_settings")
@@ -12,8 +13,25 @@ import java.math.BigDecimal;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@SuperBuilder
-public class SiteSettings extends BaseEntity {
+@Builder
+public class SiteSettings {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
+    private UUID publicId;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
     @Column(name = "site_name", length = 255)
     private String siteName;
@@ -151,4 +169,17 @@ public class SiteSettings extends BaseEntity {
     @Column(name = "enable_app_notifications")
     @Builder.Default
     private Boolean enableAppNotifications = true;
+
+    @PrePersist
+    protected void onCreate() {
+        publicId = UUID.randomUUID();
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
+        if (isActive == null) isActive = true;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
 }

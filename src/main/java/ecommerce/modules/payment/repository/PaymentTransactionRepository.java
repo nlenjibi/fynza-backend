@@ -1,13 +1,12 @@
 package ecommerce.modules.payment.repository;
 
-import ecommerce.common.base.BaseRepository;
 import ecommerce.modules.payment.entity.PaymentTransaction;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
-public interface PaymentTransactionRepository extends BaseRepository<PaymentTransaction, UUID> {
+public interface PaymentTransactionRepository extends JpaRepository<PaymentTransaction, Long> {
     Optional<PaymentTransaction> findByTransactionId(String transactionId);
 }

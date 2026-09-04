@@ -109,11 +109,11 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String accessToken = jwtTokenProvider.generateAccessToken(
-                user.getId(), user.getEmail(), user.getRole().name(), AUTH_PROVIDER_PASSWORD);
-        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
+                user.getPublicId(), user.getEmail(), user.getRole().name(), AUTH_PROVIDER_PASSWORD);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getPublicId());
 
         return AuthResponse.builder()
-                .userId(user.getId())
+                .userId(user.getPublicId())
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
@@ -151,13 +151,13 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
 
         String accessToken = jwtTokenProvider.generateAccessToken(
-                user.getId(), user.getEmail(), user.getRole().name(), AUTH_PROVIDER_PASSWORD);
-        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
+                user.getPublicId(), user.getEmail(), user.getRole().name(), AUTH_PROVIDER_PASSWORD);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getPublicId());
 
         log.info("User logged in successfully: {}", user.getEmail());
 
         return AuthResponse.builder()
-                .userId(user.getId())
+                .userId(user.getPublicId())
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
@@ -178,7 +178,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         UUID userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByPublicId(userId)
                 .orElseThrow(() -> new BadRequestException("User not found"));
 
         if (user.getStatus() != UserStatus.ACTIVE) {
@@ -186,11 +186,11 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String newAccessToken = jwtTokenProvider.generateAccessToken(
-                user.getId(), user.getEmail(), user.getRole().name(), AUTH_PROVIDER_PASSWORD);
-        String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
+                user.getPublicId(), user.getEmail(), user.getRole().name(), AUTH_PROVIDER_PASSWORD);
+        String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getPublicId());
 
         return AuthResponse.builder()
-                .userId(user.getId())
+                .userId(user.getPublicId())
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
@@ -236,11 +236,11 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
 
         String accessToken = jwtTokenProvider.generateAccessToken(
-                user.getId(), user.getEmail(), user.getRole().name(), "GOOGLE");
-        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
+                user.getPublicId(), user.getEmail(), user.getRole().name(), "GOOGLE");
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getPublicId());
 
         return AuthResponse.builder()
-                .userId(user.getId())
+                .userId(user.getPublicId())
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())

@@ -1,7 +1,8 @@
 package ecommerce.modules.category.repository;
 
-import ecommerce.common.base.BaseRepository;
 import ecommerce.modules.category.entity.Category;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -11,13 +12,15 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface CategoryRepository extends BaseRepository<Category, UUID> {
+public interface CategoryRepository extends JpaRepository<Category, Long>, JpaSpecificationExecutor<Category> {
+
+    Optional<Category> findByPublicId(UUID publicId);
 
     Optional<Category> findBySlug(String slug);
 
     boolean existsBySlug(String slug);
 
-    List<Category> findByParentCategoryId(UUID parentCategoryId);
+    List<Category> findByParentCategoryId(Long parentCategoryId);
 
     @Query("SELECT c FROM Category c WHERE c.parentCategory IS NULL")
     List<Category> findRootCategories();

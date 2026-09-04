@@ -1,7 +1,8 @@
 package ecommerce.modules.user.service;
 
-import com.querydsl.core.types.Predicate;
 import ecommerce.modules.user.dto.*;
+import ecommerce.modules.user.entity.User;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -39,8 +40,8 @@ public interface UserService {
     // Bulk operations for admin
     List<UserDto> bulkUpdateUsers(BulkUserUpdateRequest request);
 
-    // Advanced querying with predicates
-    Page<UserDto> findUsersWithPredicate(Predicate predicate, Pageable pageable);
+    // Advanced querying with specifications
+    Page<UserDto> findUsersWithPredicate(Specification<User> spec, Pageable pageable);
 
     // Customer statistics
     Map<String, Object> getCustomerStats();

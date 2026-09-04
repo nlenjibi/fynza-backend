@@ -16,11 +16,13 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface RefundRepository extends JpaRepository<Refund, UUID> {
+public interface RefundRepository extends JpaRepository<Refund, Long> {
+
+    Optional<Refund> findByPublicId(UUID publicId);
 
     Optional<Refund> findByRefundNumber(String refundNumber);
 
-    Optional<Refund> findByOrderId(UUID orderId);
+    Optional<Refund> findByOrderId(Long orderId);
 
     Page<Refund> findByStatus(RefundStatus status, Pageable pageable);
 

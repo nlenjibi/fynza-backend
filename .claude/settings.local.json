@@ -9,7 +9,14 @@
       "Bash(git commit -m ' *)",
       "Bash(git -C \"C:/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend\" status)",
       "Bash(git -C \"C:/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend\" init)",
-      "Bash(gh auth *)"
+      "Bash(gh auth *)",
+      "Bash(gh repo *)",
+      "Bash(git checkout *)",
+      "Bash(git restore *)",
+      "Bash(xargs grep *)",
+      "Bash(git -C /c/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend status)",
+      "Bash(git -C /c/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend diff --stat HEAD)",
+      "Bash(git *)"
     ]
   }
 }

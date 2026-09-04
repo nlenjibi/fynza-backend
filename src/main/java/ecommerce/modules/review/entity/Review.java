@@ -1,12 +1,11 @@
 package ecommerce.modules.review.entity;
 
-import ecommerce.common.base.BaseEntity;
 import ecommerce.modules.product.entity.Product;
 import ecommerce.modules.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -22,9 +21,39 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@SuperBuilder
-@EqualsAndHashCode(callSuper = true)
-public class Review extends BaseEntity {
+@Builder
+@EqualsAndHashCode
+public class Review {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
+    private UUID publicId;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        publicId = UUID.randomUUID();
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
+        if (isActive == null) isActive = true;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)

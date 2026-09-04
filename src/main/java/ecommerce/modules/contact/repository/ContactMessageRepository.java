@@ -16,7 +16,7 @@ import java.util.UUID;
  * Provides CRUD operations and custom queries for contact message management.
  */
 @Repository
-public interface ContactMessageRepository extends JpaRepository<ContactMessage, UUID> {
+public interface ContactMessageRepository extends JpaRepository<ContactMessage, Long> {
 
     /**
      * Find contact messages by status with pagination.
