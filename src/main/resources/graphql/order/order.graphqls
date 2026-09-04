@@ -1,0 +1,122 @@
+
+# =============================================================================
+# Order GraphQL Schema
+# Covers: Customer, Admin, and Seller order operations
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Inputs
+# ─────────────────────────────────────────────────────────────────────────────
+
+input OrderItemInput {
+    productId: ID!
+    quantity: Int!
+}
+
+input OrderCreateInput {
+    shippingAddressId: ID
+    billingAddressId: ID
+    paymentMethod: String
+    couponCode: String
+    items: [OrderItemInput!]
+    shippingCost: BigDecimal
+    customerNotes: String
+}
+
+input OrderFilterInput {
+    status: String
+    paymentStatus: String
+    dateFrom: DateTime
+    dateTo: DateTime
+    minAmount: BigDecimal
+    maxAmount: BigDecimal
+    query: String
+    orderNumber: String
+    customerEmail: String
+    highValue: Boolean
+    overdue: Boolean
+}
+
+input OrderStatusUpdateInput {
+    status: String!
+    trackingNumber: String
+    notes: String
+}
+
+input OrderSearchInput {
+    query: String
+    status: String
+    paymentStatus: String
+    dateFrom: DateTime
+    dateTo: DateTime
+    minAmount: BigDecimal
+    maxAmount: BigDecimal
+}
+
+input CancelOrderInput {
+    reason: String
+}
+
+input RefundOrderInput {
+    reason: String!
+    amount: BigDecimal
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Queries
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Query {
+
+    # ── Customer Queries (AUTHENTICATED) ──────────────────────────────────
+
+    order(id: ID!): Order
+    orderByNumber(orderNumber: String!): Order
+    myOrders(pagination: PageInput): OrderPage!
+
+    # ── Order Tracking (CUSTOMER, ADMIN, SELLER) ─────────────────────────
+
+    orderTracking(orderId: ID!): OrderTracking!
+    orderTimeline(orderId: ID!): [OrderTimeline!]!
+
+    # ── Admin Queries (ADMIN) ────────────────────────────────────────────
+
+    allOrders(pagination: PageInput): OrderPage!
+    adminSearchOrders(filter: OrderSearchInput, pagination: PageInput): OrderPage!
+    ordersByStatus(status: String!, pagination: PageInput): OrderPage!
+    orderStatistics: OrderStats!
+    orderDashboard: OrderDashboard!
+    customerOrders(customerId: ID!, pagination: PageInput): OrderPage!
+
+    # ── Seller Queries (SELLER) ──────────────────────────────────────────
+
+    sellerOrders(pagination: PageInput, filter: OrderSearchInput): OrderPage!
+    sellerOrderStats: SellerOrderStats!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mutations
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Mutation {
+
+    # ── Customer Mutations (AUTHENTICATED) ───────────────────────────────
+
+    createOrder(input: OrderCreateInput!): Order!
+    cancelOrder(id: ID!, reason: String): Order!
+    requestOrderRefund(orderId: ID!, input: RefundOrderInput): Order!
+
+    # ── Admin Mutations (ADMIN) ──────────────────────────────────────────
+
+    adminUpdateOrderStatus(id: ID!, input: OrderStatusUpdateInput!): Order!
+    adminCancelOrder(id: ID!, reason: String): Order!
+    confirmOrder(id: ID!): Order!
+    processOrder(id: ID!): Order!
+    shipOrder(id: ID!, trackingNumber: String!, carrier: String): Order!
+    deliverOrder(id: ID!): Order!
+    refundOrder(id: ID!, amount: BigDecimal!, reason: String!): Order!
+
+    # ── Seller Mutations (SELLER) ────────────────────────────────────────
+
+    sellerUpdateOrderStatus(orderId: ID!, input: OrderStatusUpdateInput!): Order!
+}

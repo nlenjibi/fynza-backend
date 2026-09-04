@@ -1,0 +1,159 @@
+# =============================================================================
+# Admin GraphQL Schema
+# Covers: Dashboard, User CRUD, Seller Management, Product Management, Analytics
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Admin Dashboard Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type AdminDashboard {
+    totalUsers: Long!
+    totalCustomers: Long!
+    totalSellers: Long!
+    totalProducts: Long!
+    totalOrders: Long!
+    totalRevenue: BigDecimal!
+    pendingOrders: Long!
+    activeUsers: Long!
+    lowStockProducts: Long!
+    ordersByStatus: [StatusEntry!]
+    recentOrders: [RecentOrder!]!
+    topSellers: [TopSeller!]!
+    lowStockAlerts: [LowStockAlert!]!
+    orderCompletionRate: Float
+    cancellationRate: Float
+}
+
+type TopSeller {
+    sellerId: String!
+    sellerName: String!
+    productCount: Long!
+    revenue: BigDecimal!
+    orderCount: Long!
+}
+
+type LowStockAlert {
+    productId: String!
+    productName: String!
+    sku: String
+    sellerName: String
+    currentStock: Int!
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Admin Customer Stats Type
+# ─────────────────────────────────────────────────────────────────────────────
+
+type CustomerStats {
+    totalCustomers: Long!
+    activeCustomers: Long!
+    newCustomersThisMonth: Long!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Admin Seller Stats Type
+# ─────────────────────────────────────────────────────────────────────────────
+
+type SellerStats {
+    totalSellers: Long!
+    activeSellers: Long!
+    pendingSellers: Long!
+    suspendedSellers: Long!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Inputs
+# ─────────────────────────────────────────────────────────────────────────────
+
+input AdminUserCreateInput {
+    username: String!
+    email: String!
+    password: String!
+    firstName: String!
+    lastName: String!
+    phone: String
+    role: String!
+}
+
+input AdminUserUpdateInput {
+    username: String
+    email: String
+    firstName: String
+    lastName: String
+    phone: String
+    role: String
+    isActive: Boolean
+}
+
+input BulkUserUpdateInput {
+    userIds: [ID!]!
+    role: String
+    isActive: Boolean
+    sendNotification: Boolean = true
+}
+
+input CustomerSearchInput {
+    query: String
+    status: String
+}
+
+input SellerSearchInput {
+    query: String
+    status: String
+}
+
+input AdminProductSearchInput {
+    status: String
+    search: String
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Queries
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Query {
+
+    # ── Admin Dashboard (ADMIN) ──────────────────────────────────────────
+    adminDashboard: AdminDashboard!
+    staffDashboard: AdminDashboard!
+
+    # ── User Management (ADMIN) ──────────────────────────────────────────
+    allUsers(pagination: PageInput, filter: UserFilterInput): UserPage!
+    adminUser(id: ID!): User
+
+    # ── Customer Management (ADMIN) ──────────────────────────────────────
+    customerStats: CustomerStats
+    searchCustomers(filter: CustomerSearchInput, pagination: PageInput): UserPage!
+
+    # ── Seller Management (ADMIN) ────────────────────────────────────────
+    adminSellers(filter: SellerSearchInput, pagination: PageInput): UserPage!
+    sellerStats: SellerStats
+
+    # ── Product Management (ADMIN) ───────────────────────────────────────
+    adminProducts(pagination: PageInput, filter: AdminProductSearchInput): ProductDto!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mutations
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Mutation {
+
+    # ── User CRUD (ADMIN) ────────────────────────────────────────────────
+    createUser(input: AdminUserCreateInput!): User!
+    updateUser(id: ID!, input: AdminUserUpdateInput!): User!
+    deleteUser(id: ID!): Boolean!
+    updateUserRole(id: ID!, role: String!): User!
+    updateUserStatus(id: ID!, isActive: Boolean!): User!
+    bulkUpdateUsers(input: BulkUserUpdateInput!): [User!]!
+
+    # ── Product Management (ADMIN) ───────────────────────────────────────
+    adminUpdateProductInventory(id: ID!, stock: Int!): ProductResponse!
+
+    # ── Seller Management (ADMIN) ────────────────────────────────────────
+    approveSeller(id: ID!): User!
+    suspendSeller(id: ID!): User!
+    reactivateSeller(id: ID!): User!
+}

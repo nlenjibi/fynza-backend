@@ -1,0 +1,141 @@
+spring:
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ecommerce}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: FynzaHikariCP
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 20000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      keepalive-time: 30000
+      validation-timeout: 3000
+      auto-commit: false
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    database-platform: org.hibernate.dialect.PostgreSQL95Dialect
+    properties:
+      hibernate:
+        format_sql: false
+        # Performance optimizations
+        jdbc:
+          batch_size: 20
+          fetch_size: 100
+          batch_versioned_data: true
+        query:
+          in_clause_parameter_padding: true
+          plan_cache_max_size: 2048
+        default_batch_fetch_size: 20
+    show-sql: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    enabled: true
+
+  main:
+    banner-mode: "off"
+
+# Custom cache properties for production
+cache:
+  default-ttl: 15  # minutes - shorter for production
+  product-ttl: 10   # minutes - shorter for frequently changing products
+  category-ttl: 120 # minutes - longer for stable categories
+  user-ttl: 20      # minutes
+  max-size: 2000     # entries - larger for production
+
+logging:
+  level:
+    root: WARN
+    com.ecommerce: INFO
+    com.smart_ecomernce_api: INFO
+    org.springframework.cache: INFO
+    com.github.benmanes.caffeine: WARN
+  file:
+    name: logs/ecommerce.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 30
+
+server:
+  port: 8080
+  compression:
+    enabled: true
+    min-response-size: 1024
+  shutdown: graceful
+  servlet:
+    session:
+      timeout: 30m
+  error:
+    include-message: never
+    include-binding-errors: never
+
+management:
+  server:
+    port: 8081
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,caches,cache
+  endpoint:
+    health:
+      show-details: when-authorized
+    caches:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Production settings
+# - Datasource tuned for moderate load
+# - Management endpoints on separate port for observability
+# - Graceful shutdown enabled
+# - Logs written to file with rolling policy
+cart:
+  auto-cleanup-enabled: false
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://yourdomain.com}
+  allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+  max-age: 3600
+
+# Rate limiting configuration
+rate-limit:
+  enabled: true  # Enable rate limiting in production
+  requests-per-minute: 100
+  requests-per-second: 10
+
+# JWT cache configuration
+jwt:
+  cache:
+    max-size: 10000
+    expire-after-write-minutes: 10
+    expire-after-access-minutes: 5
+
+# PayPal Configuration (Live)
+paypal:
+  client-id: ${PAYPAL_CLIENT_ID}
+  client-secret: ${PAYPAL_CLIENT_SECRET}
+  mode: live
+
+# Redis Configuration
+redis:
+  host: ${REDIS_HOST:localhost}
+  port: ${REDIS_PORT:6379}
+  password: ${REDIS_PASSWORD:}
+  database: 0
+  timeout: 5000ms
+  lettuce:
+    pool:
+      max-active: 20
+      max-idle: 10
+      min-idle: 5
+      max-wait: -1ms
+    shutdown-timeout: 100ms

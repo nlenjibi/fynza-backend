@@ -1,0 +1,62 @@
+# =============================================================================
+# Auth GraphQL Schema
+# Covers: Login, Register, Token refresh, Logout
+# All mutations are public (no @PreAuthorize needed at the HTTP level).
+# Logout requires an authenticated session.
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Response Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type AuthPayload {
+    accessToken: String!
+    refreshToken: String!
+    tokenType:   String!
+    expiresIn:   Long!
+    user:        AuthUser!
+}
+
+type AuthUser {
+    id:        ID!
+    email:     String!
+    username:  String!
+    firstName: String!
+    lastName:  String!
+    role:      String!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Inputs
+# ─────────────────────────────────────────────────────────────────────────────
+
+input LoginInput {
+    email:    String!
+    password: String!
+}
+
+input RegisterInput {
+    email:     String!
+    password:  String!
+    firstName: String!
+    lastName:  String!
+    phone:     String
+    role:      String
+}
+
+input RefreshTokenInput {
+    refreshToken: String!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mutations
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Mutation {
+    login(input: LoginInput!): AuthPayload!
+    register(input: RegisterInput!): AuthPayload!
+    refreshToken(input: RefreshTokenInput!): AuthPayload!
+
+    # Requires an authenticated session — pass refresh token to revoke it.
+    logout(input: RefreshTokenInput!): Boolean!
+}

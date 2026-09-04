@@ -1,0 +1,122 @@
+# =============================================================================
+# FAQ GraphQL Schema
+# Covers: Public FAQ browsing, Admin FAQ CRUD, help categories
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Enums
+# ─────────────────────────────────────────────────────────────────────────────
+
+enum FAQCategory {
+    GENERAL
+    ACCOUNT
+    ORDER
+    PAYMENT
+    SHIPPING
+    RETURN
+    PRODUCT
+    SELLER
+    SUPPORT
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type FAQ {
+    id: ID!
+    question: String!
+    answer: String!
+    category: FAQCategory!
+    isActive: Boolean!
+    viewCount: Int!
+    displayOrder: Int
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type FAQStats {
+    totalFAQs: Long!
+    activeFAQs: Long!
+    draftFAQs: Long!
+    totalViews: Long!
+}
+
+type HelpCategory {
+    name: String!
+    slug: String!
+    faqs: [FAQ!]!
+}
+
+type ContactOptions {
+    liveChat: String
+    emailSupport: String
+    phoneSupport: String
+    phoneHours: String
+}
+
+type FAQCategoryCount {
+    category: FAQCategory!
+    count: Int!
+}
+
+type FAQPage {
+    content: [FAQ!]!
+    pageInfo: PageInfo!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Inputs
+# ─────────────────────────────────────────────────────────────────────────────
+
+input FAQCreateInput {
+    question: String!
+    answer: String!
+    category: FAQCategory!
+    displayOrder: Int
+}
+
+input FAQUpdateInput {
+    question: String
+    answer: String
+    category: FAQCategory
+    displayOrder: Int
+}
+
+input FAQFilterInput {
+    category: FAQCategory
+    isActive: Boolean
+    search: String
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Queries
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Query {
+
+    # ── Public Queries ───────────────────────────────────────────────────
+    faqs(pagination: PageInput, filter: FAQFilterInput): FAQPage!
+    faq(id: ID!): FAQ
+    faqCategories: [FAQCategoryCount!]!
+    helpCategories: [HelpCategory!]!
+    contactOptions: ContactOptions!
+
+    # ── Admin Queries (ADMIN) ────────────────────────────────────────────
+    adminFaqs(pagination: PageInput, filter: FAQFilterInput): FAQPage!
+    faqStats: FAQStats!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mutations
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Mutation {
+
+    # ── Admin Mutations (ADMIN) ──────────────────────────────────────────
+    createFAQ(input: FAQCreateInput!): FAQ!
+    updateFAQ(id: ID!, input: FAQUpdateInput!): FAQ!
+    deleteFAQ(id: ID!): Boolean!
+    toggleFAQActive(id: ID!): FAQ!
+    reorderFAQs(faqIds: [ID!]!): Boolean!
+}

@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: aoms-backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  config:
+    import: optional:file:.env[.properties]
+  liquibase:
+    enabled: ${LIQUIBASE_ENABLED:false}
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
+  session:
+    store-type: redis
+    redis:
+      namespace: spring:session
+      flush-mode: on-save
+    timeout: ${SESSION_EXPIRY_SECONDS:3600}s
+    servlet:
+      cookie:
+        name: SESSION
+        http-only: true  # Prevents JavaScript access (XSS protection)
+        same-site: strict  # CSRF protection - only send cookies from same site
+        secure: false  # Override per profile (dev: false, prod: true)
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+
+auth:
+  public-key-path: classpath:keys/public.pem
+  public-key-content: ${AUTH_PUBLIC_KEY_CONTENT:}
+  session-expiry-seconds: ${SESSION_EXPIRY_SECONDS:86400}
+
+sync:
+  no-show-cron: ${NO_SHOW_SYNC_CRON:0 0 0 * * *}
+
+sso:
+  endpoint: ${SSO_ENDPOINT}
+
+arm:
+  graphql-url: ${ARM_GRAPHQL_URL}
+  api-key: ${ARM_API_KEY:}
+  service-token: ${ARM_SERVICE_TOKEN:}
+  cache-ttl-seconds: ${ARM_CACHE_TTL_SECONDS:300}
+  timeout-ms: ${ARM_TIMEOUT_MS:1500}
+  role-mappings:
+    Manager: ROLE_MANAGER
+    HR: ROLE_HR
+    Facilities: ROLE_FACILITIES_ADMIN
+    intern: ROLE_INTERN
+    full_time: ROLE_EMPLOYEE
+    contractor: ROLE_EMPLOYEE

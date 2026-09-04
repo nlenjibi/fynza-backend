@@ -1,0 +1,88 @@
+# =============================================================================
+# Follow GraphQL Schema
+# Covers: Customer following stores, Seller viewing followers
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type FollowStats {
+    totalFollowers: Long!
+    activeThisMonth: Long!
+    newThisWeek: Long!
+    avgFollowAge: Float!
+}
+
+type FollowerResponse {
+    id: ID!
+    customerId: ID!
+    customerName: String!
+    customerEmail: String!
+    customerAvatar: String
+    joinedDate: DateTime!
+    orderCount: Long!
+    totalSpent: BigDecimal!
+    lastActive: DateTime
+}
+
+type FollowerPage {
+    content: [FollowerResponse!]!
+    pageInfo: PageInfo!
+}
+
+type FollowedStoreResponse {
+    id: ID!
+    sellerId: ID!
+    storeName: String!
+    storeLogo: String
+    isVerified: Boolean!
+    rating: BigDecimal!
+    reviewCount: Int!
+    location: String
+    productCount: Int!
+    followedDate: DateTime!
+}
+
+type FollowedStoreConnection {
+    content: [FollowedStoreResponse!]!
+    pageInfo: PageInfo!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Queries
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Inputs
+# ─────────────────────────────────────────────────────────────────────────────
+
+input FollowInput {
+    sellerId: ID!
+}
+
+extend type Query {
+
+    # ── Customer Queries (CUSTOMER) ──────────────────────────────────────
+    myFollowedStores(pagination: PageInput): FollowedStoreConnection!
+    isFollowingStore(sellerId: ID!): Boolean!
+    myFollowStats: FollowStats!
+
+    # ── Seller Queries (SELLER) ──────────────────────────────────────────
+    myFollowers(pagination: PageInput): FollowerPage!
+    sellerFollowerStats: FollowStats!
+
+    # ── Public Queries ───────────────────────────────────────────────────
+    storeFollowerCount(sellerId: ID!): Long!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mutations
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Mutation {
+
+    # ── Customer Mutations (CUSTOMER) ────────────────────────────────────
+    followStore(input: FollowInput!): Boolean!
+    unfollowStore(sellerId: ID!): Boolean!
+}

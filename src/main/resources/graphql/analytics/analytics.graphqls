@@ -1,0 +1,258 @@
+# =============================================================================
+# Analytics GraphQL Schema
+# Covers: Admin analytics, Seller analytics, Customer analytics, Performance
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Trend & Metrics Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type TrendData {
+    period: DateTime!
+    count: Long!
+    value: BigDecimal!
+}
+
+type SellerMetrics {
+    sellerId: ID!
+    sellerName: String!
+    totalOrders: Long!
+    totalRevenue: BigDecimal!
+    cancellationRate: Float!
+    lowStockCount: Long!
+    averageRating: Float!
+}
+
+type CategoryPreference {
+    categoryId: ID!
+    categoryName: String!
+    purchaseCount: Long!
+    totalSpent: BigDecimal!
+    percentage: Float!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Admin Analytics Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type AdminAnalytics {
+    filterPeriod: String!
+    startDate: String
+    endDate: String
+
+    # Key Metrics
+    totalRevenue: BigDecimal!
+    revenueGrowth: Float
+    totalOrders: Long!
+    ordersGrowth: Float
+    totalCustomers: Long!
+    customersGrowth: Float
+    totalSellers: Long!
+    sellersGrowth: Float
+    productsSold: Long!
+    productsSoldGrowth: Float
+    averageOrderValue: BigDecimal!
+    avgOrderValueGrowth: Float
+
+    # Chart Data
+    revenueOverview: AnalyticsRevenueOverview
+    salesByCategory: [AnalyticsSalesByCategory!]!
+    topSellers: [AnalyticsTopSellerMetric!]!
+    topProducts: [AnalyticsTopProductMetric!]!
+    monthlyTrend: [AnalyticsMonthlySalesTrend!]!
+
+    # Financial
+    todayRevenue: BigDecimal
+    pendingPayments: BigDecimal
+    refundsProcessed: BigDecimal
+    paymentMethodBreakdown: [PaymentMethodBreakdown!]!
+    commissionMetrics: CommissionMetrics
+    sellerPayoutMetrics: SellerPayoutMetrics
+    netRevenueMetrics: NetRevenueMetrics
+}
+
+type AnalyticsRevenueOverview {
+    monthly: [AnalyticsMonthlyRevenue!]!
+    total: BigDecimal!
+    growth: Float
+}
+
+type AnalyticsMonthlyRevenue {
+    month: String!
+    revenue: BigDecimal!
+    orders: Long!
+}
+
+type AnalyticsSalesByCategory {
+    category: String!
+    revenue: BigDecimal!
+    sales: Long!
+    percentage: Float
+}
+
+type AnalyticsTopSellerMetric {
+    rank: Int!
+    sellerId: String!
+    sellerName: String!
+    orders: Long!
+    revenue: BigDecimal!
+    growth: Float
+}
+
+type AnalyticsTopProductMetric {
+    rank: Int!
+    productId: String!
+    productName: String!
+    salesCount: Long!
+    revenue: BigDecimal!
+    growth: Float
+    rating: Float
+}
+
+type AnalyticsMonthlySalesTrend {
+    month: String!
+    revenue: BigDecimal!
+    orders: Long!
+    avgOrderValue: BigDecimal
+    growth: Float
+}
+
+type PaymentMethodBreakdown {
+    method: String!
+    displayName: String!
+    transactions: Long!
+    amount: BigDecimal!
+    share: Float
+}
+
+type CommissionMetrics {
+    totalCommission: BigDecimal!
+    growth: Float
+    platformCommission: BigDecimal!
+    transactionFees: BigDecimal!
+    paymentProcessing: BigDecimal!
+}
+
+type SellerPayoutMetrics {
+    total: BigDecimal!
+    growth: Float
+    pending: BigDecimal!
+    processing: BigDecimal!
+    completed: BigDecimal!
+}
+
+type NetRevenueMetrics {
+    netRevenue: BigDecimal!
+    growth: Float
+    grossRevenue: BigDecimal!
+    refunds: BigDecimal!
+    payouts: BigDecimal!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Content Analytics Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type ContentAnalytics {
+    filterPeriod: String!
+    startDate: String
+    endDate: String
+    totalProducts: Long!
+    productsChange: Float
+    totalCategories: Long!
+    categoriesChange: Float
+    totalOrders: Long!
+    ordersChange: Float
+    activeSellers: Long!
+    sellersChange: Float
+    totalCustomers: Long!
+    customersChange: Float
+    articlesPublished: Long
+    articlesChange: Float
+    monthlyTrends: [MonthlyContentMetric!]!
+    categoryEngagement: [CategoryEngagement!]!
+    topContent: [TopContent!]!
+}
+
+type MonthlyContentMetric {
+    month: String!
+    productsCreated: Long!
+    categoriesCreated: Long!
+    ordersPlaced: Long!
+    newCustomers: Long!
+}
+
+type CategoryEngagement {
+    categoryName: String!
+    productCount: Long!
+    avgPrice: Float
+    orderCount: Long!
+}
+
+type TopContent {
+    title: String!
+    type: String!
+    views: Long!
+    clicks: Long!
+    ctr: Float
+    trend: String
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dashboard Stats Types (for real-time queries)
+# ─────────────────────────────────────────────────────────────────────────────
+
+type AdminStats {
+    totalUsers: Long!
+    totalRevenue: BigDecimal!
+    totalOrderCount: Long!
+    totalProducts: Long!
+    totalSellers: Long!
+    totalCustomers: Long!
+}
+
+type PerformanceMetrics {
+    avgResponseTimeMs: Float!
+    cacheHitRate: Float
+    activeConnections: Int
+    uptimeSeconds: Long
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Queries
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Query {
+
+    # ── Admin Analytics (ADMIN) ──────────────────────────────────────────
+    adminAnalytics(filter: String = "month"): AdminAnalytics!
+    adminStats: AdminStats!
+
+    # ── Individual Admin Metrics (ADMIN) ─────────────────────────────────
+    totalUsers: Long!
+    totalRevenue: BigDecimal!
+    revenueForPeriod(start: DateTime!, end: DateTime!): BigDecimal!
+    totalOrderCount: Long!
+    orderCountForPeriod(start: DateTime!, end: DateTime!): Long!
+    topSellers(limit: Int = 10): [SellerMetrics!]!
+    orderTrends(start: DateTime!, end: DateTime!): [TrendData!]!
+    revenueTrends(start: DateTime!, end: DateTime!): [TrendData!]!
+
+    # ── Content Analytics (ADMIN) ────────────────────────────────────────
+    contentAnalytics(filter: String = "month", contentType: String): ContentAnalytics!
+
+    # ── Performance (ADMIN) ──────────────────────────────────────────────
+    performanceMetrics: PerformanceMetrics!
+
+    # ── Seller Analytics (SELLER) ────────────────────────────────────────
+    sellerProductSales: Long!
+    sellerRevenue: BigDecimal!
+    sellerRevenueForPeriod(start: DateTime!, end: DateTime!): BigDecimal!
+    sellerCancellationRate: Float!
+    sellerLowStockCount: Long!
+    sellerMetrics: SellerMetrics!
+
+    # ── Customer Analytics (AUTHENTICATED) ───────────────────────────────
+    customerTotalSpending: BigDecimal!
+    customerCategoryPreferences: [CategoryPreference!]!
+}

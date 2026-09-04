@@ -1,0 +1,128 @@
+spring:
+  application:
+    name: e-store
+  profiles:
+    active: dev
+
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${USER_NAME}
+    password: ${PASSWORD}
+    driver-class-name: ${DATABASE_DRIVER}
+    hikari:
+      auto-commit: false
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    open-in-view: false
+    properties:
+      hibernate:
+        generate_statistics: true
+        jdbc:
+          batch_size: 20
+          order_inserts: true
+          order_updates: true
+        connection:
+          provider_disables_autocommit: true
+
+  # application.yml
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    schemas: public
+    locations: classpath:db/migration
+
+  graphql:
+    graphiql:
+      enabled: true
+      path: /graphiql
+    path: /graphql
+    schema:
+      locations: classpath:graphql/
+      file-extensions: .graphqls
+      printer:
+        enabled: true
+    cors:
+      allowed-origins: 
+        - "http://localhost:3000"
+        - "https://localhost:3000"
+      allowed-methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      allowed-headers: ["*"]
+      allow-credentials: true
+
+  thymeleaf:
+    check-template-location: false
+
+  # Performance Caching Configuration
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=30m,recordStats
+    cache-names: products,categories,carts,users,reviews,orders,users-page,users-search,users-role,users-active,users-predicate,admin-dashboard
+
+
+logging:
+  level:
+    root: INFO
+    com.smart_ecomernce_api: DEBUG
+    org.hibernate.tool.schema: ERROR
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+server:
+  port: 9190
+  servlet:
+    context-path: /api
+  forward-headers-strategy: framework
+
+app:
+  frontend:
+    url: http://localhost:3000
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+    version: OPENAPI_3_0  # Force OpenAPI 3.0 instead of 3.1 (use OPENAPI_3_0 in uppercase)
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    # DON'T set config-url or url - let SpringDoc auto-detect them
+    try-it-out-enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+
+# Actuator configuration for Prometheus metrics
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when_authorized
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+# Redis Configuration
+redis:
+  host: ${REDIS_HOST:localhost}
+  port: ${REDIS_PORT:6379}
+  password: ${REDIS_PASSWORD:}
+  database: 0
+  timeout: 5000ms
+
+# Cache Configuration
+cache:
+  level: multi  # Options: caffeine, redis, multi (default: caffeine)
+  l1:
+    max-size: 10000
+    ttl-minutes: 5
+  l2:
+    ttl-minutes: 15

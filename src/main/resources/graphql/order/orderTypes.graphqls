@@ -1,0 +1,168 @@
+# =============================================================================
+# Order Types - Shared types and enums for order module
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Enums
+# ─────────────────────────────────────────────────────────────────────────────
+
+enum OrderStatusEnum {
+    PENDING
+    CONFIRMED
+    PROCESSING
+    VALIDATION_FAILED
+    VALIDATED
+    SHIPPED
+    IN_TRANSIT
+    OUT_FOR_DELIVERY
+    DELIVERED
+    CANCELLED
+    REFUND_REQUESTED
+    REFUNDED
+    FAILED
+    RETURNED
+    PAYMENT_FAILED
+}
+
+enum PaymentStatusEnum {
+    PENDING
+    PAID
+    COMPLETED
+    FAILED
+    REFUNDED
+    PARTIALLY_REFUNDED
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Core Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type Order {
+    id: ID!
+    orderNumber: String!
+    status: String!
+    customerId: ID!
+    items: [OrderItem!]!
+    subtotal: BigDecimal!
+    tax: BigDecimal!
+    shippingCost: BigDecimal!
+    discount: BigDecimal!
+    totalAmount: BigDecimal!
+    paymentMethod: String!
+    paymentStatus: String!
+    shippingAddress: Address!
+    trackingNumber: String
+    estimatedDelivery: DateTime
+    timeline: [TimelineEntry!]!
+    createdAt: DateTime!
+}
+
+type OrderItem {
+    id: ID!
+    productId: ID!
+    productName: String!
+    variantId: ID
+    size: String
+    color: String
+    quantity: Int!
+    price: BigDecimal!
+    image: String
+}
+
+type TimelineEntry {
+    status: String!
+    message: String!
+    timestamp: DateTime!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tracking Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type OrderTracking {
+    orderId: ID!
+    orderNumber: String!
+    status: String!
+    displayName: String
+    trackingNumber: String
+    estimatedDelivery: DateTime
+    shippingAddress: String
+    timeline: [OrderTimeline!]!
+}
+
+type OrderTimeline {
+    activityId: ID
+    activityType: String
+    status: String!
+    description: String!
+    oldValue: String
+    newValue: String
+    timestamp: DateTime!
+    icon: String
+    color: String
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stats Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type OrderStats {
+    totalOrders: Long!
+    pendingOrders: Long!
+    processingOrders: Long!
+    shippedOrders: Long!
+    deliveredOrders: Long!
+    cancelledOrders: Long!
+    totalRevenue: BigDecimal!
+    monthlyRevenue: BigDecimal!
+    averageOrderValue: BigDecimal!
+}
+
+type SellerOrderStats {
+    totalOrders: Long!
+    pending: Long!
+    confirmed: Long!
+    processing: Long!
+    shipped: Long!
+    delivered: Long!
+    cancelled: Long!
+    refunded: Long!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dashboard Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type OrderDashboard {
+    totalOrders: Long!
+    pendingOrders: Long!
+    ordersByStatus: [StatusEntry!]
+    recentOrders: [RecentOrder!]!
+    orderCompletionRate: Float
+    cancellationRate: Float
+    totalRevenue: BigDecimal!
+}
+
+type StatusEntry {
+    key: String!
+    value: Long!
+}
+
+type RecentOrder {
+    orderId: String!
+    orderNumber: String!
+    customerName: String
+    sellerName: String
+    amount: BigDecimal!
+    status: String!
+    createdAt: String!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Paginated Response Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type OrderPage {
+    content: [Order!]!
+    pageInfo: PageInfo!
+}

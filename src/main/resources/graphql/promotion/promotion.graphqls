@@ -1,0 +1,121 @@
+# =============================================================================
+# Promotion GraphQL Schema
+# Covers: Admin promotions, Seller promotions
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type AdminPromotion {
+    id: ID!
+    name: String!
+    promotionType: String!
+    code: String
+    discountValue: BigDecimal!
+    discountType: String!
+    minPurchase: BigDecimal
+    maxDiscount: BigDecimal
+    startDate: DateTime!
+    endDate: DateTime!
+    usageLimit: Int
+    usageCount: Int!
+    totalRevenue: BigDecimal!
+    status: String!
+    isGlobal: Boolean!
+    targetCategoryId: ID
+    isActive: Boolean!
+    createdAt: DateTime!
+}
+
+type SellerPromotion {
+    id: ID!
+    sellerId: ID!
+    name: String!
+    promotionType: String!
+    discountType: String
+    discountValue: BigDecimal!
+    minPurchase: BigDecimal
+    maxDiscount: BigDecimal
+    startDate: DateTime!
+    endDate: DateTime!
+    usageLimit: Int
+    usageCount: Int!
+    status: String!
+    isActive: Boolean!
+    createdAt: DateTime!
+}
+
+type AdminPromotionPage {
+    content: [AdminPromotion!]!
+    pageInfo: PageInfo!
+}
+
+type SellerPromotionPage {
+    content: [SellerPromotion!]!
+    pageInfo: PageInfo!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Inputs
+# ─────────────────────────────────────────────────────────────────────────────
+
+input AdminPromotionCreateInput {
+    name: String!
+    promotionType: String!
+    code: String
+    discountValue: BigDecimal!
+    minPurchase: BigDecimal
+    maxDiscount: BigDecimal
+    startDate: DateTime!
+    endDate: DateTime!
+    usageLimit: Int
+    categoryId: ID
+    isGlobal: Boolean = false
+}
+
+input SellerPromotionCreateInput {
+    name: String!
+    promotionType: String!
+    discountValue: BigDecimal!
+    minPurchase: BigDecimal
+    startDate: DateTime!
+    endDate: DateTime!
+    usageLimit: Int
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Queries
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Query {
+
+    # ── Admin Queries (ADMIN) ────────────────────────────────────────────
+    adminPromotions(pagination: PageInput): AdminPromotionPage!
+    activeAdminPromotions: [AdminPromotion!]!
+    adminPromotionStats: AdminPromotionStats!
+
+    # ── Seller Queries (SELLER) ──────────────────────────────────────────
+    sellerPromotions(pagination: PageInput): SellerPromotionPage!
+    activeSellerPromotions: [SellerPromotion!]!
+}
+
+type AdminPromotionStats {
+    activeCount: Long!
+    totalRevenue: BigDecimal!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mutations
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Mutation {
+
+    # ── Admin Mutations (ADMIN) ──────────────────────────────────────────
+    createAdminPromotion(input: AdminPromotionCreateInput!): AdminPromotion!
+    deleteAdminPromotion(id: ID!): Boolean!
+
+    # ── Seller Mutations (SELLER) ────────────────────────────────────────
+    createSellerPromotion(input: SellerPromotionCreateInput!): SellerPromotion!
+    deleteSellerPromotion(id: ID!): Boolean!
+}

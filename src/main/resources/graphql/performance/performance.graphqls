@@ -1,0 +1,161 @@
+# Performance GraphQL Schema
+# Admin performance monitoring - System, Cache, Database, Security tabs
+
+# ==================== System Tab ====================
+
+type SystemMetrics {
+    # Memory
+    memory: MemoryInfo!
+    
+    # CPU & Threads
+    cpu: CpuInfo!
+    
+    # Server Status
+    server: ServerInfo!
+    
+    # Rate Limiting
+    rateLimits: [RateLimitEndpoint!]!
+}
+
+type MemoryInfo {
+    maxMb: Long!
+    usedMb: Long!
+    usagePercent: String!
+    warning: Boolean!
+}
+
+type CpuInfo {
+    threadCount: Int!
+    peakThreads: Int!
+    daemonThreads: Int!
+    nonHeapMemoryMb: Long!
+}
+
+type ServerInfo {
+    status: String!
+    message: String!
+    uptime: Long!
+}
+
+type RateLimitEndpoint {
+    endpoint: String!
+    total: Long!
+    perMin: Int!
+    perSec: Int!
+    errors: Int!
+}
+
+# ==================== Cache Tab ====================
+
+type CacheMetrics {
+    actions: CacheActions!
+    caches: [CacheStatistics!]!
+}
+
+type CacheActions {
+    canWarmup: Boolean!
+    canClearAll: Boolean!
+}
+
+type CacheStatistics {
+    cacheName: String!
+    hits: Long!
+    misses: Long!
+    hitRate: String!
+    size: Long!
+    hitRateStatus: String!  # GREEN, YELLOW, RED
+}
+
+# ==================== Database Tab ====================
+
+type DatabaseMetrics {
+    info: DatabaseInfo!
+    connectionPool: ConnectionPoolInfo!
+    queryPerformance: QueryPerformanceInfo!
+}
+
+type DatabaseInfo {
+    product: String!
+    driver: String!
+}
+
+type ConnectionPoolInfo {
+    active: Int!
+    idle: Int!
+    total: Int!
+    max: Int!
+    utilization: String!
+    health: String!
+}
+
+type QueryPerformanceInfo {
+    totalQueries: Long!
+    slowQueries: Int!
+    avgTime: String!
+    status: String!
+}
+
+# ==================== Security Tab ====================
+
+type SecurityMetrics {
+    stats: SecurityStats!
+    actions: SecurityActions!
+}
+
+type SecurityStats {
+    failedLoginAttempts: Int!
+    hitRate: String!
+    accessLogSize: Long!
+    lockoutDurationMinutes: Int!
+}
+
+type SecurityActions {
+    canCleanup: Boolean!
+}
+
+# ==================== Unified Dashboard ====================
+
+type PerformanceDashboard {
+    timestamp: String!
+    system: SystemMetrics
+    cache: CacheMetrics
+    database: DatabaseMetrics
+    security: SecurityMetrics
+}
+
+extend type Query {
+    # Security: ADMIN only
+    systemMetrics: SystemMetrics!
+    
+    # Security: ADMIN only
+    cacheMetrics: CacheMetrics!
+    
+    # Security: ADMIN only
+    databaseMetrics: DatabaseMetrics!
+    
+    # Security: ADMIN only
+    securityMetrics: SecurityMetrics!
+    
+    # Security: ADMIN only - Get all metrics at once
+    performanceDashboard: PerformanceDashboard!
+    
+    # Security: ADMIN only - Export in different formats
+    exportPerformanceMetrics(format: String = "json"): String!
+}
+
+extend type Mutation {
+    # Security: ADMIN only
+    warmupCache: Boolean!
+    
+    # Security: ADMIN only
+    clearAllCaches: Boolean!
+    
+    # Security: ADMIN only
+    clearSpecificCache(cacheName: String!): Boolean!
+    
+    # Security: ADMIN only
+    cleanupSecurityData: Boolean!
+    
+    # Security: ADMIN only
+    refreshMetrics: Boolean!
+}

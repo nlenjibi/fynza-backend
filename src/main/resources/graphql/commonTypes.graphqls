@@ -1,0 +1,12 @@
+# Common GraphQL Types
+# Shared types used across multiple schema files
+
+type StatusCount {
+    status: String!
+    count: Long!
+}
+
+type CategoryCount {
+    category: String!
+    count: Long!
+}

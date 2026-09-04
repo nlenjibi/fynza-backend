@@ -1,0 +1,173 @@
+# =============================================================================
+# Review GraphQL Schema
+# Covers: Product reviews, ratings, admin moderation, seller replies
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type Review {
+    id: ID!
+    productId: ID!
+    productSlug: String
+    productName: String
+    user: ReviewUserInfo!
+    rating: Int!
+    title: String
+    comment: String!
+    verifiedPurchase: Boolean!
+    approved: Boolean!
+    helpfulCount: Int!
+    notHelpfulCount: Int!
+    helpfulPercentage: Float
+    totalVotes: Int!
+    images: [String!]
+    pros: [String!]
+    cons: [String!]
+    adminResponse: String
+    adminResponseAt: DateTime
+    rejectionReason: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type ReviewUserInfo {
+    id: ID!
+    firstName: String!
+    lastName: String!
+    email: String
+    avatarUrl: String
+    totalReviews: Int!
+}
+
+type ReviewSummary {
+    totalReviews: Long!
+    averageRating: Float
+    verifiedPurchases: Long
+    verifiedPurchasePercentage: Float
+    distribution: ReviewRatingDistribution!
+    topPros: [String!]
+    topCons: [String!]
+}
+
+type ReviewRatingDistribution {
+    fiveStars: Long!
+    fiveStarsPercentage: Float
+    fourStars: Long!
+    fourStarsPercentage: Float
+    threeStars: Long!
+    threeStarsPercentage: Float
+    twoStars: Long!
+    twoStarsPercentage: Float
+    oneStar: Long!
+    oneStarPercentage: Float
+}
+
+type ReviewStats {
+    totalReviews: Long!
+    pendingReviews: Long!
+    approvedReviews: Long!
+    rejectedReviews: Long!
+    averageRating: Float
+    fiveStarReviews: Long!
+    fourStarReviews: Long!
+    threeStarReviews: Long!
+    twoStarReviews: Long!
+    oneStarReviews: Long!
+}
+
+type ReviewPage {
+    content: [Review!]!
+    pageInfo: PageInfo!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Inputs
+# ─────────────────────────────────────────────────────────────────────────────
+
+input ReviewCreateInput {
+    productId: ID!
+    rating: Int!
+    title: String
+    comment: String!
+    pros: [String!]
+    cons: [String!]
+    images: [String!]
+}
+
+input ReviewUpdateInput {
+    rating: Int
+    title: String
+    comment: String
+    pros: [String!]
+    cons: [String!]
+}
+
+input AdminResponseInput {
+    response: String!
+}
+
+input ReviewFilterInput {
+    productId: ID
+    customerId: ID
+    rating: Int
+    minRating: Int
+    maxRating: Int
+    verifiedPurchase: Boolean
+    approved: Boolean
+    withImages: Boolean
+    searchText: String
+    dateFrom: DateTime
+    dateTo: DateTime
+    positiveOnly: Boolean
+    negativeOnly: Boolean
+    needsAttention: Boolean
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Queries
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Query {
+
+    # ── Public Review Queries ────────────────────────────────────────────
+    review(id: ID!): Review
+    productReviews(productId: ID!, pagination: PageInput, filter: ReviewFilterInput): ReviewPage!
+    productRatingStats(productId: ID!): ReviewSummary!
+    mostHelpfulReviews(productId: ID!, limit: Int = 10): [Review!]!
+    recentReviews(productId: ID!, limit: Int = 10): [Review!]!
+    reviewsWithImages(productId: ID!, pagination: PageInput): ReviewPage!
+    verifiedReviews(productId: ID!, pagination: PageInput): ReviewPage!
+    reviewsByRating(productId: ID!, rating: Int!, pagination: PageInput): ReviewPage!
+
+    # ── Authenticated Review Queries ─────────────────────────────────────
+    myReviews(pagination: PageInput): ReviewPage!
+
+    # ── Admin Review Queries (ADMIN) ─────────────────────────────────────
+    adminReviews(pagination: PageInput, filter: ReviewFilterInput): ReviewPage!
+    adminReviewStats: ReviewStats!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mutations
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Mutation {
+
+    # ── Authenticated Review Mutations ───────────────────────────────────
+    createReview(input: ReviewCreateInput!): Review!
+    updateReview(id: ID!, input: ReviewUpdateInput!): Review!
+    deleteReview(id: ID!): Boolean!
+    restoreReview(id: ID!): Review!
+    markReviewHelpful(id: ID!): Review!
+
+    # ── Admin Review Mutations (ADMIN) ───────────────────────────────────
+    approveReview(id: ID!): Review!
+    rejectReview(id: ID!, reason: String!): Review!
+    addAdminResponse(id: ID!, input: AdminResponseInput!): Review!
+    removeAdminResponse(id: ID!): Review!
+    bulkApproveReviews(ids: [ID!]!): Int!
+    bulkRejectReviews(ids: [ID!]!, reason: String!): Int!
+    bulkDeleteReviews(ids: [ID!]!): Int!
+}

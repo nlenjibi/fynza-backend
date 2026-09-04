@@ -1,0 +1,144 @@
+# =============================================================================
+# Message GraphQL Schema
+# Covers: Customer/Seller conversations, Admin message management
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Enums
+# ─────────────────────────────────────────────────────────────────────────────
+
+enum ConversationCategory {
+    GENERAL
+    ORDER
+    PRODUCT
+    SHIPPING
+    PAYMENT
+    REFUND
+    TECHNICAL
+}
+
+enum MessagePriority {
+    LOW
+    MEDIUM
+    HIGH
+    URGENT
+}
+
+enum MessageStatus {
+    OPEN
+    PENDING
+    RESOLVED
+    CLOSED
+    ARCHIVED
+}
+
+enum MessageType {
+    CUSTOMER
+    SELLER
+    SUPPORT
+    SYSTEM
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type Conversation {
+    id: ID!
+    subject: String!
+    category: ConversationCategory
+    priority: MessagePriority
+    status: MessageStatus
+    type: MessageType
+    participantType: MessageType
+    isStarred: Boolean
+    isPinned: Boolean
+    lastMessagePreview: String
+    unreadCount: Int
+    orderId: ID
+    productId: ID
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    messages: [Message!]
+}
+
+type Message {
+    id: ID!
+    content: String!
+    senderType: MessageType
+    senderName: String
+    isRead: Boolean
+    createdAt: DateTime!
+}
+
+type ConversationStats {
+    unreadCount: Long!
+    openCount: Long!
+    pendingCount: Long!
+    resolvedCount: Long!
+}
+
+type ConversationPage {
+    content: [Conversation!]!
+    pageInfo: PageInfo!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Inputs
+# ─────────────────────────────────────────────────────────────────────────────
+
+input CreateConversationInput {
+    subject: String!
+    category: ConversationCategory = GENERAL
+    content: String!
+    orderId: ID
+    productId: ID
+}
+
+input SendMessageInput {
+    content: String!
+}
+
+input ConversationFilterInput {
+    status: String
+    priority: String
+    search: String
+    category: ConversationCategory
+    isArchived: Boolean
+    hasUnread: Boolean
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Queries
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Query {
+
+    # ── Customer/Seller Queries (AUTHENTICATED) ──────────────────────────
+    myConversations(pagination: PageInput, status: String): ConversationPage!
+    conversation(id: ID!): Conversation
+    myMessageStats: ConversationStats!
+
+    # ── Admin Queries (ADMIN) ────────────────────────────────────────────
+    adminConversations(pagination: PageInput, status: String, search: String): ConversationPage!
+    adminMessageStats: ConversationStats!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mutations
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Mutation {
+
+    # ── Customer/Seller Mutations (AUTHENTICATED) ────────────────────────
+    createConversation(input: CreateConversationInput!): Conversation!
+    replyToConversation(id: ID!, input: SendMessageInput!): Conversation!
+    markConversationAsRead(id: ID!): Boolean!
+    toggleConversationStar(id: ID!): Conversation!
+    deleteConversation(id: ID!): Boolean!
+
+    # ── Admin Mutations (ADMIN) ──────────────────────────────────────────
+    adminReplyToConversation(id: ID!, input: SendMessageInput!): Conversation!
+    updateConversationStatus(id: ID!, status: String!): Conversation!
+    adminDeleteConversation(id: ID!): Boolean!
+}
