@@ -375,7 +375,7 @@ public class UserServiceImpl implements UserService {
         if (userRepository.findByPublicId(userId).isEmpty()) {
             throw new ResourceNotFoundException(USER_NOT_FOUND + userId);
         }
-        return addressRepository.findByUser_PublicId(userId).stream()
+        return addressRepository.findByUser_Id(userId).stream()
                 .map(this::toAddressDto)
                 .toList();
     }
