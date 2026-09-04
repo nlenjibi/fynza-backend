@@ -1,4 +1,4 @@
-package ecommerce.modules.admin.async;
+package ecommerce.modules.analytics.async;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
