@@ -1,12 +1,14 @@
 package ecommerce.modules.product.repository;
 
-import ecommerce.common.base.BaseRepository;
 import ecommerce.common.enums.InventoryStatus;
 import ecommerce.common.enums.ProductStatus;
 import ecommerce.modules.product.entity.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,10 +19,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface ProductRepository extends BaseRepository<Product, UUID> {
+public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
 
-    @EntityGraph(attributePaths = {"category", "seller"})
-    Optional<Product> findById(UUID id);
+    Optional<Product> findByPublicId(UUID publicId);
+
+    Optional<Product> findBySlug(String slug);
 
     @EntityGraph(attributePaths = {"category", "seller"})
     Page<Product> findByBrandIgnoreCase(String brand, Pageable pageable);
@@ -29,13 +32,13 @@ public interface ProductRepository extends BaseRepository<Product, UUID> {
     Page<Product> findByBrandInIgnoreCase(List<String> brands, Pageable pageable);
 
     @EntityGraph(attributePaths = {"category", "seller"})
-    Page<Product> findByCategoryId(UUID categoryId, Pageable pageable);
+    Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"category", "seller"})
-    Page<Product> findByCategoryIdAndStatus(UUID categoryId, ProductStatus status, Pageable pageable);
+    Page<Product> findByCategoryIdAndStatus(Long categoryId, ProductStatus status, Pageable pageable);
 
     @EntityGraph(attributePaths = {"category", "seller"})
-    Page<Product> findBySellerId(UUID sellerId, Pageable pageable);
+    Page<Product> findBySellerId(Long sellerId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"category", "seller"})
     Page<Product> findByStatus(ProductStatus status, Pageable pageable);
@@ -54,7 +57,7 @@ public interface ProductRepository extends BaseRepository<Product, UUID> {
     List<Product> findTopByViewCount(@Param("status") ProductStatus status, Pageable pageable);
 
     @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.category LEFT JOIN FETCH p.seller WHERE p.id IN :ids")
-    List<Product> findByIdIn(@Param("ids") List<UUID> ids);
+    List<Product> findByIdIn(@Param("ids") List<Long> ids);
 
     long countByInventoryStatusAndIsActiveTrue(InventoryStatus inventoryStatus);
 
@@ -63,20 +66,20 @@ public interface ProductRepository extends BaseRepository<Product, UUID> {
 
     @Modifying
     @Query("UPDATE Product p SET p.stock = p.stock - :quantity, p.availableQuantity = p.availableQuantity - :quantity WHERE p.id = :id AND p.isActive = true AND p.stock >= :quantity")
-    int reserveStockAndIsActiveTrue(@Param("id") UUID id, @Param("quantity") int quantity);
+    int reserveStockAndIsActiveTrue(@Param("id") Long id, @Param("quantity") int quantity);
 
     @Modifying
     @Query("UPDATE Product p SET p.stock = p.stock + :quantity, p.availableQuantity = p.availableQuantity + :quantity WHERE p.id = :id AND p.isActive = true")
-    int releaseReservedStockAndIsActiveTrue(@Param("id") UUID id, @Param("quantity") int quantity);
+    int releaseReservedStockAndIsActiveTrue(@Param("id") Long id, @Param("quantity") int quantity);
 
-    long countBySellerId(UUID sellerId);
+    long countBySellerId(Long sellerId);
 
-    long countBySellerIdAndStatus(UUID sellerId, ProductStatus status);
+    long countBySellerIdAndStatus(Long sellerId, ProductStatus status);
 
-    long countBySellerIdAndInventoryStatus(UUID sellerId, InventoryStatus inventoryStatus);
+    long countBySellerIdAndInventoryStatus(Long sellerId, InventoryStatus inventoryStatus);
 
     @Query("SELECT COUNT(p) FROM Product p WHERE p.seller.id = :sellerId AND p.inventoryStatus = 'LOW_STOCK'")
-    long countBySellerIdAndLowStock(@Param("sellerId") UUID sellerId);
+    long countBySellerIdAndLowStock(@Param("sellerId") Long sellerId);
 
     @EntityGraph(attributePaths = {"category", "seller"})
     Page<Product> findByStatusAndIsApproved(ProductStatus status, Boolean isApproved, Pageable pageable);

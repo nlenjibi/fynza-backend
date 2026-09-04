@@ -1,20 +1,19 @@
 package ecommerce.modules.promotion.repository;
 
-import ecommerce.common.base.BaseRepository;
 import ecommerce.modules.promotion.entity.AdminFlashSale;
 import ecommerce.modules.promotion.entity.AdminFlashSale.Status;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 @Repository
-public interface AdminFlashSaleRepository extends BaseRepository<AdminFlashSale, UUID> {
+public interface AdminFlashSaleRepository extends JpaRepository<AdminFlashSale, Long> {
 
     Page<AdminFlashSale> findAllByOrderByStartDatetimeDesc(Pageable pageable);
 
@@ -33,8 +32,8 @@ public interface AdminFlashSaleRepository extends BaseRepository<AdminFlashSale,
     long countActive();
 
     @Query("UPDATE AdminFlashSale f SET f.currentProductsCount = f.currentProductsCount + :count WHERE f.id = :id")
-    void incrementProductCount(@Param("id") UUID id, @Param("count") int count);
+    void incrementProductCount(@Param("id") Long id, @Param("count") int count);
 
     @Query("UPDATE AdminFlashSale f SET f.currentProductsCount = f.currentProductsCount - :count WHERE f.id = :id AND f.currentProductsCount >= :count")
-    void decrementProductCount(@Param("id") UUID id, @Param("count") int count);
+    void decrementProductCount(@Param("id") Long id, @Param("count") int count);
 }
