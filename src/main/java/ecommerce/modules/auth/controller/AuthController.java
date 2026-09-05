@@ -10,6 +10,7 @@ import ecommerce.modules.auth.dto.RefreshTokenRequest;
 import ecommerce.modules.auth.dto.RegisterRequest;
 import ecommerce.modules.auth.dto.ResendVerificationRequest;
 import ecommerce.modules.auth.dto.ResetPasswordRequest;
+import ecommerce.modules.auth.dto.SessionResponse;
 import ecommerce.modules.auth.dto.VerifyEmailRequest;
 import ecommerce.modules.auth.service.AuthService;
 import ecommerce.common.security.UserPrincipal;
@@ -20,6 +21,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/v1/auth")
@@ -88,5 +92,32 @@ public class AuthController {
         authService.changePassword(principal.getId(), request.getCurrentPassword(),
                 request.getNewPassword(), request.getConfirmPassword());
         return ResponseEntity.ok(ApiResponse.success("Password changed successfully", null));
+    }
+
+    @GetMapping("/sessions")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<List<SessionResponse>>> listSessions(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestHeader(value = "X-Refresh-Token", required = false) String currentRefreshToken) {
+        List<SessionResponse> sessions = authService.listActiveSessions(principal.getId(), currentRefreshToken);
+        return ResponseEntity.ok(ApiResponse.success("Active sessions retrieved", sessions));
+    }
+
+    @DeleteMapping("/sessions/{sessionId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> revokeSession(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID sessionId) {
+        authService.revokeSession(principal.getId(), sessionId);
+        return ResponseEntity.ok(ApiResponse.success("Session revoked", null));
+    }
+
+    @DeleteMapping("/sessions/others")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> revokeOtherSessions(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody LogoutRequest request) {
+        authService.revokeAllOtherSessions(principal.getId(), request.getRefreshToken());
+        return ResponseEntity.ok(ApiResponse.success("All other sessions revoked", null));
     }
 }

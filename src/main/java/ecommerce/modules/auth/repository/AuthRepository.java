@@ -18,6 +18,8 @@ public interface AuthRepository extends JpaRepository<Auth, UUID> {
 
     Optional<Auth> findByRefreshTokenAndIsActiveTrue(String refreshToken);
 
+    java.util.List<Auth> findAllByUser_IdAndIsActiveTrueOrderByLastActivityAtDesc(UUID userId);
+
     @Query("SELECT a FROM Auth a WHERE a.user.id = :userId AND a.isActive = true ORDER BY a.lastActivityAt DESC LIMIT 1")
     Optional<Auth> findTopByUserIdAndIsActiveTrueOrderByLastActivityAtDesc(@Param("userId") UUID userId);
 
@@ -25,6 +27,13 @@ public interface AuthRepository extends JpaRepository<Auth, UUID> {
     @Query("UPDATE Auth a SET a.isActive = false, a.loggedOutAt = :logoutTime " +
             "WHERE a.user.id = :userId AND a.isActive = true")
     int invalidateAllUserSessions(@Param("userId") UUID userId,
+            @Param("logoutTime") LocalDateTime logoutTime);
+
+    @Modifying
+    @Query("UPDATE Auth a SET a.isActive = false, a.loggedOutAt = :logoutTime " +
+            "WHERE a.user.id = :userId AND a.isActive = true AND a.refreshToken <> :keepToken")
+    int invalidateOtherUserSessions(@Param("userId") UUID userId,
+            @Param("keepToken") String keepToken,
             @Param("logoutTime") LocalDateTime logoutTime);
 
     @Modifying
