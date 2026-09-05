@@ -34,7 +34,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -676,10 +678,10 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public OrderTrackingResponse getTrackingInfo(UUID orderId) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByPublicId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
 
-        List<OrderTimeline> timeline = orderTimelineRepository.findByOrderIdOrderByTimestampDesc(orderId);
+        List<OrderTimeline> timeline = orderTimelineRepository.findByOrderIdOrderByTimestampDesc(order.getId());
 
         // Format shipping address
         String shippingAddress = null;
@@ -732,7 +734,9 @@ public class OrderServiceImpl implements OrderService {
         
         if (activities.isEmpty()) {
             // Fallback to legacy timeline for backward compatibility
-            List<OrderTimeline> timeline = orderTimelineRepository.findByOrderIdOrderByTimestampDesc(orderId);
+            Long orderLongId = orderRepository.findByPublicId(orderId).map(Order::getId).orElse(null);
+            if (orderLongId == null) return List.of();
+            List<OrderTimeline> timeline = orderTimelineRepository.findByOrderIdOrderByTimestampDesc(orderLongId);
             return timeline.stream().map(this::mapTimelineToResponse).collect(Collectors.toList());
         }
         
@@ -744,7 +748,7 @@ public class OrderServiceImpl implements OrderService {
      */
     private OrderTimelineResponse mapActivityToTimelineResponse(OrderActivityLog activity) {
         return OrderTimelineResponse.builder()
-                .activityId(activity.getId())
+                .activityId(activity.getPublicId())
                 .activityType(activity.getActivityType().name())
                 .status(activity.getActivityType().name())
                 .description(activity.getDescription())
@@ -803,7 +807,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse cancelOrderWithTracking(UUID orderId, CancelRequest request) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByPublicId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
 
         // Validate order can be cancelled
@@ -843,7 +847,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse requestRefund(UUID orderId, RefundRequest request) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByPublicId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
 
         // Validate order belongs to the customer
@@ -1007,7 +1011,7 @@ public class OrderServiceImpl implements OrderService {
                 .sellerName(sellerName)
                 .amount(order.getTotalAmount())
                 .status(order.getStatus().name())
-                .createdAt(order.getCreatedAt() != null ? order.getCreatedAt().format(FORMATTER) : "N/A")
+                .createdAt(order.getCreatedAt() != null ? FORMATTER.format(order.getCreatedAt().atZone(ZoneId.systemDefault())) : "N/A")
                 .build();
     }
 
@@ -1042,7 +1046,7 @@ public class OrderServiceImpl implements OrderService {
      */
     private OrderResponse mapToOrderResponse(Order order) {
         return OrderResponse.builder()
-                .id(order.getId())
+                .id(order.getPublicId())
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus().name())
                 .customerId(order.getCustomer().getId())
@@ -1132,16 +1136,18 @@ public class OrderServiceImpl implements OrderService {
     public String exportSellerOrdersToCSV(UUID sellerId, OrderStatus status, LocalDateTime dateFrom,
             LocalDateTime dateTo, String query) {
         List<Order> orders = orderRepository.findBySellerId(sellerId);
-        
+        Instant fromI = dateFrom != null ? dateFrom.atZone(ZoneId.systemDefault()).toInstant() : null;
+        Instant toI   = dateTo   != null ? dateTo.atZone(ZoneId.systemDefault()).toInstant()   : null;
+
         StringBuilder csv = new StringBuilder();
         csv.append("Order Number,Customer Name,Email,Phone,Total Amount,Status,Payment Status,Tracking Number,Created At\n");
-        
+
         for (Order order : orders) {
             boolean matches = true;
-            
+
             if (status != null && order.getStatus() != status) matches = false;
-            if (dateFrom != null && order.getCreatedAt().isBefore(dateFrom)) matches = false;
-            if (dateTo != null && order.getCreatedAt().isAfter(dateTo)) matches = false;
+            if (fromI != null && order.getCreatedAt() != null && order.getCreatedAt().isBefore(fromI)) matches = false;
+            if (toI   != null && order.getCreatedAt() != null && order.getCreatedAt().isAfter(toI))   matches = false;
             if (query != null && !query.isEmpty()) {
                 String q = query.toLowerCase();
                 boolean matchOrder = order.getOrderNumber().toLowerCase().contains(q);
@@ -1183,7 +1189,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse updateSellerOrderStatus(UUID orderId, OrderStatusUpdateRequest request, UUID sellerId) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByPublicId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         boolean hasSellerItem = order.getOrderItems().stream()
@@ -1217,13 +1223,15 @@ public class OrderServiceImpl implements OrderService {
 
         LocalDateTime startOfMonth = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
         LocalDateTime startOfLastMonth = startOfMonth.minusMonths(1);
+        Instant startOfMonthI = startOfMonth.atZone(ZoneId.systemDefault()).toInstant();
+        Instant startOfLastMonthI = startOfLastMonth.atZone(ZoneId.systemDefault()).toInstant();
 
         List<Order> thisMonthOrders = paidSellerOrders.stream()
-                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startOfMonth))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startOfMonthI))
                 .collect(Collectors.toList());
 
         List<Order> lastMonthOrders = paidSellerOrders.stream()
-                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startOfLastMonth) && o.getCreatedAt().isBefore(startOfMonth))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startOfLastMonthI) && o.getCreatedAt().isBefore(startOfMonthI))
                 .collect(Collectors.toList());
 
         long totalOrders = allSellerOrders.size();
@@ -1287,10 +1295,11 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public SellerOrderDto.SellerOrderAnalytics getSellerOrderAnalytics(UUID sellerId, int days) {
         LocalDateTime startDate = LocalDateTime.now().minusDays(days);
+        Instant startDateI = startDate.atZone(ZoneId.systemDefault()).toInstant();
 
         List<Order> sellerOrders = orderRepository.findBySellerId(sellerId);
         List<Order> filteredOrders = sellerOrders.stream()
-                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startDate))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startDateI))
                 .filter(o -> o.getPaymentStatus() == ecommerce.modules.order.entity.PaymentStatus.PAID)
                 .collect(Collectors.toList());
 
@@ -1313,14 +1322,16 @@ public class OrderServiceImpl implements OrderService {
         for (int i = 0; i < days; i++) {
             LocalDateTime dayStart = LocalDateTime.now().minusDays(i).withHour(0).withMinute(0).withSecond(0);
             LocalDateTime dayEnd = dayStart.plusDays(1);
+            Instant dayStartI = dayStart.atZone(ZoneId.systemDefault()).toInstant();
+            Instant dayEndI = dayEnd.atZone(ZoneId.systemDefault()).toInstant();
 
             BigDecimal daySales = filteredOrders.stream()
-                    .filter(o -> o.getCreatedAt().isAfter(dayStart) && o.getCreatedAt().isBefore(dayEnd))
+                    .filter(o -> o.getCreatedAt().isAfter(dayStartI) && o.getCreatedAt().isBefore(dayEndI))
                     .map(Order::getTotalAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             long dayOrders = filteredOrders.stream()
-                    .filter(o -> o.getCreatedAt().isAfter(dayStart) && o.getCreatedAt().isBefore(dayEnd))
+                    .filter(o -> o.getCreatedAt().isAfter(dayStartI) && o.getCreatedAt().isBefore(dayEndI))
                     .count();
 
             dailySalesList.add(SellerOrderDto.DailySalesDto.builder()
@@ -1410,9 +1421,10 @@ public class OrderServiceImpl implements OrderService {
     /**
      * Calculates time ago string.
      */
-    private String calculateTimeAgo(LocalDateTime dateTime) {
-        if (dateTime == null) return "N/A";
+    private String calculateTimeAgo(Instant instant) {
+        if (instant == null) return "N/A";
 
+        LocalDateTime dateTime = instant.atZone(ZoneId.systemDefault()).toLocalDateTime();
         LocalDateTime now = LocalDateTime.now();
         long minutes = java.time.Duration.between(dateTime, now).toMinutes();
 
@@ -1443,15 +1455,17 @@ public class OrderServiceImpl implements OrderService {
         LocalDateTime fourteenDaysAgo = now.minusDays(14);
         LocalDateTime sixMonthsAgo = now.minusMonths(6);
         LocalDateTime oneYearAgo = now.minusYears(1);
+        Instant sevenDaysAgoI = sevenDaysAgo.atZone(ZoneId.systemDefault()).toInstant();
+        Instant fourteenDaysAgoI = fourteenDaysAgo.atZone(ZoneId.systemDefault()).toInstant();
 
         // Current period orders
         List<Order> currentPeriodOrders = paidOrders.stream()
-                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(sevenDaysAgo))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(sevenDaysAgoI))
                 .collect(Collectors.toList());
-        
+
         // Previous period orders (8-14 days ago)
         List<Order> previousPeriodOrders = paidOrders.stream()
-                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(fourteenDaysAgo) && o.getCreatedAt().isBefore(sevenDaysAgo))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(fourteenDaysAgoI) && o.getCreatedAt().isBefore(sevenDaysAgoI))
                 .collect(Collectors.toList());
 
         // Revenue calculations
@@ -1514,12 +1528,14 @@ public class OrderServiceImpl implements OrderService {
         for (int i = 6; i >= 0; i--) {
             LocalDateTime dayStart = now.minusDays(i).withHour(0).withMinute(0).withSecond(0);
             LocalDateTime dayEnd = dayStart.plusDays(1);
+            Instant dayStartI2 = dayStart.atZone(ZoneId.systemDefault()).toInstant();
+            Instant dayEndI2 = dayEnd.atZone(ZoneId.systemDefault()).toInstant();
             final int dayIndex = (now.getDayOfWeek().getValue() - i - 1 + 7) % 7;
-            
+
             List<Order> dayOrders = paidOrders.stream()
-                    .filter(o -> o.getCreatedAt() != null && 
-                            o.getCreatedAt().isAfter(dayStart) && 
-                            o.getCreatedAt().isBefore(dayEnd))
+                    .filter(o -> o.getCreatedAt() != null &&
+                            o.getCreatedAt().isAfter(dayStartI2) &&
+                            o.getCreatedAt().isBefore(dayEndI2))
                     .collect(Collectors.toList());
 
             dailyMetrics.add(ecommerce.modules.seller.dto.SellerAnalyticsDto.DailyMetric.builder()
@@ -1536,11 +1552,13 @@ public class OrderServiceImpl implements OrderService {
         for (int i = 5; i >= 0; i--) {
             LocalDateTime monthStart = now.minusMonths(i).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
             LocalDateTime monthEnd = monthStart.plusMonths(1);
-            
+            Instant monthStartI = monthStart.atZone(ZoneId.systemDefault()).toInstant();
+            Instant monthEndI = monthEnd.atZone(ZoneId.systemDefault()).toInstant();
+
             List<Order> monthOrders = paidOrders.stream()
-                    .filter(o -> o.getCreatedAt() != null && 
-                            o.getCreatedAt().isAfter(monthStart) && 
-                            o.getCreatedAt().isBefore(monthEnd))
+                    .filter(o -> o.getCreatedAt() != null &&
+                            o.getCreatedAt().isAfter(monthStartI) &&
+                            o.getCreatedAt().isBefore(monthEndI))
                     .collect(Collectors.toList());
 
             monthlyMetrics.add(ecommerce.modules.seller.dto.SellerAnalyticsDto.MonthlyMetric.builder()
@@ -1598,18 +1616,18 @@ public class OrderServiceImpl implements OrderService {
                     BigDecimal totalSpent = customerOrders.stream()
                             .map(Order::getTotalAmount)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    LocalDateTime lastOrder = customerOrders.stream()
+                    Instant lastOrder = customerOrders.stream()
                             .map(Order::getCreatedAt)
                             .filter(java.util.Objects::nonNull)
-                            .max(LocalDateTime::compareTo)
+                            .max(Instant::compareTo)
                             .orElse(null);
-                    
+
                     return ecommerce.modules.seller.dto.SellerAnalyticsDto.TopCustomerMetric.builder()
                             .customerId(entry.getKey().toString())
                             .customerName(customerOrders.get(0).getCustomer().getEmail())
                             .totalOrders((long) customerOrders.size())
                             .totalSpent(totalSpent)
-                            .lastOrder(lastOrder != null ? calculateTimeAgo(lastOrder) : "N/A")
+                            .lastOrder(calculateTimeAgo(lastOrder))
                             .build();
                 })
                 .sorted((a, b) -> b.getTotalSpent().compareTo(a.getTotalSpent()))
