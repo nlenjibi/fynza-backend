@@ -8,8 +8,10 @@ import ecommerce.common.event.user.UserRegisteredEvent;
 import ecommerce.common.exception.BadRequestException;
 import ecommerce.common.exception.DuplicateResourceException;
 import ecommerce.common.exception.InvalidTokenException;
+import ecommerce.common.security.TotpUtil;
 import ecommerce.modules.auth.dto.AuthResponse;
 import ecommerce.modules.auth.dto.LoginRequest;
+import ecommerce.modules.auth.dto.MfaSetupResponse;
 import ecommerce.modules.auth.dto.RegisterRequest;
 import ecommerce.modules.auth.dto.SessionResponse;
 import ecommerce.modules.auth.entity.Auth;
@@ -170,12 +172,28 @@ public class AuthServiceImpl implements AuthService {
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
+        securityEventLogger.logLoginAttempt(request.getEmail(), ip, extractUserAgent(req), true, AUTH_PROVIDER_PASSWORD, null);
+
+        if (Boolean.TRUE.equals(user.getMfaEnabled())) {
+            String challengeToken = generateSecureToken();
+            verificationTokenRepository.save(VerificationToken.builder()
+                    .userId(user.getId())
+                    .token(challengeToken)
+                    .tokenType(VerificationTokenType.MFA_CHALLENGE)
+                    .expiresAt(LocalDateTime.now().plusMinutes(5))
+                    .build());
+            log.info("MFA challenge issued for user: {}", user.getEmail());
+            return AuthResponse.builder()
+                    .mfaRequired(true)
+                    .mfaChallengeToken(challengeToken)
+                    .build();
+        }
+
         String accessToken = jwtTokenProvider.generateAccessToken(
                 user.getPublicId(), user.getEmail(), user.getRole().name(), AUTH_PROVIDER_PASSWORD);
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getPublicId());
 
         persistSession(user, accessToken, refreshToken);
-        securityEventLogger.logLoginAttempt(request.getEmail(), ip, extractUserAgent(req), true, AUTH_PROVIDER_PASSWORD, null);
 
         log.info("User logged in successfully: {}", user.getEmail());
         return buildAuthResponse(user, accessToken, refreshToken);
@@ -410,6 +428,101 @@ public class AuthServiceImpl implements AuthService {
         authRepository.invalidateAllUserSessions(userId, LocalDateTime.now());
 
         log.info("Password changed for user: {}", user.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public MfaSetupResponse setupMfa(UUID userId) {
+        User user = userRepository.findByPublicId(userId)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        if (Boolean.TRUE.equals(user.getMfaEnabled())) {
+            throw new BadRequestException("MFA is already enabled");
+        }
+
+        String secret = TotpUtil.generateSecret();
+        user.setMfaSecret(secret);
+        userRepository.save(user);
+
+        String qrUri = TotpUtil.generateQrUri("Fynza", user.getEmail(), secret);
+        log.info("MFA setup initiated for user: {}", user.getEmail());
+
+        return MfaSetupResponse.builder()
+                .secret(secret)
+                .qrCodeUri(qrUri)
+                .manualEntryCode(secret)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public void enableMfa(UUID userId, String totpCode) {
+        User user = userRepository.findByPublicId(userId)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        if (user.getMfaSecret() == null) {
+            throw new BadRequestException("MFA setup not initiated. Call /mfa/setup first.");
+        }
+
+        if (!TotpUtil.verify(user.getMfaSecret(), totpCode)) {
+            throw new BadRequestException("Invalid TOTP code");
+        }
+
+        user.setMfaEnabled(true);
+        userRepository.save(user);
+        log.info("MFA enabled for user: {}", user.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public void disableMfa(UUID userId, String totpCode) {
+        User user = userRepository.findByPublicId(userId)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        if (!Boolean.TRUE.equals(user.getMfaEnabled())) {
+            throw new BadRequestException("MFA is not enabled");
+        }
+
+        if (!TotpUtil.verify(user.getMfaSecret(), totpCode)) {
+            throw new BadRequestException("Invalid TOTP code");
+        }
+
+        user.setMfaEnabled(false);
+        user.setMfaSecret(null);
+        userRepository.save(user);
+        log.info("MFA disabled for user: {}", user.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse verifyMfa(String challengeToken, String totpCode) {
+        VerificationToken vt = verificationTokenRepository
+                .findByTokenAndTokenType(challengeToken, VerificationTokenType.MFA_CHALLENGE)
+                .orElseThrow(() -> new InvalidTokenException("Invalid or expired MFA challenge"));
+
+        if (!vt.isValid()) {
+            throw new InvalidTokenException("MFA challenge has expired or already been used");
+        }
+
+        User user = userRepository.findByPublicId(vt.getUserId())
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        if (!TotpUtil.verify(user.getMfaSecret(), totpCode)) {
+            throw new BadRequestException("Invalid TOTP code");
+        }
+
+        vt.setIsUsed(true);
+        vt.setUsedAt(LocalDateTime.now());
+        verificationTokenRepository.save(vt);
+
+        String accessToken = jwtTokenProvider.generateAccessToken(
+                user.getPublicId(), user.getEmail(), user.getRole().name(), AUTH_PROVIDER_PASSWORD);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getPublicId());
+
+        persistSession(user, accessToken, refreshToken);
+        log.info("MFA verified, tokens issued for user: {}", user.getEmail());
+
+        return buildAuthResponse(user, accessToken, refreshToken);
     }
 
     @Override

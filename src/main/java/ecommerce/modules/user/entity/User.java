@@ -104,6 +104,13 @@ public class User {
     @Column(name = "last_password_change")
     private LocalDateTime lastPasswordChange;
 
+    @Column(name = "mfa_enabled", nullable = false)
+    @Builder.Default
+    private Boolean mfaEnabled = false;
+
+    @Column(name = "mfa_secret", length = 64)
+    private String mfaSecret;
+
     @Column(name = "google_id")
     private String googleId;
 

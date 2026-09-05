@@ -2,6 +2,7 @@ package ecommerce.modules.auth.service;
 
 import ecommerce.modules.auth.dto.AuthResponse;
 import ecommerce.modules.auth.dto.LoginRequest;
+import ecommerce.modules.auth.dto.MfaSetupResponse;
 import ecommerce.modules.auth.dto.RegisterRequest;
 import ecommerce.modules.auth.dto.SessionResponse;
 import java.util.List;
@@ -36,4 +37,12 @@ public interface AuthService {
     void revokeSession(UUID userId, UUID sessionId);
 
     void revokeAllOtherSessions(UUID userId, String currentRefreshToken);
+
+    MfaSetupResponse setupMfa(UUID userId);
+
+    void enableMfa(UUID userId, String totpCode);
+
+    void disableMfa(UUID userId, String totpCode);
+
+    AuthResponse verifyMfa(String challengeToken, String totpCode);
 }
