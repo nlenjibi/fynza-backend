@@ -1,6 +1,7 @@
 package ecommerce.graphql.resolver.follow;
 
 import ecommerce.common.response.PaginatedResponse;
+import ecommerce.common.security.UserPrincipal;
 import ecommerce.graphql.dto.FollowedStoreConnection;
 import ecommerce.graphql.dto.FollowerPage;
 import ecommerce.graphql.input.FollowInput;
@@ -17,10 +18,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.ContextValue;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 
 import java.util.UUID;
@@ -39,10 +40,10 @@ public class FollowResolver {
     @QueryMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     public FollowedStoreConnection myFollowedStores(@Argument PageInput pagination,
-                                                     @ContextValue UUID userId) {
-        log.info("GQL myFollowedStores(user={})", userId);
+                                                    @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL myFollowedStores(user={})", principal.getId());
         Pageable pageable = toPageable(pagination);
-        Page<FollowedStoreResponse> page = followService.getFollowedStores(userId, pageable);
+        Page<FollowedStoreResponse> page = followService.getFollowedStores(principal.getId(), pageable);
         return FollowedStoreConnection.builder()
                 .content(page.getContent())
                 .pageInfo(PaginatedResponse.from(page))
@@ -52,16 +53,16 @@ public class FollowResolver {
     @QueryMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     public boolean isFollowingStore(@Argument UUID sellerId,
-                                     @ContextValue UUID userId) {
-        log.info("GQL isFollowingStore(user={}, seller={})", userId, sellerId);
-        return followService.isFollowing(userId, sellerId);
+                                    @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL isFollowingStore(user={}, seller={})", principal.getId(), sellerId);
+        return followService.isFollowing(principal.getId(), sellerId);
     }
 
     @QueryMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public FollowStatsResponse myFollowStats(@ContextValue UUID userId) {
-        log.info("GQL myFollowStats(user={})", userId);
-        return followService.getCustomerFollowStats(userId);
+    public FollowStatsResponse myFollowStats(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL myFollowStats(user={})", principal.getId());
+        return followService.getCustomerFollowStats(principal.getId());
     }
 
     // =========================================================================
@@ -71,10 +72,10 @@ public class FollowResolver {
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
     public FollowerPage myFollowers(@Argument PageInput pagination,
-                                     @ContextValue UUID sellerId) {
-        log.info("GQL myFollowers(seller={})", sellerId);
+                                    @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL myFollowers(seller={})", principal.getId());
         Pageable pageable = toPageable(pagination);
-        Page<FollowerResponse> page = followService.getFollowers(sellerId, pageable);
+        Page<FollowerResponse> page = followService.getFollowers(principal.getId(), pageable);
         return FollowerPage.builder()
                 .content(page.getContent())
                 .pageInfo(PaginatedResponse.from(page))
@@ -83,9 +84,9 @@ public class FollowResolver {
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public FollowStatsResponse sellerFollowerStats(@ContextValue UUID sellerId) {
-        log.info("GQL sellerFollowerStats(seller={})", sellerId);
-        return followService.getSellerFollowStats(sellerId);
+    public FollowStatsResponse sellerFollowerStats(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerFollowerStats(seller={})", principal.getId());
+        return followService.getSellerFollowStats(principal.getId());
     }
 
     // =========================================================================
@@ -106,18 +107,18 @@ public class FollowResolver {
     @MutationMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     public boolean followStore(@Argument FollowInput input,
-                                @ContextValue UUID userId) {
-        log.info("GQL followStore(user={}, seller={})", userId, input.getSellerId());
-        followService.followStore(userId, input.getSellerId());
+                               @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL followStore(user={}, seller={})", principal.getId(), input.getSellerId());
+        followService.followStore(principal.getId(), input.getSellerId());
         return true;
     }
 
     @MutationMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     public boolean unfollowStore(@Argument UUID sellerId,
-                                  @ContextValue UUID userId) {
-        log.info("GQL unfollowStore(user={}, seller={})", userId, sellerId);
-        followService.unfollowStore(userId, sellerId);
+                                 @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL unfollowStore(user={}, seller={})", principal.getId(), sellerId);
+        followService.unfollowStore(principal.getId(), sellerId);
         return true;
     }
 

@@ -1,9 +1,11 @@
 package ecommerce.graphql.resolver.user;
 
-import com.querydsl.core.types.Predicate;
+import ecommerce.common.security.UserPrincipal;
 import ecommerce.modules.user.dto.*;
-import ecommerce.modules.user.entity.UserPredicates;
+import ecommerce.modules.user.entity.User;
+import ecommerce.modules.user.spec.UserSpec;
 import ecommerce.modules.user.service.UserService;
+import org.springframework.data.jpa.domain.Specification;
 import ecommerce.modules.user.repository.CustomerProfileRepository;
 import ecommerce.modules.user.entity.CustomerProfile;
 import ecommerce.modules.order.repository.OrderRepository;
@@ -19,17 +21,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.ContextValue;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -54,9 +55,9 @@ public class UserResolver {
     }
 
     @QueryMapping
-    public UserDto currentUser(@ContextValue UUID userId) {
-        log.info("GQL currentUser(user={})", userId);
-        return userService.getUserById(userId).orElse(null);
+    public UserDto currentUser(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL currentUser(user={})", principal.getId());
+        return userService.getUserById(principal.getId()).orElse(null);
     }
 
     // =========================================================================
@@ -65,19 +66,12 @@ public class UserResolver {
 
     @QueryMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public UserResponceDto users(@Argument PageInput pagination,
-                                  @Argument UserFilterInput filter) {
+    public UserResponceDto users(@Argument PageInput pagination, @Argument UserFilterInput filter) {
         log.info("GQL users");
         Pageable pageable = toPageable(pagination);
-
-        Page<UserDto> userPage;
-        if (filter != null) {
-            Predicate predicate = buildPredicateFromFilter(filter);
-            userPage = userService.findUsersWithPredicate(predicate, pageable);
-        } else {
-            userPage = userService.getAllUsers(pageable);
-        }
-
+        Page<UserDto> userPage = filter != null
+                ? userService.findUsersWithPredicate(buildPredicateFromFilter(filter), pageable)
+                : userService.getAllUsers(pageable);
         return UserResponceDto.builder()
                 .content(userPage.getContent())
                 .pageInfo(PaginatedResponse.from(userPage))
@@ -90,14 +84,14 @@ public class UserResolver {
 
     @QueryMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public CustomerDashboardResponse customerDashboard(@ContextValue UUID userId) {
-        log.info("GQL customerDashboard(user={})", userId);
+    public CustomerDashboardResponse customerDashboard(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL customerDashboard(user={})", principal.getId());
+        UUID userId = principal.getId();
 
         CustomerProfile customerProfile = customerProfileRepository.findByUserId(userId).orElse(null);
-        long wishlistItems = wishlistItemRepository.countByUserId(userId);
-
-        List<Order> orders = orderRepository.findByCustomerId(userId, PageRequest.of(0, 10)).getContent();
-        long totalOrders = orderRepository.findByCustomerId(userId, PageRequest.of(0, Integer.MAX_VALUE)).getTotalElements();
+        long wishlistItems = wishlistItemRepository.countByUser_PublicId(userId);
+        List<Order> orders = orderRepository.findByCustomer_PublicId(userId, PageRequest.of(0, 10)).getContent();
+        long totalOrders = orderRepository.findByCustomer_PublicId(userId, PageRequest.of(0, Integer.MAX_VALUE)).getTotalElements();
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d, yyyy");
         List<CustomerDashboardResponse.RecentOrderDto> recentOrders = orders.stream()
@@ -134,9 +128,9 @@ public class UserResolver {
 
     @QueryMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public List<AddressDto> myAddresses(@ContextValue UUID userId) {
-        log.info("GQL myAddresses(user={})", userId);
-        return userService.getCustomerAddresses(userId);
+    public List<AddressDto> myAddresses(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL myAddresses(user={})", principal.getId());
+        return userService.getCustomerAddresses(principal.getId());
     }
 
     // =========================================================================
@@ -145,15 +139,12 @@ public class UserResolver {
 
     @QueryMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public LoyaltyRedemptionResponse loyaltyBalance(@ContextValue UUID userId) {
-        log.info("GQL loyaltyBalance(user={})", userId);
-
-        CustomerProfile customerProfile = customerProfileRepository.findByUserId(userId)
+    public LoyaltyRedemptionResponse loyaltyBalance(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL loyaltyBalance(user={})", principal.getId());
+        CustomerProfile customerProfile = customerProfileRepository.findByUserId(principal.getId())
                 .orElseThrow(() -> new RuntimeException("Customer profile not found"));
-
         int points = customerProfile.getLoyaltyPoints() != null ? customerProfile.getLoyaltyPoints() : 0;
         BigDecimal availableDiscount = BigDecimal.valueOf(points).multiply(BigDecimal.valueOf(0.10));
-
         return LoyaltyRedemptionResponse.builder()
                 .previousPoints(0)
                 .redeemedPoints(0)
@@ -171,8 +162,8 @@ public class UserResolver {
     @MutationMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     public UserDto updateCustomerProfile(@Argument CustomerProfileUpdateInput input,
-                                          @ContextValue UUID userId) {
-        log.info("GQL updateCustomerProfile(user={})", userId);
+                                         @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL updateCustomerProfile(user={})", principal.getId());
         UserDto request = UserDto.builder()
                 .email(input.getEmail())
                 .username(input.getUsername())
@@ -180,7 +171,7 @@ public class UserResolver {
                 .lastName(input.getLastName())
                 .phone(input.getPhone())
                 .build();
-        return userService.updateCustomerProfile(userId, request);
+        return userService.updateCustomerProfile(principal.getId(), request);
     }
 
     // =========================================================================
@@ -190,8 +181,8 @@ public class UserResolver {
     @MutationMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     public AddressDto addAddress(@Argument AddressInput input,
-                                  @ContextValue UUID userId) {
-        log.info("GQL addAddress(user={})", userId);
+                                 @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL addAddress(user={})", principal.getId());
         AddressRequest request = AddressRequest.builder()
                 .label(input.getLabel())
                 .type(input.getAddressType())
@@ -202,15 +193,15 @@ public class UserResolver {
                 .country(input.getCountry())
                 .isDefault(input.getIsDefault())
                 .build();
-        return userService.addCustomerAddress(userId, request);
+        return userService.addCustomerAddress(principal.getId(), request);
     }
 
     @MutationMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     public AddressDto updateAddress(@Argument UUID id,
-                                     @Argument AddressInput input,
-                                     @ContextValue UUID userId) {
-        log.info("GQL updateAddress(id={}, user={})", id, userId);
+                                    @Argument AddressInput input,
+                                    @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL updateAddress(id={}, user={})", id, principal.getId());
         AddressRequest request = AddressRequest.builder()
                 .label(input.getLabel())
                 .type(input.getAddressType())
@@ -221,15 +212,14 @@ public class UserResolver {
                 .country(input.getCountry())
                 .isDefault(input.getIsDefault())
                 .build();
-        return userService.updateCustomerAddress(userId, id, request);
+        return userService.updateCustomerAddress(principal.getId(), id, request);
     }
 
     @MutationMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public boolean deleteAddress(@Argument UUID id,
-                                  @ContextValue UUID userId) {
-        log.info("GQL deleteAddress(id={}, user={})", id, userId);
-        userService.deleteCustomerAddress(userId, id);
+    public boolean deleteAddress(@Argument UUID id, @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL deleteAddress(id={}, user={})", id, principal.getId());
+        userService.deleteCustomerAddress(principal.getId(), id);
         return true;
     }
 
@@ -240,21 +230,19 @@ public class UserResolver {
     @MutationMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     public LoyaltyRedemptionResponse redeemLoyaltyPoints(@Argument LoyaltyRedeemInput input,
-                                                          @ContextValue UUID userId) {
-        log.info("GQL redeemLoyaltyPoints(user={}, points={})", userId, input.getPointsToRedeem());
-
+                                                         @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL redeemLoyaltyPoints(user={}, points={})", principal.getId(), input.getPointsToRedeem());
+        UUID userId = principal.getId();
         CustomerProfile customerProfile = customerProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Customer profile not found"));
 
         Integer currentPoints = customerProfile.getLoyaltyPoints();
         int pointsToRedeem = input.getPointsToRedeem();
-
         if (currentPoints == null || currentPoints < 100 || pointsToRedeem < 100 || pointsToRedeem > currentPoints) {
             throw new RuntimeException("Insufficient loyalty points for redemption");
         }
 
         BigDecimal discountAmount = BigDecimal.valueOf(pointsToRedeem).multiply(BigDecimal.valueOf(0.10));
-
         customerProfile.setLoyaltyPoints(currentPoints - pointsToRedeem);
         customerProfileRepository.save(customerProfile);
 
@@ -295,16 +283,9 @@ public class UserResolver {
         return PageRequest.of(input.getPage(), input.getSize(), sort);
     }
 
-    private Predicate buildPredicateFromFilter(UserFilterInput filter) {
-        return UserPredicates.builder()
-                .withSearch(filter.getSearch())
-                .withRole(filter.getRole())
-                .withActive(filter.getActive())
-                .withEmailVerified(filter.getEmailVerified())
-                .withCreatedAfter(filter.getCreatedAfter())
-                .withCreatedBefore(filter.getCreatedBefore())
-                .withPhoneNumberContaining(filter.getPhoneNumber())
-                .withNameContaining(filter.getName())
-                .build();
+    private Specification<User> buildPredicateFromFilter(UserFilterInput filter) {
+        return Specification.where(UserSpec.emailOrNameContains(filter.getSearch()))
+                .and(filter.getRole() != null ? UserSpec.hasRole(filter.getRole()) : null)
+                .and(Boolean.TRUE.equals(filter.getActive()) ? UserSpec.isActive() : null);
     }
 }
