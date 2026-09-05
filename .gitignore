@@ -155,3 +155,5 @@ memory/
 .kilo/*
 .claude/
 .claude/*
+.claude/settings.json
+
