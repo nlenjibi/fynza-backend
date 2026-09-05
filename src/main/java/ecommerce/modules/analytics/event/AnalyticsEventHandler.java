@@ -31,8 +31,7 @@ public class AnalyticsEventHandler {
         log.debug("Analytics: ORDER_PLACED {}", event.orderId());
         analyticsService.recordEvent("ORDER_PLACED", event.orderId(), Map.of(
                 "customerId", event.customerId(),
-                "totalAmount", event.totalAmount(),
-                "itemCount",   event.itemCount()
+                "totalAmount", event.totalAmount()
         ));
         analyticsService.refreshAnalyticsCache();
     }
@@ -42,8 +41,7 @@ public class AnalyticsEventHandler {
     public void onOrderCancelled(OrderCancelledEvent event) {
         log.debug("Analytics: ORDER_CANCELLED {}", event.orderId());
         analyticsService.recordEvent("ORDER_CANCELLED", event.orderId(), Map.of(
-                "customerId", event.customerId(),
-                "reason",     event.reason()
+                "customerId", event.customerId()
         ));
     }
 

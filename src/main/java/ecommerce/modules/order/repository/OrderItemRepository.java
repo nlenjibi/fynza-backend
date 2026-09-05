@@ -41,10 +41,10 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
     long countTotalSoldByProduct(@Param("productId") Long productId);
 
     @Query("SELECT COUNT(oi) FROM OrderItem oi WHERE oi.product.seller.id = :sellerId")
-    long countByProductSellerId(@Param("sellerId") Long sellerId);
+    long countByProductSellerId(@Param("sellerId") UUID sellerId);
 
     @Query("SELECT COALESCE(SUM(oi.price * oi.quantity), 0) FROM OrderItem oi WHERE oi.product.seller.id = :sellerId AND oi.order.status IN ('DELIVERED', 'CONFIRMED')")
-    BigDecimal sumRevenueBySellerId(@Param("sellerId") Long sellerId);
+    BigDecimal sumRevenueBySellerId(@Param("sellerId") UUID sellerId);
 
     @Query("SELECT oi.product.seller.id, COUNT(oi) FROM OrderItem oi WHERE oi.order.status IN ('DELIVERED', 'CONFIRMED') GROUP BY oi.product.seller.id ORDER BY COUNT(oi) DESC")
     List<Object[]> findTopSellerIdsByOrderCount(org.springframework.data.domain.Pageable pageable);

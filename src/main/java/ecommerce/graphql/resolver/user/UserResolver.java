@@ -29,6 +29,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 
 import java.math.BigDecimal;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
@@ -105,7 +106,7 @@ public class UserResolver {
                 .map(order -> CustomerDashboardResponse.RecentOrderDto.builder()
                         .orderId(order.getId().toString())
                         .orderNumber(order.getOrderNumber())
-                        .orderDate(order.getCreatedAt() != null ? order.getCreatedAt().format(formatter) : "N/A")
+                        .orderDate(order.getCreatedAt() != null ? formatter.format(order.getCreatedAt().atZone(ZoneId.systemDefault())) : "N/A")
                         .status(order.getStatus().name())
                         .totalAmount(order.getTotalAmount())
                         .build())
