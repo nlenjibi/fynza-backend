@@ -110,7 +110,7 @@ public class InventoryServiceImpl implements InventoryService {
         log.debug("Checking stock for product: {}, quantity: {}", productId, quantity);
         
         return CompletableFuture.supplyAsync(() -> {
-            Product product = productRepository.findById(productId)
+            Product product = productRepository.findByPublicId(productId)
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + productId));
             
             boolean hasStock = product.getAvailableQuantity() >= quantity;
@@ -129,7 +129,7 @@ public class InventoryServiceImpl implements InventoryService {
         
         return CompletableFuture.supplyAsync(() -> {
             try {
-                Product product = productRepository.findById(productId)
+                Product product = productRepository.findByPublicId(productId)
                         .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + productId));
                 
                 if (product.getAvailableQuantity() < quantity) {
@@ -160,7 +160,7 @@ public class InventoryServiceImpl implements InventoryService {
         
         return CompletableFuture.supplyAsync(() -> {
             try {
-                Product product = productRepository.findById(productId)
+                Product product = productRepository.findByPublicId(productId)
                         .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + productId));
                 
                 product.reduceStock(quantity);
@@ -185,7 +185,7 @@ public class InventoryServiceImpl implements InventoryService {
         
         return CompletableFuture.supplyAsync(() -> {
             try {
-                Product product = productRepository.findById(productId)
+                Product product = productRepository.findByPublicId(productId)
                         .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + productId));
                 
                 product.addStock(quantity);
