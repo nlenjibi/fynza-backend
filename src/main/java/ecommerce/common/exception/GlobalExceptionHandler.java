@@ -1,5 +1,6 @@
 package ecommerce.common.exception;
 
+import ecommerce.common.audit.RateLimitingAspect;
 import ecommerce.common.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
