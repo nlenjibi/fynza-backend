@@ -15,6 +15,7 @@ import ecommerce.modules.review.event.ProductReviewSubmittedEvent;
 import ecommerce.modules.user.event.UserRegisteredEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -28,6 +29,9 @@ import java.util.Map;
 public class NotificationEventListener {
 
     private final NotificationService notificationService;
+
+    @Value("${app.frontend.url:http://localhost:3000}")
+    private String frontendUrl;
 
     @Async("notificationTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -185,6 +189,36 @@ public class NotificationEventListener {
             Map.of(
                 "firstName", event.firstName(),
                 "lastName", event.lastName()
+            )
+        );
+    }
+
+    @Async("notificationTaskExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onAuthUserVerificationRequired(ecommerce.common.event.user.UserRegisteredEvent event) {
+        log.debug("[NotificationEvent] USER_VERIFICATION_EMAIL userId={}", event.userId());
+        if (event.verificationToken() == null) return;
+        notificationService.sendToExternalRecipient(
+            NotificationType.USER_VERIFICATION_EMAIL,
+            event.email(),
+            Map.of(
+                "fullName", event.fullName(),
+                "verificationLink", frontendUrl + "/verify-email?token=" + event.verificationToken()
+            )
+        );
+    }
+
+    @Async("notificationTaskExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onPasswordResetRequested(ecommerce.common.event.user.PasswordResetRequestedEvent event) {
+        log.debug("[NotificationEvent] USER_PASSWORD_RESET_EMAIL userId={}", event.userId());
+        notificationService.sendToExternalRecipient(
+            NotificationType.USER_PASSWORD_RESET_EMAIL,
+            event.email(),
+            Map.of(
+                "fullName", event.fullName(),
+                "resetLink", frontendUrl + "/reset-password?token=" + event.resetToken(),
+                "expiryMinutes", String.valueOf(event.expiryMinutes())
             )
         );
     }
