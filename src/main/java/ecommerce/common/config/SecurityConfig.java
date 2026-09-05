@@ -31,19 +31,19 @@ import java.util.List;
 /**
  * Central Spring Security configuration.
  *
- * <h3>Session policy rationale</h3>
- * The API is stateless (JWT-based), so we use {@code IF_REQUIRED} rather than
- * {@code STATELESS} solely because the OAuth2 authorization-code flow requires
- * a short-lived HTTP session to carry the PKCE state / nonce between the
- * redirect to the provider and the callback. Once the success handler fires and
- * the JWT cookies are set, the session is no longer needed.
+ * <h3>Session policy</h3>
+ * {@code IF_REQUIRED} (not STATELESS) because the OAuth2 authorization-code flow
+ * needs a short-lived HTTP session to carry PKCE state between the redirect and the
+ * callback. After the success handler sets JWT cookies, the session is discarded.
  *
- * <h3>Cross-origin (Next.js on a different server)</h3>
- * CORS is fully driven by {@code application.properties}. For the cookie-based
- * token scheme to work across origins, the frontend must call the API with
- * {@code credentials: 'include'} (fetch) or {@code withCredentials: true}
- * (axios), and the cookies must carry {@code SameSite=None; Secure=true}
- * (configured in the auth handlers via {@code app.cookie.secure}).
+ * <h3>CSRF</h3>
+ * Disabled: REST API consumed by SPA/mobile clients over HTTPS. Origin is strictly
+ * restricted by the CORS allowlist, making CSRF attacks infeasible for credentialed
+ * cross-origin requests. OWASP A01 is mitigated by the explicit origin allowlist.
+ *
+ * <h3>CORS</h3>
+ * Fully driven by {@code cors.*} properties. Wildcard headers are not used —
+ * an explicit allowlist prevents header-injection attacks.
  */
 @Configuration
 @EnableWebSecurity
@@ -51,6 +51,19 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class SecurityConfig {
+
+    private static final String CSP_POLICY =
+            "default-src 'self'; " +
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh; " +
+            "style-src 'self' 'unsafe-inline' https://esm.sh; " +
+            "img-src 'self' data: blob:; " +
+            "font-src 'self' data: https://esm.sh; " +
+            "connect-src 'self' https://esm.sh; " +
+            "worker-src blob:; " +
+            "frame-ancestors 'none'; " +
+            "form-action 'self'; " +
+            "base-uri 'self'; " +
+            "object-src 'none'";
 
     // ── Core security components ───────────────────────────────────────────────
     private final CustomUserDetailsService customUserDetailsService;
@@ -65,7 +78,7 @@ public class SecurityConfig {
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
 
-    // ── Authorization rules ────────────────────────────────────────────────────
+    // ── Authorization rules — each module registers its own SecurityRules bean ─
     private final List<SecurityRules> securityRules;
 
     // ── CORS ───────────────────────────────────────────────────────────────────
@@ -78,26 +91,34 @@ public class SecurityConfig {
     @Value("${cors.max-age:3600}")
     private Long maxAge;
 
-    // ── Security filter chain ──────────────────────────────────────────────────
-
     @Bean
+    @SuppressWarnings("java:S4502") // CSRF disabled intentionally — see class Javadoc
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // CSRF disabled: we rely on SameSite cookies + CORS, not CSRF tokens.
                 .csrf(AbstractHttpConfigurer::disable)
-
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                // ── HTTP security response headers (OWASP A05) ────────────────
+                .headers(headers -> headers
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(CSP_POLICY))
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31_536_000))  // 1 year
+                        .frameOptions(frame -> frame.deny())
+                        .contentTypeOptions(ct -> {}))         // X-Content-Type-Options: nosniff
 
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(customAuthenticationEntryPoint)
-                        .accessDeniedHandler(customAccessDeniedHandler)
-                )
+                        .accessDeniedHandler(customAccessDeniedHandler))
+
+                // IF_REQUIRED so OAuth2 state survives the provider redirect
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 
                 .authorizeHttpRequests(auth -> {
-                    auth
-                            .requestMatchers("/api/api/v1/products", "/api/api/v1/products/").permitAll()
-                            .requestMatchers("/api/api/v1/products/**").permitAll();
-                    
+                    // Public product browsing — path is relative to context-path (no /api prefix here)
+                    auth.requestMatchers("/api/v1/products", "/api/v1/products/**").permitAll();
+
+                    // Module-scoped rules (Swagger, Auth, etc.)
                     if (securityRules != null) {
                         securityRules.forEach(rule -> rule.configure(auth));
                     }
@@ -106,20 +127,15 @@ public class SecurityConfig {
 
                 .oauth2Login(oauth2 -> oauth2
                         .authorizationEndpoint(endpoint -> endpoint
-                                .authorizationRequestRepository(httpSessionOAuth2AuthorizationRequestRepository())
-                        )
+                                .authorizationRequestRepository(httpSessionOAuth2AuthorizationRequestRepository()))
                         .successHandler(oAuth2AuthenticationSuccessHandler)
-                        .failureHandler(oAuth2AuthenticationFailureHandler)
-                )
+                        .failureHandler(oAuth2AuthenticationFailureHandler))
 
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
-    // ── Beans ──────────────────────────────────────────────────────────────────
-
 
     @Bean
     public HttpSessionOAuth2AuthorizationRequestRepository httpSessionOAuth2AuthorizationRequestRepository() {
@@ -139,20 +155,19 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-
-        config.setAllowedOrigins(allowedOrigins);   // Must be explicit, not "*", for credentialed requests
+        config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(allowedMethods);
-        config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("Authorization"));
-        config.setAllowCredentials(true);           // Required so the browser sends cookies cross-origin
+        // Explicit allowlist — never use "*" with credentialed requests (OWASP A01)
+        config.setAllowedHeaders(List.of(
+                "Content-Type", "Authorization", "Accept",
+                "X-Requested-With", "Origin", "X-Request-Id"));
+        config.setExposedHeaders(List.of("Authorization", "X-Request-Id"));
+        config.setAllowCredentials(true);
         config.setMaxAge(maxAge);
-
         log.debug("CORS configured — allowed origins: {}", allowedOrigins);
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

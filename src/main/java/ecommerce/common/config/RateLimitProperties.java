@@ -11,6 +11,14 @@ public class RateLimitProperties {
 
     private boolean enabled = true;
 
+    /**
+     * Set {@code true} only when the app runs behind a trusted reverse proxy
+     * (e.g. nginx, AWS ALB) that unconditionally overwrites X-Forwarded-For.
+     * Leave {@code false} (default) if clients can reach the app directly —
+     * otherwise rate limits can be bypassed by forging the header.
+     */
+    private boolean trustProxy = false;
+
     /** Login endpoint tier — stricter to defend against credential stuffing. */
     private Tier login = new Tier(5, 60);
 

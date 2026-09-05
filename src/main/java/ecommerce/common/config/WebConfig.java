@@ -5,51 +5,33 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
-import java.text.SimpleDateFormat;
-
+/**
+ * Primary Jackson {@link ObjectMapper} used for HTTP request/response serialization.
+ *
+ * <p>This mapper is intentionally separate from the Redis mapper in {@link RedisConfig}
+ * — the HTTP mapper must never carry {@code @class} type metadata in responses.
+ */
 @Configuration
-@Slf4j
 public class WebConfig {
 
     @Bean
     @Primary
     public ObjectMapper objectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-
-        // Register JavaTimeModule for LocalDateTime handling
-        mapper.registerModule(new JavaTimeModule());
-
-        // Reduce memory footprint - don't serialize null/empty fields
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
-
-        // Optimize date serialization
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        mapper.disable(SerializationFeature.WRITE_DURATIONS_AS_TIMESTAMPS);
-        
-        // Use ISO-8601 format
-        mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
-
-        // Reduce deserialization overhead
-        mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        mapper.disable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES);
-        mapper.disable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES);
-        
-        // Optimize for reading - use long for integers
-        mapper.enable(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS);
-        mapper.enable(DeserializationFeature.USE_LONG_FOR_INTS);
-        
-        // Buffer recycling for memory efficiency
-        mapper.configure(com.fasterxml.jackson.core.JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
-        mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.AUTO_CLOSE_SOURCE, false);
-
-        log.info("Jackson ObjectMapper configured for memory efficiency");
-        
-        return mapper;
+        return new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                // ISO-8601 dates ("2024-01-15T10:30:00Z"), not timestamps
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .disable(SerializationFeature.WRITE_DURATIONS_AS_TIMESTAMPS)
+                // Omit null fields — reduces payload, prevents leaking internal structure
+                .setSerializationInclusion(JsonInclude.Include.NON_NULL)
+                // Forward-compatible deserialization
+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .disable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+                // Integers from JSON number literals round-trip to Long, not Integer
+                .enable(DeserializationFeature.USE_LONG_FOR_INTS);
     }
 }
