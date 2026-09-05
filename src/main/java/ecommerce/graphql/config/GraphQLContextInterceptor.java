@@ -40,6 +40,7 @@ public class GraphQLContextInterceptor implements WebGraphQlInterceptor {
                     builder.graphQLContext(ctx -> {
                         ctx.put("userId",        principal.getId());
                         ctx.put("userRole",      principal.getRole().name());
+                        ctx.put("userEmail",     principal.getEmail());
                         ctx.put("userPrincipal", principal);
                     }).build()
             );
