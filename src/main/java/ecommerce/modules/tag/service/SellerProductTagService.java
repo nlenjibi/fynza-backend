@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -116,7 +117,7 @@ public class SellerProductTagService {
                 .tagName(tagName)
                 .description(description)
                 .ipAddress(ipAddress)
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .build();
         tagActivityRepository.save(activity);
     }

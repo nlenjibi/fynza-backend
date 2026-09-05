@@ -53,5 +53,6 @@ public class QueryPerformanceAspect {
         public long getSlowCount() { return slowCount.get(); }
         public double getAverageTime() { return count.get() == 0 ? 0 : totalTime / count.get(); }
         public long getMaxTime() { return maxTime; }
+        public long getMinTime() { return maxTime; }
     }
 }

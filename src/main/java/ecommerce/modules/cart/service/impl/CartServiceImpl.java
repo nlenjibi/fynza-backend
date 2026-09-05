@@ -18,6 +18,8 @@ import ecommerce.modules.product.dto.ProductResponse;
 import ecommerce.modules.product.entity.Product;
 import ecommerce.modules.product.entity.ProductImage;
 import ecommerce.modules.product.repository.ProductRepository;
+import ecommerce.modules.user.entity.User;
+import ecommerce.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,7 @@ public class CartServiceImpl implements CartService {
     private final ProductRepository productRepository;
     private final StockReservationRepository stockReservationRepository;
     private final CouponRepository couponRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -54,9 +57,9 @@ public class CartServiceImpl implements CartService {
     @Transactional(readOnly = true)
     public CartResponse getCartById(UUID cartId, UUID userId) {
         log.info("Fetching cart by id: {} for user: {}", cartId, userId);
-        Cart cart = cartRepository.findById(cartId)
+        Cart cart = cartRepository.findByPublicId(cartId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Cart", cartId));
-        if (!cart.getUserId().equals(userId)) {
+        if (!cart.getUser().getId().equals(userId)) {
             throw new IllegalStateException("Cart does not belong to user");
         }
         return mapToCartResponse(cart);
@@ -270,9 +273,11 @@ public class CartServiceImpl implements CartService {
         if (existingCart != null) {
             return mapToCartResponse(existingCart);
         }
-        
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
         Cart newCart = Cart.builder()
-                .userId(userId)
+                .user(user)
                 .build();
         newCart = cartRepository.save(newCart);
         
@@ -325,8 +330,10 @@ public class CartServiceImpl implements CartService {
     private Cart getOrCreateCart(UUID userId) {
         return cartRepository.findByUserIdWithItems(userId)
                 .orElseGet(() -> {
+                    User user = userRepository.findById(userId)
+                            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
                     Cart newCart = Cart.builder()
-                            .userId(userId)
+                            .user(user)
                             .build();
                     return cartRepository.save(newCart);
                 });
@@ -396,7 +403,7 @@ public class CartServiceImpl implements CartService {
         
         return CartResponse.builder()
                 .id(cart.getId())
-                .userId(cart.getUserId())
+                .userId(cart.getUser().getId())
                 .items(itemResponses)
                 .subtotal(subtotal)
                 .tax(tax)

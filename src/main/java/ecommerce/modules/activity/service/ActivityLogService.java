@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -72,7 +73,7 @@ public class ActivityLogService {
                 .entityType(entityType)
                 .entityId(entityId)
                 .ipAddress(ipAddress)
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .build();
         activityLogRepository.save(activityLog);
     }
@@ -93,7 +94,7 @@ public class ActivityLogService {
                 .entityType(entityType)
                 .entityId(entityId)
                 .ipAddress(ipAddress)
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .build();
         return activityLogRepository.save(activityLog);
     }
@@ -194,7 +195,7 @@ public class ActivityLogService {
                     .status(status)
                     .description(details)
                     .ipAddress(ipAddress)
-                    .createdAt(LocalDateTime.now())
+                    .createdAt(Instant.now())
                     .build();
             activityLogRepository.save(auditLog);
             log.debug("Audit action logged: {} by user {}", action, username);
@@ -218,7 +219,7 @@ public class ActivityLogService {
                 .status(status)
                 .description(details)
                 .ipAddress(ipAddress)
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .build();
         return activityLogRepository.save(auditLog);
     }
@@ -283,7 +284,7 @@ public class ActivityLogService {
                 .oldValue(oldValue)
                 .newValue(newValue)
                 .ipAddress(ipAddress)
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .build();
         orderActivityLogRepository.save(activity);
     }
@@ -350,7 +351,7 @@ public class ActivityLogService {
                 .paymentMethod(paymentMethod)
                 .status(status)
                 .ipAddress(ipAddress)
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .build();
         paymentActivityLogRepository.save(activity);
         log.debug("Payment activity logged: {} for user: {}", type, userId);

@@ -25,7 +25,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     Optional<Order> findByPublicId(UUID publicId);
 
     @EntityGraph(attributePaths = {"customer", "orderItems", "orderItems.product", "shippingAddress", "billingAddress"})
-    Page<Order> findByCustomerId(Long customerId, Pageable pageable);
+    Page<Order> findByCustomerId(UUID customerId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"customer", "orderItems", "orderItems.product", "shippingAddress", "billingAddress"})
     Page<Order> findByCustomer_PublicId(UUID customerPublicId, Pageable pageable);
@@ -45,7 +45,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     boolean existsByCustomerIdAndProductId(@Param("customerId") Long customerId, @Param("productId") Long productId);
 
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.orderItems oi LEFT JOIN FETCH oi.product WHERE o.customer.id IN :customerIds")
-    List<Order> findByCustomerIdIn(@Param("customerIds") List<Long> customerIds);
+    List<Order> findByCustomerIdIn(@Param("customerIds") List<UUID> customerIds);
 
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.orderItems oi LEFT JOIN FETCH oi.product WHERE o.id IN :orderIds")
     List<Order> findByIdIn(@Param("orderIds") List<Long> orderIds);
@@ -58,11 +58,11 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     @Query("SELECT DISTINCT o FROM Order o JOIN o.orderItems oi JOIN oi.product p WHERE p.seller.id = :sellerId")
     @EntityGraph(attributePaths = {"customer", "orderItems", "orderItems.product", "shippingAddress", "billingAddress"})
-    Page<Order> findBySellerId(@Param("sellerId") Long sellerId, Pageable pageable);
+    Page<Order> findBySellerId(@Param("sellerId") UUID sellerId, Pageable pageable);
 
     @Query("SELECT DISTINCT o FROM Order o JOIN o.orderItems oi JOIN oi.product p WHERE p.seller.id = :sellerId")
     @EntityGraph(attributePaths = {"customer", "orderItems", "orderItems.product", "shippingAddress", "billingAddress"})
-    List<Order> findBySellerId(@Param("sellerId") Long sellerId);
+    List<Order> findBySellerId(@Param("sellerId") UUID sellerId);
 
     @Query("SELECT o.status, COUNT(o) FROM Order o WHERE o.isActive = true GROUP BY o.status")
     List<Object[]> countByStatusGrouped();
@@ -78,7 +78,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
            "AND (:maxAmount IS NULL OR o.totalAmount <= :maxAmount) " +
            "AND (:query IS NULL OR LOWER(o.orderNumber) LIKE LOWER(CONCAT('%', :query, '%')))")
     Page<Order> searchOrders(
-            @Param("customerId") Long customerId,
+            @Param("customerId") UUID customerId,
             @Param("status") String status,
             @Param("dateFrom") LocalDateTime dateFrom,
             @Param("dateTo") LocalDateTime dateTo,
@@ -97,7 +97,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
            "OR LOWER(o.customer.firstName) LIKE LOWER(CONCAT('%', :query, '%')) " +
            "OR LOWER(o.customer.lastName) LIKE LOWER(CONCAT('%', :query, '%')))")
     Page<Order> findSellerOrdersWithFilters(
-            @Param("sellerId") Long sellerId,
+            @Param("sellerId") UUID sellerId,
             @Param("status") OrderStatus status,
             @Param("dateFrom") LocalDateTime dateFrom,
             @Param("dateTo") LocalDateTime dateTo,
@@ -107,7 +107,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     @Query("SELECT o.status, COUNT(o) FROM Order o JOIN o.orderItems oi JOIN oi.product p " +
            "WHERE p.seller.id = :sellerId GROUP BY o.status")
-    List<Object[]> countSellerOrdersByStatusGrouped(@Param("sellerId") Long sellerId);
+    List<Object[]> countSellerOrdersByStatusGrouped(@Param("sellerId") UUID sellerId);
 
     @Query("SELECT o FROM Order o WHERE o.isActive = true " +
            "AND (:status IS NULL OR o.status = :status) " +
