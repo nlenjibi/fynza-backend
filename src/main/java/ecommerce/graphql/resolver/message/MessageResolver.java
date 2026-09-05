@@ -3,6 +3,7 @@ package ecommerce.graphql.resolver.message;
 import ecommerce.common.enums.MessageStatus;
 import ecommerce.common.enums.MessageType;
 import ecommerce.common.response.PaginatedResponse;
+import ecommerce.common.security.UserPrincipal;
 import ecommerce.graphql.dto.ConversationConnection;
 import ecommerce.graphql.input.CreateConversationInput;
 import ecommerce.graphql.input.PageInput;
@@ -20,10 +21,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.ContextValue;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 
 import java.util.UUID;
@@ -41,14 +42,13 @@ public class MessageResolver {
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public ConversationConnection myConversations(
-            @Argument PageInput pagination,
-            @Argument String status,
-            @ContextValue UUID userId) {
-        log.info("GQL myConversations(user={})", userId);
+    public ConversationConnection myConversations(@Argument PageInput pagination,
+                                                  @Argument String status,
+                                                  @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL myConversations(user={})", principal.getId());
         Pageable pageable = toPageable(pagination);
         MessageStatus msgStatus = status != null ? MessageStatus.valueOf(status.toUpperCase()) : null;
-        Page<ConversationResponse> page = messageService.getUserConversations(userId, msgStatus, null, null, pageable);
+        Page<ConversationResponse> page = messageService.getUserConversations(principal.getId(), msgStatus, null, null, pageable);
         return ConversationConnection.builder()
                 .content(page.getContent())
                 .pageInfo(PaginatedResponse.from(page))
@@ -57,16 +57,17 @@ public class MessageResolver {
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public ConversationResponse conversation(@Argument UUID id, @ContextValue UUID userId) {
-        log.info("GQL conversation(id={}, user={})", id, userId);
-        return messageService.getConversation(id, userId);
+    public ConversationResponse conversation(@Argument UUID id,
+                                             @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL conversation(id={}, user={})", id, principal.getId());
+        return messageService.getConversation(id, principal.getId());
     }
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public ConversationStatsResponse myMessageStats(@ContextValue UUID userId) {
-        log.info("GQL myMessageStats(user={})", userId);
-        return messageService.getUserStats(userId);
+    public ConversationStatsResponse myMessageStats(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL myMessageStats(user={})", principal.getId());
+        return messageService.getUserStats(principal.getId());
     }
 
     // =========================================================================
@@ -75,10 +76,9 @@ public class MessageResolver {
 
     @QueryMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ConversationConnection adminConversations(
-            @Argument PageInput pagination,
-            @Argument String status,
-            @Argument String search) {
+    public ConversationConnection adminConversations(@Argument PageInput pagination,
+                                                     @Argument String status,
+                                                     @Argument String search) {
         log.info("GQL adminConversations");
         Pageable pageable = toPageable(pagination);
         MessageStatus msgStatus = status != null ? MessageStatus.valueOf(status.toUpperCase()) : null;
@@ -102,10 +102,9 @@ public class MessageResolver {
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
-    public ConversationResponse createConversation(
-            @Argument CreateConversationInput input,
-            @ContextValue UUID userId) {
-        log.info("GQL createConversation(user={})", userId);
+    public ConversationResponse createConversation(@Argument CreateConversationInput input,
+                                                   @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL createConversation(user={})", principal.getId());
         CreateConversationRequest request = CreateConversationRequest.builder()
                 .subject(input.getSubject())
                 .category(input.getCategory())
@@ -113,20 +112,19 @@ public class MessageResolver {
                 .orderId(input.getOrderId())
                 .productId(input.getProductId())
                 .build();
-        return messageService.createConversation(userId, MessageType.CUSTOMER, request);
+        return messageService.createConversation(principal.getId(), MessageType.CUSTOMER, request);
     }
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
-    public ConversationResponse replyToConversation(
-            @Argument UUID id,
-            @Argument SendMessageInput input,
-            @ContextValue UUID userId) {
-        log.info("GQL replyToConversation(id={}, user={})", id, userId);
+    public ConversationResponse replyToConversation(@Argument UUID id,
+                                                    @Argument SendMessageInput input,
+                                                    @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL replyToConversation(id={}, user={})", id, principal.getId());
         SendMessageRequest request = SendMessageRequest.builder()
                 .content(input.getContent())
                 .build();
-        return messageService.replyToConversation(id, userId, MessageType.CUSTOMER, userId.toString(), request);
+        return messageService.replyToConversation(id, principal.getId(), MessageType.CUSTOMER, principal.getId().toString(), request);
     }
 
     @MutationMapping
@@ -139,16 +137,18 @@ public class MessageResolver {
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
-    public ConversationResponse toggleConversationStar(@Argument UUID id, @ContextValue UUID userId) {
-        log.info("GQL toggleConversationStar(id={}, user={})", id, userId);
-        return messageService.toggleStar(id, userId);
+    public ConversationResponse toggleConversationStar(@Argument UUID id,
+                                                       @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL toggleConversationStar(id={}, user={})", id, principal.getId());
+        return messageService.toggleStar(id, principal.getId());
     }
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
-    public boolean deleteConversation(@Argument UUID id, @ContextValue UUID userId) {
-        log.info("GQL deleteConversation(id={}, user={})", id, userId);
-        messageService.deleteConversation(id, userId);
+    public boolean deleteConversation(@Argument UUID id,
+                                      @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL deleteConversation(id={}, user={})", id, principal.getId());
+        messageService.deleteConversation(id, principal.getId());
         return true;
     }
 
@@ -158,9 +158,8 @@ public class MessageResolver {
 
     @MutationMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ConversationResponse adminReplyToConversation(
-            @Argument UUID id,
-            @Argument SendMessageInput input) {
+    public ConversationResponse adminReplyToConversation(@Argument UUID id,
+                                                         @Argument SendMessageInput input) {
         log.info("GQL adminReplyToConversation(id={})", id);
         SendMessageRequest request = SendMessageRequest.builder()
                 .content(input.getContent())
@@ -171,9 +170,7 @@ public class MessageResolver {
 
     @MutationMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ConversationResponse updateConversationStatus(
-            @Argument UUID id,
-            @Argument String status) {
+    public ConversationResponse updateConversationStatus(@Argument UUID id, @Argument String status) {
         log.info("GQL updateConversationStatus(id={}, status={})", id, status);
         return messageService.updateConversationStatus(id, MessageStatus.valueOf(status.toUpperCase()));
     }

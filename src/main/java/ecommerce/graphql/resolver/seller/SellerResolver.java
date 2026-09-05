@@ -2,6 +2,7 @@ package ecommerce.graphql.resolver.seller;
 
 import ecommerce.common.enums.ProductStatus;
 import ecommerce.common.response.PaginatedResponse;
+import ecommerce.common.security.UserPrincipal;
 import ecommerce.graphql.dto.ProductDto;
 import ecommerce.graphql.dto.ReviewResponseDto;
 import ecommerce.graphql.input.*;
@@ -27,17 +28,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.ContextValue;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Controller
 @RequiredArgsConstructor
@@ -55,9 +53,9 @@ public class SellerResolver {
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public SellerDashboardResponse sellerDashboard(@ContextValue UUID sellerId) {
-        log.info("GQL sellerDashboard(seller={})", sellerId);
-        return sellerService.getDashboard(sellerId);
+    public SellerDashboardResponse sellerDashboard(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerDashboard(seller={})", principal.getId());
+        return sellerService.getDashboard(principal.getId());
     }
 
     // =========================================================================
@@ -66,18 +64,17 @@ public class SellerResolver {
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public SellerAnalyticsDto sellerAnalytics(@ContextValue UUID sellerId) {
-        log.info("GQL sellerAnalytics(seller={})", sellerId);
-        return sellerService.getSellerAnalytics(sellerId);
+    public SellerAnalyticsDto sellerAnalytics(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerAnalytics(seller={})", principal.getId());
+        return sellerService.getSellerAnalytics(principal.getId());
     }
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public SellerAnalyticsResponse sellerSalesAnalytics(
-            @Argument int days,
-            @ContextValue UUID sellerId) {
-        log.info("GQL sellerSalesAnalytics(seller={}, days={})", sellerId, days);
-        return sellerService.getSalesAnalytics(sellerId, days);
+    public SellerAnalyticsResponse sellerSalesAnalytics(@Argument int days,
+                                                        @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerSalesAnalytics(seller={}, days={})", principal.getId(), days);
+        return sellerService.getSalesAnalytics(principal.getId(), days);
     }
 
     // =========================================================================
@@ -86,30 +83,23 @@ public class SellerResolver {
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public ProductDto sellerProducts(
-            @Argument PageInput pagination,
-            @Argument SellerProductFilterInput filter,
-            @ContextValue UUID sellerId) {
-        log.info("GQL sellerProducts(seller={})", sellerId);
+    public ProductDto sellerProducts(@Argument PageInput pagination,
+                                     @Argument SellerProductFilterInput filter,
+                                     @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerProducts(seller={})", principal.getId());
         Pageable pageable = toPageable(pagination);
 
         ProductStatus status = null;
         UUID categoryId = null;
         String search = null;
-
         if (filter != null) {
-            if (filter.getStatus() != null) {
-                status = ProductStatus.valueOf(filter.getStatus().toUpperCase());
-            }
+            if (filter.getStatus() != null) status = ProductStatus.valueOf(filter.getStatus().toUpperCase());
             categoryId = filter.getCategoryId();
             search = filter.getSearch();
         }
 
-        Page<ProductResponse> page = productService.findBySellerId(sellerId, status, categoryId, search, pageable);
-        return ProductDto.builder()
-                .content(page.getContent())
-                .pageInfo(PaginatedResponse.from(page))
-                .build();
+        Page<ProductResponse> page = productService.findBySellerId(principal.getId(), status, categoryId, search, pageable);
+        return ProductDto.builder().content(page.getContent()).pageInfo(PaginatedResponse.from(page)).build();
     }
 
     // =========================================================================
@@ -118,9 +108,9 @@ public class SellerResolver {
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public StoreResponse sellerStore(@ContextValue UUID sellerId) {
-        log.info("GQL sellerStore(seller={})", sellerId);
-        return sellerService.getStore(sellerId);
+    public StoreResponse sellerStore(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerStore(seller={})", principal.getId());
+        return sellerService.getStore(principal.getId());
     }
 
     // =========================================================================
@@ -129,23 +119,18 @@ public class SellerResolver {
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public ReviewResponseDto sellerReviews(
-            @Argument PageInput pagination,
-            @ContextValue UUID sellerId) {
-        log.info("GQL sellerReviews(seller={})", sellerId);
-        Pageable pageable = toPageable(pagination);
-        Page<ReviewResponse> page = sellerService.getSellerReviews(sellerId, pageable);
-        return ReviewResponseDto.builder()
-                .content(page.getContent())
-                .pageInfo(PaginatedResponse.from(page))
-                .build();
+    public ReviewResponseDto sellerReviews(@Argument PageInput pagination,
+                                           @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerReviews(seller={})", principal.getId());
+        Page<ReviewResponse> page = sellerService.getSellerReviews(principal.getId(), toPageable(pagination));
+        return ReviewResponseDto.builder().content(page.getContent()).pageInfo(PaginatedResponse.from(page)).build();
     }
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public ReviewStatsResponse sellerReviewStats(@ContextValue UUID sellerId) {
-        log.info("GQL sellerReviewStats(seller={})", sellerId);
-        return reviewService.getSellerReviewStats(sellerId);
+    public ReviewStatsResponse sellerReviewStats(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerReviewStats(seller={})", principal.getId());
+        return reviewService.getSellerReviewStats(principal.getId());
     }
 
     // =========================================================================
@@ -165,30 +150,30 @@ public class SellerResolver {
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public SellerPaymentSettingsResponse sellerPaymentSettings(@ContextValue UUID sellerId) {
-        log.info("GQL sellerPaymentSettings(seller={})", sellerId);
-        return sellerService.getPaymentSettings(sellerId);
+    public SellerPaymentSettingsResponse sellerPaymentSettings(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerPaymentSettings(seller={})", principal.getId());
+        return sellerService.getPaymentSettings(principal.getId());
     }
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public SellerShippingSettingsResponse sellerShippingSettings(@ContextValue UUID sellerId) {
-        log.info("GQL sellerShippingSettings(seller={})", sellerId);
-        return sellerService.getShippingSettings(sellerId);
+    public SellerShippingSettingsResponse sellerShippingSettings(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerShippingSettings(seller={})", principal.getId());
+        return sellerService.getShippingSettings(principal.getId());
     }
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public List<ShippingZoneResponse> sellerShippingZones(@ContextValue UUID sellerId) {
-        log.info("GQL sellerShippingZones(seller={})", sellerId);
-        return sellerService.getShippingZones(sellerId);
+    public List<ShippingZoneResponse> sellerShippingZones(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerShippingZones(seller={})", principal.getId());
+        return sellerService.getShippingZones(principal.getId());
     }
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public SellerNotificationSettingsResponse sellerNotificationSettings(@ContextValue UUID sellerId) {
-        log.info("GQL sellerNotificationSettings(seller={})", sellerId);
-        return sellerService.getNotificationSettings(sellerId);
+    public SellerNotificationSettingsResponse sellerNotificationSettings(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerNotificationSettings(seller={})", principal.getId());
+        return sellerService.getNotificationSettings(principal.getId());
     }
 
     // =========================================================================
@@ -197,10 +182,9 @@ public class SellerResolver {
 
     @MutationMapping
     @PreAuthorize("hasRole('SELLER')")
-    public ProductResponse createSellerProduct(
-            @Argument SellerProductCreateInput input,
-            @ContextValue UUID sellerId) {
-        log.info("GQL createSellerProduct(seller={})", sellerId);
+    public ProductResponse createSellerProduct(@Argument SellerProductCreateInput input,
+                                               @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL createSellerProduct(seller={})", principal.getId());
         CreateProductRequest request = CreateProductRequest.builder()
                 .name(input.getName())
                 .description(input.getDescription())
@@ -212,24 +196,19 @@ public class SellerResolver {
                 .stock(input.getStock())
                 .images(input.getImages())
                 .build();
-        return productService.create(request, sellerId);
+        return productService.create(request, principal.getId());
     }
 
     @MutationMapping
     @PreAuthorize("hasRole('SELLER')")
-    public ProductResponse updateSellerProduct(
-            @Argument UUID id,
-            @Argument SellerProductUpdateInput input,
-            @ContextValue UUID sellerId) {
-        log.info("GQL updateSellerProduct(id={}, seller={})", id, sellerId);
-
+    public ProductResponse updateSellerProduct(@Argument UUID id,
+                                               @Argument SellerProductUpdateInput input,
+                                               @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL updateSellerProduct(id={}, seller={})", id, principal.getId());
         ProductResponse existing = productService.findById(id);
         boolean isOwner = existing.getSeller() != null &&
-                existing.getSeller().getId().toString().equals(sellerId.toString());
-        if (!isOwner) {
-            throw new RuntimeException("You are not authorized to update this product");
-        }
-
+                existing.getSeller().getId().toString().equals(principal.getId().toString());
+        if (!isOwner) throw new RuntimeException("You are not authorized to update this product");
         UpdateProductRequest request = UpdateProductRequest.builder()
                 .name(input.getName())
                 .description(input.getDescription())
@@ -246,28 +225,24 @@ public class SellerResolver {
 
     @MutationMapping
     @PreAuthorize("hasRole('SELLER')")
-    public boolean deleteSellerProduct(@Argument UUID id, @ContextValue UUID sellerId) {
-        log.info("GQL deleteSellerProduct(id={}, seller={})", id, sellerId);
-
+    public boolean deleteSellerProduct(@Argument UUID id,
+                                       @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL deleteSellerProduct(id={}, seller={})", id, principal.getId());
         ProductResponse existing = productService.findById(id);
         boolean isOwner = existing.getSeller() != null &&
-                existing.getSeller().getId().toString().equals(sellerId.toString());
-        if (!isOwner) {
-            throw new RuntimeException("You are not authorized to delete this product");
-        }
-
+                existing.getSeller().getId().toString().equals(principal.getId().toString());
+        if (!isOwner) throw new RuntimeException("You are not authorized to delete this product");
         productService.delete(id);
         return true;
     }
 
     @MutationMapping
     @PreAuthorize("hasRole('SELLER')")
-    public boolean assignProductTags(
-            @Argument UUID id,
-            @Argument List<String> tags,
-            @ContextValue UUID sellerId) {
-        log.info("GQL assignProductTags(id={}, seller={})", id, sellerId);
-        sellerService.assignTagsToProduct(id, tags, sellerId);
+    public boolean assignProductTags(@Argument UUID id,
+                                     @Argument List<String> tags,
+                                     @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL assignProductTags(id={}, seller={})", id, principal.getId());
+        sellerService.assignTagsToProduct(id, tags, principal.getId());
         return true;
     }
 
@@ -277,10 +252,9 @@ public class SellerResolver {
 
     @MutationMapping
     @PreAuthorize("hasRole('SELLER')")
-    public StoreResponse updateSellerStore(
-            @Argument SellerStoreUpdateInput input,
-            @ContextValue UUID sellerId) {
-        log.info("GQL updateSellerStore(seller={})", sellerId);
+    public StoreResponse updateSellerStore(@Argument SellerStoreUpdateInput input,
+                                           @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL updateSellerStore(seller={})", principal.getId());
         UpdateStoreRequest request = UpdateStoreRequest.builder()
                 .storeName(input.getStoreName())
                 .storeDescription(input.getStoreDescription())
@@ -298,7 +272,7 @@ public class SellerResolver {
                 .businessRegistration(input.getBusinessRegistration())
                 .bankName(input.getBankName())
                 .build();
-        return sellerService.updateStore(sellerId, request);
+        return sellerService.updateStore(principal.getId(), request);
     }
 
     // =========================================================================
@@ -307,12 +281,11 @@ public class SellerResolver {
 
     @MutationMapping
     @PreAuthorize("hasRole('SELLER')")
-    public ReviewResponse sellerReplyToReview(
-            @Argument UUID reviewId,
-            @Argument SellerReplyInput input,
-            @ContextValue UUID sellerId) {
-        log.info("GQL sellerReplyToReview(review={}, seller={})", reviewId, sellerId);
-        return reviewService.sellerReply(reviewId, sellerId, input.getReply());
+    public ReviewResponse sellerReplyToReview(@Argument UUID reviewId,
+                                              @Argument SellerReplyInput input,
+                                              @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerReplyToReview(review={}, seller={})", reviewId, principal.getId());
+        return reviewService.sellerReply(reviewId, principal.getId(), input.getReply());
     }
 
     // =========================================================================
@@ -323,8 +296,8 @@ public class SellerResolver {
     @PreAuthorize("hasRole('SELLER')")
     public SellerPaymentSettingsResponse updateSellerPaymentSettings(
             @Argument SellerPaymentSettingsInput input,
-            @ContextValue UUID sellerId) {
-        log.info("GQL updateSellerPaymentSettings(seller={})", sellerId);
+            @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL updateSellerPaymentSettings(seller={})", principal.getId());
         SellerPaymentSettingsRequest request = SellerPaymentSettingsRequest.builder()
                 .bankName(input.getBankName())
                 .accountHolderName(input.getAccountHolderName())
@@ -332,27 +305,26 @@ public class SellerResolver {
                 .branch(input.getBranch())
                 .payoutSchedule(ecommerce.common.enums.PayoutSchedule.valueOf(input.getPayoutSchedule()))
                 .build();
-        return sellerService.updatePaymentSettings(sellerId, request);
+        return sellerService.updatePaymentSettings(principal.getId(), request);
     }
 
     @MutationMapping
     @PreAuthorize("hasRole('SELLER')")
     public SellerShippingSettingsResponse updateSellerShippingSettings(
             @Argument SellerShippingSettingsInput input,
-            @ContextValue UUID sellerId) {
-        log.info("GQL updateSellerShippingSettings(seller={})", sellerId);
+            @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL updateSellerShippingSettings(seller={})", principal.getId());
         SellerShippingSettingsRequest request = SellerShippingSettingsRequest.builder()
                 .returnPolicy(input.getReturnPolicy())
                 .build();
-        return sellerService.updateShippingSettings(sellerId, request);
+        return sellerService.updateShippingSettings(principal.getId(), request);
     }
 
     @MutationMapping
     @PreAuthorize("hasRole('SELLER')")
-    public ShippingZoneResponse createSellerShippingZone(
-            @Argument ShippingZoneInput input,
-            @ContextValue UUID sellerId) {
-        log.info("GQL createSellerShippingZone(seller={})", sellerId);
+    public ShippingZoneResponse createSellerShippingZone(@Argument ShippingZoneInput input,
+                                                         @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL createSellerShippingZone(seller={})", principal.getId());
         ShippingZoneRequest request = ShippingZoneRequest.builder()
                 .zoneName(input.getZoneName())
                 .zoneDescription(input.getZoneDescription())
@@ -362,16 +334,15 @@ public class SellerResolver {
                 .freeShippingMin(input.getFreeShippingMin())
                 .estimatedDays(input.getEstimatedDays())
                 .build();
-        return sellerService.createShippingZone(sellerId, request);
+        return sellerService.createShippingZone(principal.getId(), request);
     }
 
     @MutationMapping
     @PreAuthorize("hasRole('SELLER')")
-    public ShippingZoneResponse updateSellerShippingZone(
-            @Argument UUID zoneId,
-            @Argument ShippingZoneInput input,
-            @ContextValue UUID sellerId) {
-        log.info("GQL updateSellerShippingZone(zone={}, seller={})", zoneId, sellerId);
+    public ShippingZoneResponse updateSellerShippingZone(@Argument UUID zoneId,
+                                                         @Argument ShippingZoneInput input,
+                                                         @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL updateSellerShippingZone(zone={}, seller={})", zoneId, principal.getId());
         ShippingZoneRequest request = ShippingZoneRequest.builder()
                 .zoneName(input.getZoneName())
                 .zoneDescription(input.getZoneDescription())
@@ -381,16 +352,15 @@ public class SellerResolver {
                 .freeShippingMin(input.getFreeShippingMin())
                 .estimatedDays(input.getEstimatedDays())
                 .build();
-        return sellerService.updateShippingZone(sellerId, zoneId, request);
+        return sellerService.updateShippingZone(principal.getId(), zoneId, request);
     }
 
     @MutationMapping
     @PreAuthorize("hasRole('SELLER')")
-    public boolean deleteSellerShippingZone(
-            @Argument UUID zoneId,
-            @ContextValue UUID sellerId) {
-        log.info("GQL deleteSellerShippingZone(zone={}, seller={})", zoneId, sellerId);
-        sellerService.deleteShippingZone(sellerId, zoneId);
+    public boolean deleteSellerShippingZone(@Argument UUID zoneId,
+                                            @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL deleteSellerShippingZone(zone={}, seller={})", zoneId, principal.getId());
+        sellerService.deleteShippingZone(principal.getId(), zoneId);
         return true;
     }
 
@@ -398,8 +368,8 @@ public class SellerResolver {
     @PreAuthorize("hasRole('SELLER')")
     public SellerNotificationSettingsResponse updateSellerNotificationSettings(
             @Argument SellerNotificationSettingsInput input,
-            @ContextValue UUID sellerId) {
-        log.info("GQL updateSellerNotificationSettings(seller={})", sellerId);
+            @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL updateSellerNotificationSettings(seller={})", principal.getId());
         SellerNotificationSettingsRequest request = SellerNotificationSettingsRequest.builder()
                 .newOrders(input.getNewOrders())
                 .orderUpdates(input.getOrderUpdates())
@@ -409,7 +379,7 @@ public class SellerResolver {
                 .refundRequests(input.getRefundRequests())
                 .promotionalEmails(input.getPromotionalEmails())
                 .build();
-        return sellerService.updateNotificationSettings(sellerId, request);
+        return sellerService.updateNotificationSettings(principal.getId(), request);
     }
 
     // =========================================================================
