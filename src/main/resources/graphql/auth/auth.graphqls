@@ -1,20 +1,24 @@
 # =============================================================================
 # Auth GraphQL Schema
-# Covers: Login, Register, Token refresh, Logout
-# All mutations are public (no @PreAuthorize needed at the HTTP level).
-# Logout requires an authenticated session.
+# Covers: Login · Register · Token refresh · Logout
+#         Email verification · Password recovery · Change password
+#         Session management · MFA (TOTP) · Social / OAuth2 accounts
 # =============================================================================
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Response Types
+# Output Types
 # ─────────────────────────────────────────────────────────────────────────────
 
 type AuthPayload {
-    accessToken: String!
-    refreshToken: String!
-    tokenType:   String!
-    expiresIn:   Long!
-    user:        AuthUser!
+    accessToken:       String
+    refreshToken:      String
+    tokenType:         String
+    expiresIn:         Long
+    user:              AuthUser
+    # Present when credentials are correct but MFA is required.
+    # Real tokens are null until verifyMfa succeeds.
+    mfaRequired:       Boolean!
+    mfaChallengeToken: String
 }
 
 type AuthUser {
@@ -24,6 +28,30 @@ type AuthUser {
     firstName: String!
     lastName:  String!
     role:      String!
+}
+
+type SessionInfo {
+    sessionId:      ID!
+    deviceName:     String
+    ipAddress:      String
+    createdAt:      Instant!
+    lastActivityAt: DateTime
+    expiresAt:      DateTime!
+    current:        Boolean!
+}
+
+type MfaSetupPayload {
+    secret:          String!
+    qrCodeUri:       String!
+    manualEntryCode: String!
+}
+
+type LinkedAccount {
+    provider:    String!
+    displayName: String
+    email:       String
+    avatarUrl:   String
+    linkedAt:    Instant!
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -48,15 +76,104 @@ input RefreshTokenInput {
     refreshToken: String!
 }
 
+input VerifyEmailInput {
+    token: String!
+}
+
+input ResendVerificationInput {
+    email: String!
+}
+
+input ForgotPasswordInput {
+    email: String!
+}
+
+input ResetPasswordInput {
+    token:           String!
+    newPassword:     String!
+    confirmPassword: String!
+}
+
+input ChangePasswordInput {
+    currentPassword: String!
+    newPassword:     String!
+    confirmPassword: String!
+}
+
+input MfaEnableInput {
+    totpCode: String!
+}
+
+input MfaDisableInput {
+    totpCode: String!
+}
+
+input MfaVerifyInput {
+    challengeToken: String!
+    totpCode:       String!
+}
+
+input RevokeSessionInput {
+    sessionId: ID!
+}
+
+input RevokeOtherSessionsInput {
+    refreshToken: String!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Queries  (authenticated)
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Query {
+    # All active sessions for the authenticated user.
+    # Pass currentRefreshToken to mark which entry is the current device.
+    activeSessions(currentRefreshToken: String): [SessionInfo!]!
+
+    # OAuth2 providers linked to the authenticated account.
+    linkedAccounts: [LinkedAccount!]!
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Mutations
 # ─────────────────────────────────────────────────────────────────────────────
 
 extend type Mutation {
-    login(input: LoginInput!): AuthPayload!
-    register(input: RegisterInput!): AuthPayload!
-    refreshToken(input: RefreshTokenInput!): AuthPayload!
 
-    # Requires an authenticated session — pass refresh token to revoke it.
+    # ── Core auth ─────────────────────────────────────────────────────────────
+    register(input: RegisterInput!): AuthPayload!
+    login(input: LoginInput!): AuthPayload!
+    refreshToken(input: RefreshTokenInput!): AuthPayload!
+    # Pass refreshToken to revoke the specific session.
     logout(input: RefreshTokenInput!): Boolean!
+
+    # ── Email verification ─────────────────────────────────────────────────────
+    verifyEmail(input: VerifyEmailInput!): Boolean!
+    resendVerification(input: ResendVerificationInput!): Boolean!
+
+    # ── Password recovery ──────────────────────────────────────────────────────
+    # Always returns true — never reveals whether the email exists.
+    forgotPassword(input: ForgotPasswordInput!): Boolean!
+    resetPassword(input: ResetPasswordInput!): Boolean!
+    # Authenticated. Invalidates all active sessions on success.
+    changePassword(input: ChangePasswordInput!): Boolean!
+
+    # ── Session management  (authenticated) ────────────────────────────────────
+    revokeSession(input: RevokeSessionInput!): Boolean!
+    revokeOtherSessions(input: RevokeOtherSessionsInput!): Boolean!
+
+    # ── MFA — TOTP, Google Authenticator compatible  (authenticated) ───────────
+    # Step 1: generate secret + QR code. MFA is NOT active yet.
+    setupMfa: MfaSetupPayload!
+    # Step 2: confirm with first code to activate MFA.
+    enableMfa(input: MfaEnableInput!): Boolean!
+    # Requires a valid TOTP code to prevent accidental disabling.
+    disableMfa(input: MfaDisableInput!): Boolean!
+    # Public — exchange an MFA challenge token + TOTP for real JWT tokens.
+    verifyMfa(input: MfaVerifyInput!): AuthPayload!
+
+    # ── Social / OAuth2 accounts  (authenticated) ──────────────────────────────
+    # provider: "google" | "github" | "facebook"
+    # Fails when only one provider is linked and no password login exists.
+    unlinkSocialAccount(provider: String!): Boolean!
 }
