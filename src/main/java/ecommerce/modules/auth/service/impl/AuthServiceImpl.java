@@ -369,7 +369,7 @@ public class AuthServiceImpl implements AuthService {
 
             eventPublisher.publish(new PasswordResetRequestedEvent(
                     user.getId(), user.getEmail(), user.getFirstName() + " " + user.getLastName(),
-                    token, tokenProperties.getPasswordResetMinutes()));
+                    token, (int) tokenProperties.getPasswordResetMinutes()));
 
             log.info("Password reset requested for user: {}", email);
         });

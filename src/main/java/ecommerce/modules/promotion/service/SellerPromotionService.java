@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -48,7 +49,7 @@ public class SellerPromotionService {
         
         promotion = promotionRepository.save(promotion);
         
-        logActivity(sellerId, promotion.getId(), SellerPromotionActivity.ActivityType.PROMOTION_CREATED,
+        logActivity(sellerId, promotion.getPublicId(), SellerPromotionActivity.ActivityType.PROMOTION_CREATED,
                 name, discountValue, "Promotion created", ipAddress);
         
         return mapToDto(promotion);
@@ -56,7 +57,7 @@ public class SellerPromotionService {
 
     @Transactional
     public void deletePromotion(UUID sellerId, UUID promotionId, String ipAddress) {
-        SellerPromotion promotion = promotionRepository.findById(promotionId)
+        SellerPromotion promotion = promotionRepository.findByPublicId(promotionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Promotion not found"));
         
         promotion.setIsActive(false);
@@ -68,7 +69,7 @@ public class SellerPromotionService {
 
     @Transactional
     public void applyDiscount(UUID sellerId, UUID promotionId, BigDecimal orderAmount, String ipAddress) {
-        SellerPromotion promotion = promotionRepository.findById(promotionId)
+        SellerPromotion promotion = promotionRepository.findByPublicId(promotionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Promotion not found"));
         
         promotion.setUsageCount(promotion.getUsageCount() + 1);
@@ -103,7 +104,7 @@ public class SellerPromotionService {
                 .discountValue(value)
                 .description(description)
                 .ipAddress(ipAddress)
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .build();
         activityRepository.save(activity);
         log.debug("Seller promotion activity logged: {} for promotion: {}", type, name);

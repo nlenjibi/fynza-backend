@@ -11,10 +11,13 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface SellerPromotionRepository extends JpaRepository<SellerPromotion, Long> {
+
+    Optional<SellerPromotion> findByPublicId(UUID publicId);
 
     Page<SellerPromotion> findBySellerIdOrderByCreatedAtDesc(UUID sellerId, Pageable pageable);
 

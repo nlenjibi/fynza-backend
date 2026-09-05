@@ -18,6 +18,8 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
 
     default Optional<Cart> findByUserId(UUID userId) { return findByUser_Id(userId); }
 
+    Optional<Cart> findByPublicId(UUID publicId);
+
     @Query("SELECT c FROM Cart c LEFT JOIN FETCH c.items WHERE c.user.id = :userId")
     Optional<Cart> findByUserPublicIdWithItems(@Param("userId") UUID userId);
 

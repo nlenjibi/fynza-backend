@@ -18,7 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -49,10 +51,12 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     public BigDecimal getRevenueForPeriod(LocalDateTime start, LocalDateTime end) {
+        Instant startI = start.atZone(ZoneId.systemDefault()).toInstant();
+        Instant endI   = end.atZone(ZoneId.systemDefault()).toInstant();
         return orderRepository.findAll().stream()
                 .filter(o -> o.getCreatedAt() != null
-                          && !o.getCreatedAt().isBefore(start)
-                          && !o.getCreatedAt().isAfter(end))
+                          && !o.getCreatedAt().isBefore(startI)
+                          && !o.getCreatedAt().isAfter(endI))
                 .filter(o -> o.getStatus() == OrderStatus.DELIVERED || o.getStatus() == OrderStatus.CONFIRMED)
                 .map(Order::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -65,10 +69,12 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     public long getOrderCountForPeriod(LocalDateTime start, LocalDateTime end) {
+        Instant startI = start.atZone(ZoneId.systemDefault()).toInstant();
+        Instant endI   = end.atZone(ZoneId.systemDefault()).toInstant();
         return orderRepository.findAll().stream()
                 .filter(o -> o.getCreatedAt() != null
-                          && !o.getCreatedAt().isBefore(start)
-                          && !o.getCreatedAt().isAfter(end))
+                          && !o.getCreatedAt().isBefore(startI)
+                          && !o.getCreatedAt().isAfter(endI))
                 .count();
     }
 
@@ -95,15 +101,15 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         List<TrendData> trends = new ArrayList<>();
         LocalDateTime cursor = start;
         while (!cursor.isAfter(end)) {
-            final LocalDateTime from = cursor;
-            final LocalDateTime to = cursor.plusDays(1);
+            final Instant from = cursor.atZone(ZoneId.systemDefault()).toInstant();
+            final Instant to   = cursor.plusDays(1).atZone(ZoneId.systemDefault()).toInstant();
             long count = orders.stream()
                     .filter(o -> o.getCreatedAt() != null
                               && !o.getCreatedAt().isBefore(from)
                               && o.getCreatedAt().isBefore(to))
                     .count();
             trends.add(new TrendData(cursor, count, BigDecimal.ZERO));
-            cursor = to;
+            cursor = cursor.plusDays(1);
         }
         return trends;
     }
@@ -114,8 +120,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         List<TrendData> trends = new ArrayList<>();
         LocalDateTime cursor = start;
         while (!cursor.isAfter(end)) {
-            final LocalDateTime from = cursor;
-            final LocalDateTime to = cursor.plusDays(1);
+            final Instant from = cursor.atZone(ZoneId.systemDefault()).toInstant();
+            final Instant to   = cursor.plusDays(1).atZone(ZoneId.systemDefault()).toInstant();
             BigDecimal value = orders.stream()
                     .filter(o -> o.getCreatedAt() != null
                               && !o.getCreatedAt().isBefore(from)
@@ -124,7 +130,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                     .map(Order::getTotalAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             trends.add(new TrendData(cursor, 0, value));
-            cursor = to;
+            cursor = cursor.plusDays(1);
         }
         return trends;
     }

@@ -56,7 +56,7 @@ public class AuditLogExportServiceImpl implements AuditLogExportService {
 
         return outputStream -> {
             Writer writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
-            CSVFormat format = CSVFormat.DEFAULT.builder().setHeader(CSV_HEADERS).get();
+            CSVFormat format = CSVFormat.DEFAULT.builder().setHeader(CSV_HEADERS).build();
 
             try (CSVPrinter printer = new CSVPrinter(writer, format)) {
                 Instant cursorOccurredAt = null;
