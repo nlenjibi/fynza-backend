@@ -1,5 +1,6 @@
 package ecommerce.modules.auth.service.impl;
 
+import ecommerce.common.config.TokenProperties;
 import ecommerce.common.enums.Role;
 import ecommerce.common.enums.UserStatus;
 import ecommerce.common.event.FynzaEventPublisher;
@@ -34,7 +35,6 @@ import ecommerce.modules.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,16 +65,12 @@ public class AuthServiceImpl implements AuthService {
     private final VerificationTokenRepository verificationTokenRepository;
     private final LinkedIdentityRepository linkedIdentityRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TokenProperties tokenProperties;
     private final JwtTokenProvider jwtTokenProvider;
     private final LoginAttemptService loginAttemptService;
     private final SecurityEventLogger securityEventLogger;
     private final FynzaEventPublisher eventPublisher;
 
-    @Value("${jwt.access-token.expiration:900000}")
-    private Long accessTokenExpiration;
-
-    @Value("${jwt.refresh-token.expiration:604800000}")
-    private Long refreshTokenExpiration;
 
     @Override
     @Transactional
@@ -129,7 +125,7 @@ public class AuthServiceImpl implements AuthService {
                 .userId(user.getId())
                 .token(verificationToken)
                 .tokenType(VerificationTokenType.EMAIL_VERIFICATION)
-                .expiresAt(LocalDateTime.now().plusHours(24))
+                .expiresAt(LocalDateTime.now().plusHours(tokenProperties.getEmailVerificationHours()))
                 .build());
 
         eventPublisher.publish(new UserRegisteredEvent(
@@ -183,7 +179,7 @@ public class AuthServiceImpl implements AuthService {
                     .userId(user.getId())
                     .token(challengeToken)
                     .tokenType(VerificationTokenType.MFA_CHALLENGE)
-                    .expiresAt(LocalDateTime.now().plusMinutes(5))
+                    .expiresAt(LocalDateTime.now().plusMinutes(tokenProperties.getMfaChallengeMinutes()))
                     .build());
             log.info("MFA challenge issued for user: {}", user.getEmail());
             return AuthResponse.builder()
@@ -293,7 +289,7 @@ public class AuthServiceImpl implements AuthService {
                 .user(user)
                 .refreshToken(refreshToken)
                 .accessToken(accessToken)
-                .expiresAt(LocalDateTime.now().plusSeconds(refreshTokenExpiration / 1000))
+                .expiresAt(LocalDateTime.now().plusSeconds(tokenProperties.refreshMillis() / 1000))
                 .lastActivityAt(LocalDateTime.now())
                 .ipAddress(extractIp(request))
                 .userAgent(extractUserAgent(request))
@@ -347,7 +343,7 @@ public class AuthServiceImpl implements AuthService {
                 .userId(user.getId())
                 .token(token)
                 .tokenType(VerificationTokenType.EMAIL_VERIFICATION)
-                .expiresAt(LocalDateTime.now().plusHours(24))
+                .expiresAt(LocalDateTime.now().plusHours(tokenProperties.getEmailVerificationHours()))
                 .build());
 
         eventPublisher.publish(new UserRegisteredEvent(
@@ -368,12 +364,12 @@ public class AuthServiceImpl implements AuthService {
                     .userId(user.getId())
                     .token(token)
                     .tokenType(VerificationTokenType.PASSWORD_RESET)
-                    .expiresAt(LocalDateTime.now().plusMinutes(15))
+                    .expiresAt(LocalDateTime.now().plusMinutes(tokenProperties.getPasswordResetMinutes()))
                     .build());
 
             eventPublisher.publish(new PasswordResetRequestedEvent(
                     user.getId(), user.getEmail(), user.getFirstName() + " " + user.getLastName(),
-                    token, 15));
+                    token, tokenProperties.getPasswordResetMinutes()));
 
             log.info("Password reset requested for user: {}", email);
         });
@@ -616,7 +612,7 @@ public class AuthServiceImpl implements AuthService {
                 .user(user)
                 .refreshToken(refreshToken)
                 .accessToken(accessToken)
-                .expiresAt(LocalDateTime.now().plusSeconds(refreshTokenExpiration / 1000))
+                .expiresAt(LocalDateTime.now().plusSeconds(tokenProperties.refreshMillis() / 1000))
                 .lastActivityAt(LocalDateTime.now())
                 .ipAddress(extractIp(req))
                 .userAgent(extractUserAgent(req))
@@ -634,7 +630,7 @@ public class AuthServiceImpl implements AuthService {
                 .role(user.getRole().name())
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
-                .expiresIn(accessTokenExpiration / 1000)
+                .expiresIn(tokenProperties.accessMillis() / 1000)
                 .build();
     }
 
