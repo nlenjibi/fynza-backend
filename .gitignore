@@ -46,3 +46,112 @@ audit_report.md
 architecture.md
 commits.md
 schema.md
+# Created by https://www.toptal.com/developers/gitignore/api/java
+# Edit at https://www.toptal.com/developers/gitignore?templates=java
+
+### Java ###
+# Compiled class file
+*.class
+
+# Log file
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files #
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+replay_pid*
+
+# End of https://www.toptal.com/developers/gitignore/api/java
+
+HELP.md
+CLAUDE.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+# Local environment files
+.env
+.env.*
+docker-compose.dev.yml
+
+
+# Keys and secrets
+src/main/resources/keys/
+
+tasks/
+.claude/
+docs/
+
+
+resources/keys/
+pr-descriptions/
+.git-rewrite
+test_output.log
+compile_output.txt
+test_run.txt
+test_full.log
+compile_check.log
+compile_check.log
+test_full.log
+final-docs/
+backend-docs/
+api contract/
+CLAUDE.md
+memory/
+/logs/
+/jar
+
+
+.kilo/
+.kilo/*
+
+# Config blob fetched by scripts/smoke-image.sh; removed by its own trap,
+# but a hard-killed build can leave one behind.
+.smoke-env-*
+.kilo/
+.kilo/*
+.claude/
+.claude/*
