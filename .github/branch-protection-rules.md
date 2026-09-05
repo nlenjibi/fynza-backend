@@ -1,136 +1,92 @@
 # GitHub Branch Protection Rules
 
-This document outlines the branch protection rules that must be configured in GitHub for this repository.
-
-## Configuration Steps
-
-1. Go to **Settings** → **Branches**
-2. Click **Add rule** for each branch pattern below
-3. Configure the settings as specified
+Configure these rules under **Settings → Branches → Add rule**.
 
 ---
 
-## Development Branch (`dev`)
+## `develop` branch
 
-**Branch name pattern:** `dev`
+| Setting | Value |
+|---|---|
+| Require a pull request before merging | ✅ |
+| Required approvals | **1** |
+| Dismiss stale reviews on new commits | ✅ |
+| Require review from code owners | — |
+| Require status checks to pass | ✅ |
+| Require branches to be up to date | ✅ |
+| Require conversation resolution | ✅ |
+| Include administrators | ✅ |
 
-### Required Settings:
-- ✅ **Require a pull request before merging**
-  - Require approvals: **1**
-  - Dismiss stale pull request approvals when new commits are pushed: ✓
-  - Require review from code owners: ✗
-
-- ✅ **Require status checks to pass before merging**
-  - Require branches to be up to date before merging: ✓
-  - Status checks that must pass:
-    - `backend-ci`
-    - `frontend-ci`
-    - `docker-build`
-
-- ✅ **Require conversation resolution before merging**
-
-- ✅ **Include administrators** (enforce for admins too)
+**Required status checks:**
+- `CI Complete`
 
 ---
 
-## Production Branch (`main`)
+## `main` branch
 
-**Branch name pattern:** `main`
+| Setting | Value |
+|---|---|
+| Require a pull request before merging | ✅ |
+| Required approvals | **2** |
+| Dismiss stale reviews on new commits | ✅ |
+| Require review from code owners | ✅ |
+| Require status checks to pass | ✅ |
+| Require branches to be up to date | ✅ |
+| Require conversation resolution | ✅ |
+| Require signed commits | ✅ |
+| Include administrators | ✅ |
+| Restrict who can push | ✅ (release automation only) |
 
-### Required Settings:
-- ✅ **Require a pull request before merging**
-  - Require approvals: **2**
-  - Dismiss stale pull request approvals when new commits are pushed: ✓
-  - Require review from code owners: ✓
-
-- ✅ **Require status checks to pass before merging**
-  - Require branches to be up to date before merging: ✓
-  - Status checks that must pass:
-    - `backend-ci`
-    - `frontend-ci`
-    - `docker-build`
-
-- ✅ **Require conversation resolution before merging**
-
-- ✅ **Require signed commits**
-
-- ✅ **Include administrators** (enforce for admins too)
-
-- ✅ **Restrict who can push to matching branches**
-  - Allow specified actors to bypass required pull requests: (leave empty or specify release automation)
+**Required status checks:**
+- `CI Complete`
 
 ---
 
-## Feature Branches (`feature/*`)
+## `feature/**` and `fix/**` branches
 
-**Branch name pattern:** `feature/*`
+| Setting | Value |
+|---|---|
+| Require a pull request before merging | ✅ |
+| Required approvals | **1** |
+| Dismiss stale reviews on new commits | ✅ |
+| Require status checks to pass | ✅ |
+| Require branches to be up to date | ✅ |
 
-### Required Settings:
-- ✅ **Require a pull request before merging**
-  - Require approvals: **1**
-  - Dismiss stale pull request approvals when new commits are pushed: ✓
-
-- ✅ **Require status checks to pass before merging**
-  - Require branches to be up to date before merging: ✓
-  - Status checks that must pass:
-    - `backend-ci`
-    - `frontend-ci`
-    - `docker-build`
+**Required status checks:**
+- `CI Complete`
 
 ---
 
-## Bug Fix Branches (`fix/*`)
+## Required GitHub Secrets
 
-**Branch name pattern:** `fix/*`
+Configure under **Settings → Secrets and variables → Actions**.
 
-### Required Settings:
-- ✅ **Require a pull request before merging**
-  - Require approvals: **1**
-  - Dismiss stale pull request approvals when new commits are pushed: ✓
-
-- ✅ **Require status checks to pass before merging**
-  - Require branches to be up to date before merging: ✓
-  - Status checks that must pass:
-    - `backend-ci`
-    - `frontend-ci`
-    - `docker-build`
+| Secret | Purpose |
+|---|---|
+| `GITLEAKS_LICENSE` | Gitleaks secret scanning (required for private org repos) |
 
 ---
 
-## GitHub Secrets Required
+## How the gate works
 
-Configure these secrets in **Settings** → **Secrets and variables** → **Actions**:
+The single `CI Complete` status check aggregates every required job in the pipeline.
+Branch protection only needs to watch one check name — the gate job fails the entire
+pipeline if any required upstream job fails or is cancelled.
 
-| Secret Name | Description | Example |
-|---|---|---|
-| `VERCEL_TOKEN` | Vercel authentication token | `vercel_...` |
-| `VERCEL_ORG_ID` | Vercel organization ID | `team_...` |
-| `VERCEL_PROJECT_ID` | Vercel project ID | `prj_...` |
+Jobs that are **skipped** for a given event type (e.g. `dependency-review` on push,
+`sbom`/`provenance`/`sign-image` on PRs) are treated as acceptable by the gate and
+do not block the merge.
 
 ---
 
-## Workflow
+## Branch flow
 
 ```
-feature/auth → PR to dev → 1 approval + CI pass → merge to dev
-                                                        ↓
-                                                   Deploy preview
-                                                        ↓
-                                                   PR to main
-                                                        ↓
-                                            2 approvals + CI pass
-                                                        ↓
-                                                   Merge to main
-                                                        ↓
-                                            Deploy to production
+feature/auth → PR → develop  (1 approval + CI Complete)
+                        ↓
+                    PR → main  (2 approvals + CI Complete)
+                                    ↓
+                             Trusted immutable artifact
+                                    ↓
+                              CD / Deployment (separate pipeline)
 ```
-
----
-
-## Notes
-
-- All status checks must pass before merging
-- Branches must be up-to-date with the target branch
-- Stale approvals are dismissed when new commits are pushed
-- Administrators are subject to the same rules
-- Production deployments require 2 approvals for extra safety
