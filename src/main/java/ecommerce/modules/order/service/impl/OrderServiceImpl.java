@@ -1059,7 +1059,7 @@ public class OrderServiceImpl implements OrderService {
                 .paymentStatus(order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null)
                 .trackingNumber(order.getTrackingNumber())
                 .estimatedDelivery(order.getEstimatedDelivery())
-                .createdAt(order.getCreatedAt())
+                .createdAt(order.getCreatedAt() != null ? order.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 
@@ -1756,16 +1756,19 @@ public class OrderServiceImpl implements OrderService {
                 .filter(o -> o.getPaymentStatus() == ecommerce.modules.order.entity.PaymentStatus.PAID)
                 .collect(Collectors.toList());
 
+        Instant startDateI = startDate.atZone(ZoneId.systemDefault()).toInstant();
+        Instant previousStartDateI = previousStartDate.atZone(ZoneId.systemDefault()).toInstant();
+
         // Filter by current period
         List<Order> currentPeriodOrders = paidOrders.stream()
-                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startDate))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startDateI))
                 .collect(Collectors.toList());
 
         // Filter by previous period
         List<Order> previousPeriodOrders = paidOrders.stream()
-                .filter(o -> o.getCreatedAt() != null && 
-                        o.getCreatedAt().isAfter(previousStartDate) && 
-                        o.getCreatedAt().isBefore(startDate))
+                .filter(o -> o.getCreatedAt() != null &&
+                        o.getCreatedAt().isAfter(previousStartDateI) &&
+                        o.getCreatedAt().isBefore(startDateI))
                 .collect(Collectors.toList());
 
         // Calculate metrics
@@ -1844,11 +1847,13 @@ public class OrderServiceImpl implements OrderService {
         for (int i = monthCount - 1; i >= 0; i--) {
             LocalDateTime monthStart = now.minusMonths(i).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
             LocalDateTime monthEnd = monthStart.plusMonths(1);
-            
+            Instant mStartI = monthStart.atZone(ZoneId.systemDefault()).toInstant();
+            Instant mEndI = monthEnd.atZone(ZoneId.systemDefault()).toInstant();
+
             List<Order> monthOrders = paidOrders.stream()
-                    .filter(o -> o.getCreatedAt() != null && 
-                            o.getCreatedAt().isAfter(monthStart) && 
-                            o.getCreatedAt().isBefore(monthEnd))
+                    .filter(o -> o.getCreatedAt() != null &&
+                            o.getCreatedAt().isAfter(mStartI) &&
+                            o.getCreatedAt().isBefore(mEndI))
                     .collect(Collectors.toList());
 
             monthlyRevenue.add(ecommerce.modules.analytics.dto.AdminAnalyticsDto.MonthlyRevenue.builder()
@@ -1992,11 +1997,13 @@ public class OrderServiceImpl implements OrderService {
         for (int i = 11; i >= 0; i--) {
             LocalDateTime monthStart = now.minusMonths(i).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
             LocalDateTime monthEnd = monthStart.plusMonths(1);
-            
+            Instant msI = monthStart.atZone(ZoneId.systemDefault()).toInstant();
+            Instant meI = monthEnd.atZone(ZoneId.systemDefault()).toInstant();
+
             List<Order> monthOrders = paidOrders.stream()
-                    .filter(o -> o.getCreatedAt() != null && 
-                            o.getCreatedAt().isAfter(monthStart) && 
-                            o.getCreatedAt().isBefore(monthEnd))
+                    .filter(o -> o.getCreatedAt() != null &&
+                            o.getCreatedAt().isAfter(msI) &&
+                            o.getCreatedAt().isBefore(meI))
                     .collect(Collectors.toList());
 
             BigDecimal monthRevenue = monthOrders.stream().map(Order::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
