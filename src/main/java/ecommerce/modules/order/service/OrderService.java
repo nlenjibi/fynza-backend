@@ -302,7 +302,7 @@ public interface OrderService {
      * @param filterPeriod Filter period: day, week, month, year
      * @return Complete admin analytics including metrics, charts, and top items
      */
-    ecommerce.modules.admin.dto.AdminAnalyticsDto getAdminAnalytics(String filterPeriod);
+    ecommerce.modules.analytics.dto.AdminAnalyticsDto getAdminAnalytics(String filterPeriod);
 
     /**
      * Retrieves seller orders with filters.
