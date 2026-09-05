@@ -23,59 +23,50 @@ public class SpringDocConfig {
     @Value("${server.servlet.context-path:/api}")
     private String contextPath;
 
+    @Value("${app.base-url:https://api.fynza.com}")
+    private String productionBaseUrl;
+
     @Bean
     public OpenAPI customOpenAPI() {
-        SecurityScheme jwtSecurityScheme = new SecurityScheme()
+        SecurityScheme jwtScheme = new SecurityScheme()
                 .type(SecurityScheme.Type.HTTP)
                 .scheme("bearer")
                 .bearerFormat("JWT")
                 .name("Authorization")
-                .description("Enter your JWT token. Click 'Authorize' button to login.");
+                .description("JWT access token. Obtain from POST /api/v1/auth/login");
 
-        Scopes oauth2Scopes = new Scopes();
-        oauth2Scopes.put("email", "Access to email");
-        oauth2Scopes.put("profile", "Access to profile");
-        SecurityScheme oauth2SecurityScheme = new SecurityScheme()
+        SecurityScheme oauth2Scheme = new SecurityScheme()
                 .type(SecurityScheme.Type.OAUTH2)
                 .flows(new OAuthFlows()
                         .authorizationCode(new OAuthFlow()
                                 .authorizationUrl("https://accounts.google.com/o/oauth2/v2/auth")
                                 .tokenUrl("https://oauth2.googleapis.com/token")
-                                .scopes(oauth2Scopes)));
-
-        SecurityRequirement jwtRequirement = new SecurityRequirement().addList("bearerAuth");
+                                .scopes(new Scopes()
+                                        .addString("email",   "Access email address")
+                                        .addString("profile", "Access profile info"))));
 
         return new OpenAPI()
                 .info(new Info()
-                        .title("Smart E-Commerce System API")
+                        .title("Fynza E-Commerce API")
                         .version("v1.0.0")
                         .description("""
-                                ## Smart E-Commerce API - Security Documentation
-                                
-                                ### How to Use
-                                1. Click **Authorize** button below
-                                2. Enter your JWT token (format: `Bearer {token}`)
-                                3. Click **Authorize** to apply to all requests
-                                4. Test protected endpoints - they will return 401 if not authenticated
+                                ## Authentication
+                                - **JWT**: Click **Authorize**, enter your Bearer token
+                                - **OAuth2**: Use the Google OAuth2 flow via `/api/v1/auth/oauth2/google`
                                 """)
-                        .contact(new Contact()
-                                .name("Development Team")
-                                .email("dev@ecommerce.com"))
-                        .license(new License()
-                                .name("Apache 2.0")
-                                .url("https://www.apache.org/licenses/LICENSE-2.0.html")))
+                        .contact(new Contact().name("Fynza Team").email("dev@fynza.com"))
+                        .license(new License().name("Proprietary")))
                 .servers(List.of(
                         new Server()
                                 .url("http://localhost:" + serverPort + contextPath)
-                                .description("Development Server"),
+                                .description("Local"),
                         new Server()
-                                .url("https://your-production-domain.com" + contextPath)
-                                .description("Production Server")
-                ))
+                                .url(productionBaseUrl)
+                                .description("Production")))
                 .components(new Components()
-                        .addSecuritySchemes("bearerAuth", jwtSecurityScheme)
-                        .addSecuritySchemes("Google-OAuth2", oauth2SecurityScheme))
-                .addSecurityItem(jwtRequirement);
+                        .addSecuritySchemes("bearerAuth",    jwtScheme)
+                        .addSecuritySchemes("Google-OAuth2", oauth2Scheme))
+                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
     }
 
     @Bean
@@ -83,22 +74,12 @@ public class SpringDocConfig {
         return GroupedOpenApi.builder()
                 .group("public")
                 .pathsToMatch(
-                        "/v1/auth/login",
-                        "/v1/auth/register",
-                        "/v1/auth/refresh",
-                        "/v1/auth/oauth2/**",
-                        "/v1/auth/password/**",
-                        "/v1/products/**",
-                        "/v1/categories/**",
-                        "/public/**",
-                        "/info",
-                        "/help-support/**",
-                        "/social-links",
-                        "/app-download-links",
+                        "/api/v1/auth/**",
+                        "/api/v1/products/**",
+                        "/api/v1/categories/**",
+                        "/api/v1/search/**",
                         "/swagger-ui/**",
-                        "/swagger-ui.html",
-                        "/v3/api-docs/public",
-                        "/graphiql/**"
+                        "/v3/api-docs/**"
                 )
                 .build();
     }
@@ -108,14 +89,20 @@ public class SpringDocConfig {
         return GroupedOpenApi.builder()
                 .group("user")
                 .pathsToMatch(
-                        "/v1/user/**",
-                        "/v1/order/**",
-                        "/v1/cart/**",
-                        "/v1/wishlist/**",
-                        "/v1/review/**"
+                        "/api/v1/user/**",
+                        "/api/v1/orders/**",
+                        "/api/v1/cart/**",
+                        "/api/v1/wishlist/**",
+                        "/api/v1/reviews/**"
                 )
-                .addOpenApiMethodFilter(method ->
-                        method.isAnnotationPresent(org.springframework.web.bind.annotation.RequestMapping.class))
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi sellerApi() {
+        return GroupedOpenApi.builder()
+                .group("seller")
+                .pathsToMatch("/api/v1/seller/**")
                 .build();
     }
 
@@ -124,21 +111,12 @@ public class SpringDocConfig {
         return GroupedOpenApi.builder()
                 .group("admin")
                 .pathsToMatch(
-                        "/v1/admin/**",
-                        "/v1/auth/account/**",
-                        "/performance/**",
-                        "/management/**"
+                        "/api/v1/admin/**",
+                        "/api/v1/analytics/**",
+                        "/api/v1/search/analytics",
+                        "/api/v1/audit-logs/**",
+                        "/api/v1/monitoring/**"
                 )
-                .addOpenApiMethodFilter(method ->
-                        method.isAnnotationPresent(org.springframework.web.bind.annotation.RequestMapping.class))
-                .build();
-    }
-
-    @Bean
-    public GroupedOpenApi allApi() {
-        return GroupedOpenApi.builder()
-                .group("all")
-                .pathsToMatch("/v3/api-docs/all")
                 .build();
     }
 }
