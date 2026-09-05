@@ -21,6 +21,8 @@ public class AuthResponse {
     private Long expiresIn;
     private String tokenType;
     private UserInfo user;
+    private boolean mfaRequired;
+    private String mfaChallengeToken;
 
     @Data
     @Builder

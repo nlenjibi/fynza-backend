@@ -6,6 +6,10 @@ import ecommerce.modules.auth.dto.ChangePasswordRequest;
 import ecommerce.modules.auth.dto.ForgotPasswordRequest;
 import ecommerce.modules.auth.dto.LoginRequest;
 import ecommerce.modules.auth.dto.LogoutRequest;
+import ecommerce.modules.auth.dto.MfaDisableRequest;
+import ecommerce.modules.auth.dto.MfaEnableRequest;
+import ecommerce.modules.auth.dto.MfaSetupResponse;
+import ecommerce.modules.auth.dto.MfaVerifyRequest;
 import ecommerce.modules.auth.dto.RefreshTokenRequest;
 import ecommerce.modules.auth.dto.RegisterRequest;
 import ecommerce.modules.auth.dto.ResendVerificationRequest;
@@ -119,5 +123,38 @@ public class AuthController {
             @Valid @RequestBody LogoutRequest request) {
         authService.revokeAllOtherSessions(principal.getId(), request.getRefreshToken());
         return ResponseEntity.ok(ApiResponse.success("All other sessions revoked", null));
+    }
+
+    @PostMapping("/mfa/setup")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<MfaSetupResponse>> mfaSetup(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        MfaSetupResponse response = authService.setupMfa(principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Scan the QR code with your authenticator app, then call /mfa/enable to confirm", response));
+    }
+
+    @PostMapping("/mfa/enable")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> mfaEnable(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody MfaEnableRequest request) {
+        authService.enableMfa(principal.getId(), request.getTotpCode());
+        return ResponseEntity.ok(ApiResponse.success("MFA enabled successfully", null));
+    }
+
+    @PostMapping("/mfa/disable")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> mfaDisable(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody MfaDisableRequest request) {
+        authService.disableMfa(principal.getId(), request.getTotpCode());
+        return ResponseEntity.ok(ApiResponse.success("MFA disabled successfully", null));
+    }
+
+    @PostMapping("/mfa/verify")
+    public ResponseEntity<ApiResponse<AuthResponse>> mfaVerify(
+            @Valid @RequestBody MfaVerifyRequest request) {
+        AuthResponse response = authService.verifyMfa(request.getChallengeToken(), request.getTotpCode());
+        return ResponseEntity.ok(ApiResponse.success("MFA verified, login successful", response));
     }
 }
