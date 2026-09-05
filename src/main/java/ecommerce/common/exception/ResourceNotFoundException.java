@@ -10,6 +10,10 @@ public class ResourceNotFoundException extends FynzaException {
         super(message, HttpStatus.NOT_FOUND);
     }
 
+    protected ResourceNotFoundException(String message, String code) {
+        super(message, HttpStatus.NOT_FOUND, code);
+    }
+
     public static ResourceNotFoundException forResource(String resourceName, Long id) {
         return new ResourceNotFoundException(resourceName + " not found with id: " + id);
     }

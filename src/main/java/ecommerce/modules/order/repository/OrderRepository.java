@@ -28,6 +28,9 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     Page<Order> findByCustomerId(Long customerId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"customer", "orderItems", "orderItems.product", "shippingAddress", "billingAddress"})
+    Page<Order> findByCustomer_PublicId(UUID customerPublicId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"customer", "orderItems", "orderItems.product", "shippingAddress", "billingAddress"})
     Optional<Order> findByOrderNumber(String orderNumber);
 
     @EntityGraph(attributePaths = {"customer", "orderItems", "orderItems.product", "shippingAddress", "billingAddress"})

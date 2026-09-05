@@ -1,10 +1,8 @@
 package ecommerce.common.exception;
 
-import org.springframework.http.HttpStatus;
-
-public class TokenExpiredException extends FynzaException {
+public class TokenExpiredException extends UnauthorizedException {
 
     public TokenExpiredException(String message) {
-        super(message, HttpStatus.UNAUTHORIZED, "TOKEN_EXPIRED");
+        super(message, "TOKEN_EXPIRED");
     }
 }

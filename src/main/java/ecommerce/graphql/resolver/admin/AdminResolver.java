@@ -1,6 +1,5 @@
 package ecommerce.graphql.resolver.admin;
 
-import com.querydsl.core.types.Predicate;
 import ecommerce.common.enums.ProductStatus;
 import ecommerce.common.response.PaginatedResponse;
 import ecommerce.graphql.dto.CustomerStats;
@@ -16,8 +15,10 @@ import ecommerce.modules.product.dto.AdminProductStatsResponse;
 import ecommerce.modules.product.dto.ProductResponse;
 import ecommerce.modules.product.service.ProductService;
 import ecommerce.modules.user.dto.*;
-import ecommerce.modules.user.entity.UserPredicates;
+import ecommerce.modules.user.entity.User;
+import ecommerce.modules.user.spec.UserSpec;
 import ecommerce.modules.user.service.UserService;
+import org.springframework.data.jpa.domain.Specification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -75,8 +76,8 @@ public class AdminResolver {
 
         Page<UserDto> userPage;
         if (filter != null) {
-            Predicate predicate = buildPredicateFromFilter(filter);
-            userPage = userService.findUsersWithPredicate(predicate, pageable);
+            Specification<User> spec = buildPredicateFromFilter(filter);
+            userPage = userService.findUsersWithPredicate(spec, pageable);
         } else {
             userPage = userService.getAllUsers(pageable);
         }
@@ -309,16 +310,9 @@ public class AdminResolver {
         return PageRequest.of(input.getPage(), input.getSize(), sort);
     }
 
-    private Predicate buildPredicateFromFilter(UserFilterInput filter) {
-        return UserPredicates.builder()
-                .withSearch(filter.getSearch())
-                .withRole(filter.getRole())
-                .withActive(filter.getActive())
-                .withEmailVerified(filter.getEmailVerified())
-                .withCreatedAfter(filter.getCreatedAfter())
-                .withCreatedBefore(filter.getCreatedBefore())
-                .withPhoneNumberContaining(filter.getPhoneNumber())
-                .withNameContaining(filter.getName())
-                .build();
+    private Specification<User> buildPredicateFromFilter(UserFilterInput filter) {
+        return Specification.where(UserSpec.emailOrNameContains(filter.getSearch()))
+                .and(filter.getRole() != null ? UserSpec.hasRole(filter.getRole()) : null)
+                .and(Boolean.TRUE.equals(filter.getActive()) ? UserSpec.isActive() : null);
     }
 }
