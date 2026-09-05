@@ -10,8 +10,7 @@ import java.util.UUID;
  * enforced by the token validation service.
  */
 public record PasswordResetRequestedEvent(
-        Long userId,
-        UUID publicUserId,
+        UUID userId,
         String email,
         String fullName,
         String resetToken,

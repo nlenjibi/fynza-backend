@@ -51,6 +51,8 @@ public enum NotificationType {
     PROMOTION_ENDING,
 
     // ── Auth / User ─────────────────────────────────────────────────────────────
+    USER_VERIFICATION_EMAIL,
+    USER_PASSWORD_RESET_EMAIL,
     USER_EMAIL_VERIFIED,
     USER_PASSWORD_CHANGED,
     USER_LOGIN_NEW_DEVICE,

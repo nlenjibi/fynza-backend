@@ -17,11 +17,15 @@ public interface AuthService {
 
     void cleanupExpiredSessions();
 
-    /**
-     * Handle OAuth2 login - generate tokens for OAuth2 authenticated users
-     * @param user The authenticated user
-     * @param request The HTTP request
-     * @return AuthResponse with tokens
-     */
     AuthResponse oauth2Login(ecommerce.modules.user.entity.User user, jakarta.servlet.http.HttpServletRequest request);
+
+    void verifyEmail(String token);
+
+    void resendVerificationEmail(String email);
+
+    void forgotPassword(String email);
+
+    void resetPassword(String token, String newPassword, String confirmPassword);
+
+    void changePassword(UUID userId, String currentPassword, String newPassword, String confirmPassword);
 }

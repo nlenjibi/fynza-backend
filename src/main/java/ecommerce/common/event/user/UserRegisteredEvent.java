@@ -10,8 +10,7 @@ import java.util.UUID;
  * Consumed to: send welcome email, trigger email verification flow if needed.
  */
 public record UserRegisteredEvent(
-        Long userId,
-        UUID publicUserId,
+        UUID userId,
         String email,
         String fullName,
         Role role,
