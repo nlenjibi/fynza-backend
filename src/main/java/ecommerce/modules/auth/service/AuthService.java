@@ -3,6 +3,8 @@ package ecommerce.modules.auth.service;
 import ecommerce.modules.auth.dto.AuthResponse;
 import ecommerce.modules.auth.dto.LoginRequest;
 import ecommerce.modules.auth.dto.RegisterRequest;
+import ecommerce.modules.auth.dto.SessionResponse;
+import java.util.List;
 import java.util.UUID;
 
 public interface AuthService {
@@ -28,4 +30,10 @@ public interface AuthService {
     void resetPassword(String token, String newPassword, String confirmPassword);
 
     void changePassword(UUID userId, String currentPassword, String newPassword, String confirmPassword);
+
+    List<SessionResponse> listActiveSessions(UUID userId, String currentRefreshToken);
+
+    void revokeSession(UUID userId, UUID sessionId);
+
+    void revokeAllOtherSessions(UUID userId, String currentRefreshToken);
 }

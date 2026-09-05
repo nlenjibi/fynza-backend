@@ -11,6 +11,7 @@ import ecommerce.common.exception.InvalidTokenException;
 import ecommerce.modules.auth.dto.AuthResponse;
 import ecommerce.modules.auth.dto.LoginRequest;
 import ecommerce.modules.auth.dto.RegisterRequest;
+import ecommerce.modules.auth.dto.SessionResponse;
 import ecommerce.modules.auth.entity.Auth;
 import ecommerce.modules.auth.entity.VerificationToken;
 import ecommerce.modules.auth.entity.VerificationTokenType;
@@ -39,6 +40,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -408,6 +410,50 @@ public class AuthServiceImpl implements AuthService {
         authRepository.invalidateAllUserSessions(userId, LocalDateTime.now());
 
         log.info("Password changed for user: {}", user.getEmail());
+    }
+
+    @Override
+    public List<SessionResponse> listActiveSessions(UUID userId, String currentRefreshToken) {
+        return authRepository.findAllByUser_IdAndIsActiveTrueOrderByLastActivityAtDesc(userId)
+                .stream()
+                .map(s -> SessionResponse.builder()
+                        .sessionId(s.getId())
+                        .deviceName(s.getDeviceName())
+                        .ipAddress(s.getIpAddress())
+                        .createdAt(s.getCreatedAt())
+                        .lastActivityAt(s.getLastActivityAt())
+                        .expiresAt(s.getExpiresAt())
+                        .current(s.getRefreshToken().equals(currentRefreshToken))
+                        .build())
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public void revokeSession(UUID userId, UUID sessionId) {
+        Auth session = authRepository.findById(sessionId)
+                .orElseThrow(() -> new BadRequestException("Session not found"));
+
+        if (!session.getUser().getId().equals(userId)) {
+            throw new BadRequestException("Session does not belong to the current user");
+        }
+
+        if (!Boolean.TRUE.equals(session.getIsActive())) {
+            throw new BadRequestException("Session is already inactive");
+        }
+
+        session.setIsActive(false);
+        session.setLoggedOutAt(LocalDateTime.now());
+        authRepository.save(session);
+
+        log.info("Session {} revoked for user {}", sessionId, userId);
+    }
+
+    @Override
+    @Transactional
+    public void revokeAllOtherSessions(UUID userId, String currentRefreshToken) {
+        int count = authRepository.invalidateOtherUserSessions(userId, currentRefreshToken, LocalDateTime.now());
+        log.info("Revoked {} other sessions for user {}", count, userId);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
