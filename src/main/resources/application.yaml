@@ -91,6 +91,18 @@ app:
   frontend-failure-redirect: ${FRONTEND_URL:http://localhost:3000}/auth/login
   cookie:
     secure: ${COOKIE_SECURE:false}
+  token:
+    access-minutes: ${TOKEN_ACCESS_MINUTES:15}
+    refresh-days: ${TOKEN_REFRESH_DAYS:7}
+    email-verification-hours: ${TOKEN_EMAIL_VERIFICATION_HOURS:24}
+    password-reset-minutes: ${TOKEN_PASSWORD_RESET_MINUTES:15}
+    mfa-challenge-minutes: ${TOKEN_MFA_CHALLENGE_MINUTES:5}
+  token:
+    access-minutes: ${TOKEN_ACCESS_MINUTES:15}
+    refresh-days: ${TOKEN_REFRESH_DAYS:7}
+    email-verification-hours: ${TOKEN_EMAIL_VERIFICATION_HOURS:24}
+    password-reset-minutes: ${TOKEN_PASSWORD_RESET_MINUTES:15}
+    mfa-challenge-minutes: ${TOKEN_MFA_CHALLENGE_MINUTES:5}
 
 server:
   forward-headers-strategy: framework
