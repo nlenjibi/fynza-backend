@@ -1,133 +1,136 @@
 package ecommerce.graphql.exception;
 
-import graphql.ErrorClassification;
-import graphql.ErrorType;
+import ecommerce.common.exception.FynzaException;
 import graphql.GraphQLError;
 import graphql.GraphqlErrorBuilder;
 import graphql.schema.DataFetchingEnvironment;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.execution.DataFetcherExceptionResolverAdapter;
-import ecommerce.common.exception.AuthorizationException;
-import ecommerce.common.exception.BadRequestException;
-import ecommerce.common.exception.CartNotFoundException;
-import ecommerce.common.exception.DuplicateResourceException;
-import ecommerce.common.exception.InsufficientStockException;
-import ecommerce.common.exception.InvalidTokenException;
-import ecommerce.common.exception.ResourceNotFoundException;
-import ecommerce.common.exception.TokenExpiredException;
-import ecommerce.common.exception.TokenNotFoundException;
+import org.springframework.graphql.execution.ErrorType;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.*;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+/**
+ * Maps Fynza domain and framework exceptions to GraphQL errors, mirroring
+ * {@code GlobalExceptionHandler} on the REST transport.
+ *
+ * <p>{@code @RestControllerAdvice} does not apply to GraphQL data-fetchers, so this
+ * resolver preserves the same status/code/message semantics on the GraphQL {@code errors}
+ * channel. Clients keying on {@code extensions.status} and {@code extensions.code} get
+ * identical information regardless of whether they use REST or GraphQL.
+ */
 @Slf4j
 @Component
 public class GraphQLExceptionResolver extends DataFetcherExceptionResolverAdapter {
 
-
-    private static final ErrorClassification UNAUTHORIZED = buildClassification("UNAUTHORIZED");
-    private static final ErrorClassification FORBIDDEN    = buildClassification("FORBIDDEN");
-    private static final ErrorClassification NOT_FOUND    = buildClassification("NOT_FOUND");
-
     @Override
     protected GraphQLError resolveToSingleError(Throwable ex, DataFetchingEnvironment env) {
-
-        String path = env.getExecutionStepInfo().getPath().toString();
-
-        // ── 401-equivalent ─────────────────────────────────────────────────────
-        if (ex instanceof TokenNotFoundException
-                || ex instanceof TokenExpiredException
-                || ex instanceof InvalidTokenException) {
-            log.warn("GraphQL token error on '{}': {}", path, ex.getMessage());
-            return error(env, UNAUTHORIZED, "Authentication required: " + ex.getMessage());
+        // Domain exceptions — covers every FynzaException subclass
+        if (ex instanceof FynzaException fynzaEx) {
+            return fromFynzaException(fynzaEx, env);
         }
-
-        if (ex instanceof BadCredentialsException
-                || ex instanceof UsernameNotFoundException) {
-            log.warn("GraphQL authentication failure on '{}': {}", path, ex.getMessage());
-            return error(env, UNAUTHORIZED, "Invalid credentials.");
+        if (ex instanceof AccessDeniedException accessEx) {
+            return fromAccessDenied(accessEx, env);
         }
-
-        if (ex instanceof AccountExpiredException
-                || ex instanceof LockedException
-                || ex instanceof DisabledException
-                || ex instanceof CredentialsExpiredException) {
-            log.warn("GraphQL account status error on '{}' [{}]: {}", path, ex.getClass().getSimpleName(), ex.getMessage());
-            return error(env, UNAUTHORIZED, "Account is not in a valid state. Please contact support.");
+        if (ex instanceof ConstraintViolationException cve) {
+            return fromConstraintViolation(cve, env);
         }
-
-        // ── 403-equivalent ─────────────────────────────────────────────────────
-        if (ex instanceof AccessDeniedException || ex instanceof AuthorizationException) {
-            log.warn("GraphQL access denied on '{}': {}", path, ex.getMessage());
-            return error(env, FORBIDDEN, "You do not have permission to perform this action.");
+        if (ex instanceof MethodArgumentNotValidException manv) {
+            return fromMethodArgumentNotValid(manv, env);
         }
+        // Fall through — framework logs INTERNAL_ERROR automatically.
+        return null;
+    }
 
-        if (ex instanceof org.springframework.security.authentication.LockedException) {
-            log.warn("GraphQL locked account on '{}': {}", path, ex.getMessage());
-            return error(env, FORBIDDEN, ex.getMessage());
-        }
+    // ── Exception mappers ──────────────────────────────────────────────────────
 
-        // ── 404-equivalent ─────────────────────────────────────────────────────
-        if (ex instanceof ResourceNotFoundException || ex instanceof CartNotFoundException) {
-            log.warn("GraphQL resource not found on '{}': {}", path, ex.getMessage());
-            return error(env, NOT_FOUND, ex.getMessage());
-        }
+    private GraphQLError fromFynzaException(FynzaException ex, DataFetchingEnvironment env) {
+        log.warn("GraphQL domain exception [{}] on '{}': {}",
+                ex.getClass().getSimpleName(), env.getField().getName(), ex.getMessage());
 
-        // ── Validation / business rule violations ──────────────────────────────
-        if (ex instanceof BadRequestException) {
-            log.warn("GraphQL validation error on '{}': {}", path, ex.getMessage());
-            return error(env, ErrorType.ValidationError, ex.getMessage());
-        }
+        Map<String, Object> ext = baseExtensions(ex.getStatus());
+        if (ex.getCode() != null) ext.put("code", ex.getCode());
 
-        // ── Conflict / resource state errors ───────────────────────────────────
-        if (ex instanceof DuplicateResourceException) {
-            log.warn("GraphQL duplicate resource on '{}': {}", path, ex.getMessage());
-            return error(env, ErrorType.ExecutionAborted, ex.getMessage());
-        }
+        return GraphqlErrorBuilder.newError(env)
+                .errorType(classificationFor(ex.getStatus()))
+                .message(ex.getMessage())
+                .extensions(ext)
+                .build();
+    }
 
-        if (ex instanceof InsufficientStockException) {
-            log.warn("GraphQL insufficient stock on '{}': {}", path, ex.getMessage());
-            return error(env, ErrorType.ExecutionAborted, ex.getMessage());
-        }
+    private GraphQLError fromAccessDenied(AccessDeniedException ex, DataFetchingEnvironment env) {
+        log.warn("GraphQL access denied on '{}': {}", env.getField().getName(), ex.getMessage());
 
-        // RateLimitExceededException handling disabled - class not implemented
-        // if (ex instanceof RateLimitExceededException) {
-        //     log.warn("GraphQL rate limit exceeded on '{}': {}", path, ex.getMessage());
-        //     return error(env, ErrorType.ExecutionAborted,
-        //             "Too many requests. Please slow down and try again.");
-        // }
+        return GraphqlErrorBuilder.newError(env)
+                .errorType(ErrorType.FORBIDDEN)
+                .message("You do not have permission to access this resource.")
+                .extensions(baseExtensions(HttpStatus.FORBIDDEN))
+                .build();
+    }
 
-        // ── Catch-all ──────────────────────────────────────────────────────────
-        // Log full stack trace for unexpected errors — critical for debugging.
-        log.error("Unexpected GraphQL error on '{}': {}", path, ex.getMessage(), ex);
-        return error(env, ErrorType.DataFetchingException,
-                "An unexpected error occurred. Please contact support if this persists.");
+    private GraphQLError fromConstraintViolation(ConstraintViolationException ex, DataFetchingEnvironment env) {
+        Map<String, String> fieldErrors = ex.getConstraintViolations().stream()
+                .collect(Collectors.toMap(
+                        cv -> cv.getPropertyPath().toString(),
+                        ConstraintViolation::getMessage,
+                        (existing, replacement) -> existing));
+        log.warn("GraphQL constraint violation on '{}': {}", env.getField().getName(), fieldErrors);
+        return validationError(env, fieldErrors);
+    }
+
+    private GraphQLError fromMethodArgumentNotValid(MethodArgumentNotValidException ex, DataFetchingEnvironment env) {
+        Map<String, String> fieldErrors = Stream.concat(
+                        ex.getBindingResult().getFieldErrors().stream()
+                                .map(e -> Map.entry(e.getField(),
+                                        e.getDefaultMessage() != null ? e.getDefaultMessage() : "invalid")),
+                        ex.getBindingResult().getGlobalErrors().stream()
+                                .map(e -> Map.entry(e.getObjectName(),
+                                        e.getDefaultMessage() != null ? e.getDefaultMessage() : "invalid")))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                        (existing, replacement) -> existing));
+        log.warn("GraphQL validation failure on '{}': {}", env.getField().getName(), fieldErrors);
+        return validationError(env, fieldErrors);
+    }
+
+    private GraphQLError validationError(DataFetchingEnvironment env, Map<String, String> fieldErrors) {
+        Map<String, Object> ext = baseExtensions(HttpStatus.BAD_REQUEST);
+        ext.put("errors", fieldErrors);
+        return GraphqlErrorBuilder.newError(env)
+                .errorType(ErrorType.BAD_REQUEST)
+                .message("Validation failed.")
+                .extensions(ext)
+                .build();
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────
 
-    private GraphQLError error(DataFetchingEnvironment env,
-                               ErrorClassification classification,
-                               String message) {
-        return GraphqlErrorBuilder.newError()
-                .errorType(classification)
-                .message(message)
-                .path(env.getExecutionStepInfo().getPath())
-                .location(env.getField().getSourceLocation())
-                .build();
+    private Map<String, Object> baseExtensions(HttpStatus status) {
+        Map<String, Object> ext = new LinkedHashMap<>();
+        ext.put("status", status.value());
+        ext.put("reason", status.name());
+        return ext;
     }
 
     /**
-     * Creates a custom {@link ErrorClassification} that appears as the
-     * {@code "classification"} field in the GraphQL error extensions block,
-     * allowing frontend clients to switch on typed error codes.
+     * Buckets an HTTP status into the nearest Spring {@link ErrorType}. The exact status is
+     * always preserved in {@code extensions.status} and {@code extensions.reason}, so 409/422
+     * still surface losslessly even though they bucket to {@code BAD_REQUEST}.
      */
-    private static ErrorClassification buildClassification(String name) {
-        return new ErrorClassification() {
-            @Override
-            public String toString() { return name; }
+    private ErrorType classificationFor(HttpStatus status) {
+        return switch (status) {
+            case UNAUTHORIZED -> ErrorType.UNAUTHORIZED;
+            case FORBIDDEN    -> ErrorType.FORBIDDEN;
+            case NOT_FOUND    -> ErrorType.NOT_FOUND;
+            default           -> status.is5xxServerError() ? ErrorType.INTERNAL_ERROR : ErrorType.BAD_REQUEST;
         };
     }
 }
