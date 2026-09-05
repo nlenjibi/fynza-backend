@@ -3,7 +3,9 @@ package ecommerce.common.security;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
+import ecommerce.common.config.TokenProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -19,11 +21,10 @@ public class JwtTokenProvider {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
-    @Value("${jwt.access-token.expiration:900000}")
-    private Long accessTokenExpiration;
+    @Autowired
+    private TokenProperties tokenProperties;
 
-    @Value("${jwt.refresh-token.expiration:604800000}")
-    private Long refreshTokenExpiration;
+
 
     private SecretKey getSigningKey() {
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
@@ -36,7 +37,7 @@ public class JwtTokenProvider {
 
     public String generateAccessToken(UUID userId, String email, String role, String authProvider) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + accessTokenExpiration);
+        Date expiryDate = new Date(now.getTime() + tokenProperties.accessMillis());
 
         return Jwts.builder()
                 .subject(userId.toString())
@@ -52,7 +53,7 @@ public class JwtTokenProvider {
 
     public String generateRefreshToken(UUID userId) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + refreshTokenExpiration);
+        Date expiryDate = new Date(now.getTime() + tokenProperties.refreshMillis());
 
         return Jwts.builder()
                 .subject(userId.toString())
@@ -128,6 +129,6 @@ public class JwtTokenProvider {
     }
 
     public long getAccessTokenExpiration() {
-        return accessTokenExpiration;
+        return tokenProperties.accessMillis();
     }
 }
