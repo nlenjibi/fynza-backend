@@ -54,9 +54,9 @@ public class ProductServiceImpl implements ProductService {
         Page<Product> products;
 
         if (filter.getCategoryId() != null) {
-            products = productRepository.findByCategoryId(filter.getCategoryId(), pageable);
+            products = productRepository.findByCategory_PublicId(filter.getCategoryId(), pageable);
         } else if (filter.getSellerId() != null) {
-            products = productRepository.findBySellerId(filter.getSellerId(), pageable);
+            products = productRepository.findBySeller_PublicId(filter.getSellerId(), pageable);
         } else if (filter.getBrand() != null && !filter.getBrand().isBlank()) {
             products = productRepository.findByBrandIgnoreCase(filter.getBrand(), pageable);
         } else if (filter.getBrands() != null && !filter.getBrands().isEmpty()) {
@@ -81,7 +81,7 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse findById(UUID id) {
         log.debug("Finding product by id: {}", id);
 
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
         return mapToResponse(product);
@@ -99,7 +99,7 @@ public class ProductServiceImpl implements ProductService {
 
         Category category = null;
         if (request.getCategoryId() != null) {
-            category = categoryRepository.findById(request.getCategoryId())
+            category = categoryRepository.findByPublicId(request.getCategoryId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Category not found with id: " + request.getCategoryId()));
         }
@@ -152,7 +152,7 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse update(UUID id, UpdateProductRequest request) {
         log.info("Updating product with id: {}", id);
 
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
         if (request.getName() != null) {
@@ -206,7 +206,7 @@ public class ProductServiceImpl implements ProductService {
     public void delete(UUID id) {
         log.info("Deleting product with id: {}", id);
 
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
         productRepository.delete(product);
@@ -416,7 +416,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse addStock(UUID id, int quantity) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         product.addStock(quantity);
         productRepository.save(product);
@@ -427,7 +427,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse restoreStock(UUID id, int quantity) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         product.releaseReservedStock(quantity);
         productRepository.save(product);
@@ -438,7 +438,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse releaseReservedStock(UUID id, int quantity) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         product.releaseReservedStock(quantity);
         productRepository.save(product);
@@ -449,7 +449,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse reserveStock(UUID id, int quantity) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         product.reserveStock(quantity);
         productRepository.save(product);
@@ -460,7 +460,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse reduceStock(UUID id, int quantity) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         product.reduceStock(quantity);
         productRepository.save(product);
@@ -471,7 +471,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public Boolean incrementViewCount(UUID id) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         product.setViewCount((product.getViewCount() != null ? product.getViewCount() : 0) + 1);
         productRepository.save(product);
@@ -485,7 +485,7 @@ public class ProductServiceImpl implements ProductService {
         if (rating < 0 || rating > 5) {
             throw new IllegalArgumentException("Rating must be between 0 and 5");
         }
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         product.setRating(BigDecimal.valueOf(rating.doubleValue()));
         productRepository.save(product);
@@ -545,7 +545,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse approveProduct(UUID id) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         
         product.setIsApproved(true);
@@ -559,7 +559,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse rejectProduct(UUID id, String reason) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         
         product.setIsApproved(false);
@@ -574,7 +574,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse updateProductStatus(UUID id, ProductStatus status) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         
         product.setStatus(status);
