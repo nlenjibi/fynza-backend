@@ -1699,7 +1699,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public ecommerce.modules.admin.dto.AdminAnalyticsDto getAdminAnalytics(String filterPeriod) {
+    public ecommerce.modules.analytics.dto.AdminAnalyticsDto getAdminAnalytics(String filterPeriod) {
         // Determine date range based on filter
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startDate;
@@ -1822,7 +1822,7 @@ public class OrderServiceImpl implements OrderService {
         Double avgOrderValueGrowth = calculateGrowthDecimal(previousAvgOrderValue, currentAvgOrderValue);
 
         // Revenue overview (monthly)
-        List<ecommerce.modules.admin.dto.AdminAnalyticsDto.MonthlyRevenue> monthlyRevenue = new java.util.ArrayList<>();
+        List<ecommerce.modules.analytics.dto.AdminAnalyticsDto.MonthlyRevenue> monthlyRevenue = new java.util.ArrayList<>();
         for (int i = monthCount - 1; i >= 0; i--) {
             LocalDateTime monthStart = now.minusMonths(i).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
             LocalDateTime monthEnd = monthStart.plusMonths(1);
@@ -1833,7 +1833,7 @@ public class OrderServiceImpl implements OrderService {
                             o.getCreatedAt().isBefore(monthEnd))
                     .collect(Collectors.toList());
 
-            monthlyRevenue.add(ecommerce.modules.admin.dto.AdminAnalyticsDto.MonthlyRevenue.builder()
+            monthlyRevenue.add(ecommerce.modules.analytics.dto.AdminAnalyticsDto.MonthlyRevenue.builder()
                     .month(monthNames[monthStart.getMonthValue() - 1])
                     .revenue(monthOrders.stream().map(Order::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add))
                     .orders((long) monthOrders.size())
@@ -1845,7 +1845,7 @@ public class OrderServiceImpl implements OrderService {
                 .flatMap(o -> o.getOrderItems().stream())
                 .collect(Collectors.toList());
 
-        List<ecommerce.modules.admin.dto.AdminAnalyticsDto.SalesByCategory> salesByCategory = allItems.stream()
+        List<ecommerce.modules.analytics.dto.AdminAnalyticsDto.SalesByCategory> salesByCategory = allItems.stream()
                 .filter(item -> item.getProduct() != null && item.getProduct().getCategory() != null)
                 .collect(Collectors.groupingBy(
                         item -> item.getProduct().getCategory().getName(),
@@ -1863,7 +1863,7 @@ public class OrderServiceImpl implements OrderService {
                 .entrySet().stream()
                 .map(entry -> {
                     Object[] data = (Object[]) entry.getValue();
-                    return ecommerce.modules.admin.dto.AdminAnalyticsDto.SalesByCategory.builder()
+                    return ecommerce.modules.analytics.dto.AdminAnalyticsDto.SalesByCategory.builder()
                             .category(entry.getKey())
                             .sales((Long) data[0])
                             .revenue((BigDecimal) data[1])
@@ -1874,7 +1874,7 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
 
         BigDecimal totalCategoryRevenue = salesByCategory.stream()
-                .map(ecommerce.modules.admin.dto.AdminAnalyticsDto.SalesByCategory::getRevenue)
+                .map(ecommerce.modules.analytics.dto.AdminAnalyticsDto.SalesByCategory::getRevenue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         final BigDecimal finalTotalCatRev = totalCategoryRevenue;
@@ -1887,7 +1887,7 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
 
         // Top sellers (based on order items)
-        List<ecommerce.modules.admin.dto.AdminAnalyticsDto.TopSellerMetric> topSellers = allItems.stream()
+        List<ecommerce.modules.analytics.dto.AdminAnalyticsDto.TopSellerMetric> topSellers = allItems.stream()
                 .filter(item -> item.getSeller() != null)
                 .collect(Collectors.groupingBy(
                         item -> item.getSeller().getId(),
@@ -1912,7 +1912,7 @@ public class OrderServiceImpl implements OrderService {
                 .limit(5)
                 .map(entry -> {
                     Object[] data = (Object[]) entry.getValue();
-                    return ecommerce.modules.admin.dto.AdminAnalyticsDto.TopSellerMetric.builder()
+                    return ecommerce.modules.analytics.dto.AdminAnalyticsDto.TopSellerMetric.builder()
                             .sellerId(entry.getKey().toString())
                             .sellerName((String) data[0])
                             .orders((Long) data[1])
@@ -1929,7 +1929,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // Top products
-        List<ecommerce.modules.admin.dto.AdminAnalyticsDto.TopProductMetric> topProducts = allItems.stream()
+        List<ecommerce.modules.analytics.dto.AdminAnalyticsDto.TopProductMetric> topProducts = allItems.stream()
                 .collect(Collectors.groupingBy(
                         item -> item.getProduct().getId().toString(),
                         Collectors.collectingAndThen(
@@ -1953,7 +1953,7 @@ public class OrderServiceImpl implements OrderService {
                     return salesB.compareTo(salesA);
                 })
                 .limit(5)
-                .map(data -> ecommerce.modules.admin.dto.AdminAnalyticsDto.TopProductMetric.builder()
+                .map(data -> ecommerce.modules.analytics.dto.AdminAnalyticsDto.TopProductMetric.builder()
                         .productName((String) data[0])
                         .salesCount((Long) data[1])
                         .revenue((BigDecimal) data[2])
@@ -1969,7 +1969,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // Monthly sales trend
-        List<ecommerce.modules.admin.dto.AdminAnalyticsDto.MonthlySalesTrend> monthlyTrend = new java.util.ArrayList<>();
+        List<ecommerce.modules.analytics.dto.AdminAnalyticsDto.MonthlySalesTrend> monthlyTrend = new java.util.ArrayList<>();
         BigDecimal prevMonthRevenue = BigDecimal.ZERO;
         for (int i = 11; i >= 0; i--) {
             LocalDateTime monthStart = now.minusMonths(i).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
@@ -1990,7 +1990,7 @@ public class OrderServiceImpl implements OrderService {
                     ? calculateGrowthDecimal(prevMonthRevenue, monthRevenue)
                     : 0.0;
 
-            monthlyTrend.add(ecommerce.modules.admin.dto.AdminAnalyticsDto.MonthlySalesTrend.builder()
+            monthlyTrend.add(ecommerce.modules.analytics.dto.AdminAnalyticsDto.MonthlySalesTrend.builder()
                     .month(monthNames[monthStart.getMonthValue() - 1])
                     .revenue(monthRevenue)
                     .orders(monthOrdersCount)
@@ -2011,7 +2011,7 @@ public class OrderServiceImpl implements OrderService {
         // Create effectively final copy for lambda expression
         final BigDecimal finalTotalPaymentAmount = totalPaymentAmount;
 
-        List<ecommerce.modules.admin.dto.AdminAnalyticsDto.PaymentMethodBreakdown> paymentMethodBreakdown = paymentBreakdownData.stream()
+        List<ecommerce.modules.analytics.dto.AdminAnalyticsDto.PaymentMethodBreakdown> paymentMethodBreakdown = paymentBreakdownData.stream()
                 .map(row -> {
                     PaymentMethod method = (PaymentMethod) row[0];
                     Long count = (Long) row[1];
@@ -2019,7 +2019,7 @@ public class OrderServiceImpl implements OrderService {
                     Double share = finalTotalPaymentAmount.compareTo(BigDecimal.ZERO) > 0
                             ? amount.multiply(BigDecimal.valueOf(100)).divide(finalTotalPaymentAmount, 2, java.math.RoundingMode.HALF_UP).doubleValue()
                             : 0.0;
-                    return ecommerce.modules.admin.dto.AdminAnalyticsDto.PaymentMethodBreakdown.builder()
+                    return ecommerce.modules.analytics.dto.AdminAnalyticsDto.PaymentMethodBreakdown.builder()
                             .method(method != null ? method.name() : "UNKNOWN")
                             .displayName(method != null ? method.getDisplayName() : "Unknown")
                             .transactions(count)
@@ -2057,7 +2057,7 @@ public class OrderServiceImpl implements OrderService {
         // Net revenue
         BigDecimal netRevenue = totalCommission.subtract(refundsProcessed);
 
-        return ecommerce.modules.admin.dto.AdminAnalyticsDto.builder()
+        return ecommerce.modules.analytics.dto.AdminAnalyticsDto.builder()
                 .filterPeriod(filterPeriod)
                 .startDate(startDate.toLocalDate().toString())
                 .endDate(endDate.toLocalDate().toString())
@@ -2076,7 +2076,7 @@ public class OrderServiceImpl implements OrderService {
                 .productsSoldGrowth(productsSoldGrowth)
                 .averageOrderValue(avgOrderValue)
                 .avgOrderValueGrowth(avgOrderValueGrowth)
-                .revenueOverview(ecommerce.modules.admin.dto.AdminAnalyticsDto.RevenueOverview.builder()
+                .revenueOverview(ecommerce.modules.analytics.dto.AdminAnalyticsDto.RevenueOverview.builder()
                         .monthly(monthlyRevenue)
                         .total(totalRevenue)
                         .growth(revenueGrowth)
@@ -2086,21 +2086,21 @@ public class OrderServiceImpl implements OrderService {
                 .topProducts(topProducts)
                 .monthlyTrend(monthlyTrend)
                 .paymentMethodBreakdown(paymentMethodBreakdown)
-                .commissionMetrics(ecommerce.modules.admin.dto.AdminAnalyticsDto.CommissionMetrics.builder()
+                .commissionMetrics(ecommerce.modules.analytics.dto.AdminAnalyticsDto.CommissionMetrics.builder()
                         .totalCommission(totalCommission)
                         .platformCommission(platformCommission)
                         .transactionFees(transactionFees)
                         .paymentProcessing(paymentProcessing)
                         .growth(revenueGrowth)
                         .build())
-                .sellerPayoutMetrics(ecommerce.modules.admin.dto.AdminAnalyticsDto.SellerPayoutMetrics.builder()
+                .sellerPayoutMetrics(ecommerce.modules.analytics.dto.AdminAnalyticsDto.SellerPayoutMetrics.builder()
                         .total(totalPayouts)
                         .pending(pendingPayouts)
                         .processing(processingPayouts)
                         .completed(completedPayouts)
                         .growth(0.082)
                         .build())
-                .netRevenueMetrics(ecommerce.modules.admin.dto.AdminAnalyticsDto.NetRevenueMetrics.builder()
+                .netRevenueMetrics(ecommerce.modules.analytics.dto.AdminAnalyticsDto.NetRevenueMetrics.builder()
                         .netRevenue(netRevenue)
                         .grossRevenue(totalRevenue)
                         .refunds(refundsProcessed)
