@@ -10,10 +10,12 @@ import ecommerce.common.exception.DuplicateResourceException;
 import ecommerce.common.exception.InvalidTokenException;
 import ecommerce.common.security.TotpUtil;
 import ecommerce.modules.auth.dto.AuthResponse;
+import ecommerce.modules.auth.dto.LinkedIdentityResponse;
 import ecommerce.modules.auth.dto.LoginRequest;
 import ecommerce.modules.auth.dto.MfaSetupResponse;
 import ecommerce.modules.auth.dto.RegisterRequest;
 import ecommerce.modules.auth.dto.SessionResponse;
+import ecommerce.modules.auth.repository.LinkedIdentityRepository;
 import ecommerce.modules.auth.entity.Auth;
 import ecommerce.modules.auth.entity.VerificationToken;
 import ecommerce.modules.auth.entity.VerificationTokenType;
@@ -61,6 +63,7 @@ public class AuthServiceImpl implements AuthService {
     private final SellerProfileRepository sellerProfileRepository;
     private final AuthRepository authRepository;
     private final VerificationTokenRepository verificationTokenRepository;
+    private final LinkedIdentityRepository linkedIdentityRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final LoginAttemptService loginAttemptService;
@@ -523,6 +526,36 @@ public class AuthServiceImpl implements AuthService {
         log.info("MFA verified, tokens issued for user: {}", user.getEmail());
 
         return buildAuthResponse(user, accessToken, refreshToken);
+    }
+
+    @Override
+    public List<LinkedIdentityResponse> listLinkedIdentities(UUID userId) {
+        return linkedIdentityRepository.findAllByUserId(userId).stream()
+                .map(li -> LinkedIdentityResponse.builder()
+                        .provider(li.getProvider())
+                        .displayName(li.getDisplayName())
+                        .email(li.getEmail())
+                        .avatarUrl(li.getAvatarUrl())
+                        .linkedAt(li.getLinkedAt())
+                        .build())
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public void unlinkSocialAccount(UUID userId, String provider) {
+        if (!linkedIdentityRepository.existsByUserIdAndProvider(userId, provider)) {
+            throw new BadRequestException("Provider '" + provider + "' is not linked to this account");
+        }
+
+        long count = linkedIdentityRepository.countByUserId(userId);
+        if (count <= 1) {
+            throw new BadRequestException(
+                    "Cannot unlink your only social account. Set a password first using the forgot-password flow.");
+        }
+
+        linkedIdentityRepository.deleteByUserIdAndProvider(userId, provider);
+        log.info("Unlinked provider='{}' for user={}", provider, userId);
     }
 
     @Override

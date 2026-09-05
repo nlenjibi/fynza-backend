@@ -1,8 +1,10 @@
 package ecommerce.common.security;
 
-import ecommerce.common.enums.PaymentMethod;
 import ecommerce.common.enums.Role;
+import ecommerce.common.enums.UserStatus;
 import ecommerce.modules.auth.dto.AuthResponse;
+import ecommerce.modules.auth.entity.LinkedIdentity;
+import ecommerce.modules.auth.repository.LinkedIdentityRepository;
 import ecommerce.modules.auth.service.AuthService;
 import ecommerce.modules.user.entity.User;
 import ecommerce.modules.user.repository.UserRepository;
@@ -13,8 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -22,30 +24,24 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 /**
- * Handles successful OAuth2 logins.
+ * Handles successful OAuth2 logins (Google, GitHub, Facebook).
  *
- * <p>
- * Mints JWT access + refresh tokens, attaches them as {@code HttpOnly} cookies,
- * then redirects to the configured frontend URL.
+ * <p>Flow:
+ * <ol>
+ *   <li>Extract user attributes from the OAuth2 provider's token</li>
+ *   <li>Upsert the {@link User} row (email is the stable identity key)</li>
+ *   <li>Upsert a {@link LinkedIdentity} row for this provider + providerUserId pair</li>
+ *   <li>Mint JWT access + refresh tokens via {@link AuthService#oauth2Login}</li>
+ *   <li>Set {@code HttpOnly} cookies and redirect to the frontend</li>
+ * </ol>
  *
  * <h3>Cross-origin cookie behaviour</h3>
- * When the Spring API and Next.js frontend live on <em>different</em> origins
- * (different hostnames or ports), the browser will only attach the cookies to
- * subsequent API requests when <strong>all three</strong> conditions hold:
- * <ol>
- * <li>{@code SameSite=None}</li>
- * <li>{@code Secure=true} (HTTPS required by the browser spec for
- * SameSite=None)</li>
- * <li>The frontend fetch/axios call uses {@code credentials: 'include'}</li>
- * </ol>
- * During local development over HTTP you can set
- * {@code app.cookie.secure=false}
- * and accept {@code SameSite=Lax} — the cookies will then be set but will only
- * travel with same-site navigations. Use a reverse proxy (e.g. nginx or Next.js
- * rewrites) pointing both origins to the same hostname to avoid this entirely.
+ * SameSite=None + Secure=true is required when the API and frontend run on different
+ * origins. Set {@code app.cookie.secure=false} for local HTTP dev (Lax is used instead).
  */
 @Slf4j
 @Component
@@ -55,9 +51,6 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
     @Value("${app.frontend.success-redirect:http://localhost:3000}")
     private String frontendUrl;
 
-    /**
-     * Set to {@code false} in local HTTP development via application properties.
-     */
     @Value("${app.cookie.secure:true}")
     private boolean secureCookie;
 
@@ -69,156 +62,183 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
     private final AuthService authService;
     private final UserRepository userRepository;
+    private final LinkedIdentityRepository linkedIdentityRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    // Providers where email ownership is implicit (no email_verified claim needed)
+    private static final java.util.Set<String> VERIFIED_BY_DEFAULT =
+            java.util.Set.of("github", "facebook");
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
-            HttpServletResponse response,
-            Authentication authentication) throws IOException {
-
+                                        HttpServletResponse response,
+                                        Authentication authentication) throws IOException {
         try {
             OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
 
-            String registrationId = "unknown";
+            String provider = "unknown";
             if (authentication instanceof OAuth2AuthenticationToken token) {
-                registrationId = token.getAuthorizedClientRegistrationId();
+                provider = token.getAuthorizedClientRegistrationId();
             }
 
-            log.info("OAuth2 login via provider='{}' attributes={}", registrationId, oAuth2User.getAttributes());
+            log.info("OAuth2 login via provider='{}'", provider);
 
-            String email = getEmail(oAuth2User);
-            String name = getName(oAuth2User);
-            String avatar = getAvatar(oAuth2User);
+            String email    = extractEmail(oAuth2User, provider);
+            String name     = extractName(oAuth2User);
+            String avatar   = extractAvatar(oAuth2User, provider);
+            String providerId = extractProviderId(oAuth2User, provider);
 
             if (email == null) {
-                throw new OAuth2AuthenticationException("Email not provided by OAuth2 provider");
+                throw new IllegalStateException("Email not provided by OAuth2 provider: " + provider);
             }
 
-            Boolean emailVerified = oAuth2User.getAttribute("email_verified");
-            if (!Boolean.TRUE.equals(emailVerified)) {
-                log.warn("Email not verified by OAuth2 provider: {}", email);
-                throw new OAuth2AuthenticationException("Email not verified by OAuth2 provider");
+            // Google returns email_verified; GitHub/Facebook verify emails at account creation
+            if (!VERIFIED_BY_DEFAULT.contains(provider)) {
+                Boolean verified = oAuth2User.getAttribute("email_verified");
+                if (!Boolean.TRUE.equals(verified)) {
+                    throw new IllegalStateException("Email not verified by provider: " + provider);
+                }
             }
 
-            // ── Upsert user ────────────────────────────────────────────────────────
-            String finalRegistrationId = registrationId;
+            // ── Upsert User ───────────────────────────────────────────────────────
+            final String finalProvider = provider;
             User user = userRepository.findByEmail(email)
                     .map(existing -> {
-                        updateExistingUser(existing, name, avatar);
+                        patchExistingUser(existing, name, avatar);
                         return userRepository.save(existing);
                     })
                     .orElseGet(() -> {
-                        User created = createNewUser(finalRegistrationId, email, name, avatar);
+                        User created = buildNewOAuthUser(finalProvider, email, name, avatar);
                         User saved = userRepository.save(created);
-                        log.info("Created new OAuth2 user: email='{}' provider='{}'", email, finalRegistrationId);
+                        log.info("Created new OAuth2 user email='{}' provider='{}'", email, finalProvider);
                         return saved;
                     });
 
-            log.info("User upsert complete, calling authService.getCurrentUserSession");
+            // ── Upsert LinkedIdentity ─────────────────────────────────────────────
+            upsertLinkedIdentity(user.getId(), provider, providerId, email, name, avatar);
 
-            // ── Get existing user session instead of creating new tokens ───────
+            // ── Mint tokens + set cookies ─────────────────────────────────────────
             AuthResponse authResponse = authService.oauth2Login(user, request);
 
-            log.info("Auth tokens generated, setting cookies");
-
-            // ── Set cookies ────────────────────────────────────────────────────────
-            // SameSite=None is required for cross-origin cookie delivery.
-            // The spec mandates Secure=true whenever SameSite=None is used.
             String sameSite = secureCookie ? "None" : "Lax";
 
-            ResponseCookie accessTokenCookie = ResponseCookie.from("access_token", authResponse.getAccessToken())
-                    .httpOnly(true)
-                    .secure(secureCookie)
-                    .path("/")
-                    .maxAge(Duration.ofMinutes(accessTokenExpiryMinutes))
-                    .sameSite(sameSite)
-                    .build();
+            ResponseCookie accessCookie = ResponseCookie.from("access_token", authResponse.getAccessToken())
+                    .httpOnly(true).secure(secureCookie).path("/")
+                    .maxAge(Duration.ofMinutes(accessTokenExpiryMinutes)).sameSite(sameSite).build();
 
-            ResponseCookie refreshTokenCookie = ResponseCookie.from("refresh_token", authResponse.getRefreshToken())
-                    .httpOnly(true)
-                    .secure(secureCookie)
-                    .path("/")
-                    .maxAge(Duration.ofDays(refreshTokenExpiryDays))
-                    .sameSite(sameSite)
-                    .build();
+            ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", authResponse.getRefreshToken())
+                    .httpOnly(true).secure(secureCookie).path("/")
+                    .maxAge(Duration.ofDays(refreshTokenExpiryDays)).sameSite(sameSite).build();
 
-            response.addHeader("Set-Cookie", accessTokenCookie.toString());
-            response.addHeader("Set-Cookie", refreshTokenCookie.toString());
-
-            // Redirect to home page after successful OAuth2 login
+            response.addHeader("Set-Cookie", accessCookie.toString());
+            response.addHeader("Set-Cookie", refreshCookie.toString());
             response.sendRedirect(frontendUrl);
 
         } catch (Exception e) {
-            log.error("OAuth2 authentication success handler failed", e);
+            log.error("OAuth2 success handler failed", e);
             response.sendRedirect(frontendUrl + "/auth/login?error=oauth2_failure");
         }
     }
 
-    // ── Attribute extraction (Google defaults) ─────────────────────────────────
+    // ── Attribute extraction ──────────────────────────────────────────────────
 
-    private String getEmail(OAuth2User oAuth2User) {
-        return oAuth2User.getAttribute("email");
+    private String extractEmail(OAuth2User user, String provider) {
+        return user.getAttribute("email");
     }
 
-    private String getName(OAuth2User oAuth2User) {
-        return oAuth2User.getAttribute("name");
+    private String extractName(OAuth2User user) {
+        String name = user.getAttribute("name");
+        if (name == null) {
+            String login = user.getAttribute("login"); // GitHub uses 'login'
+            if (login != null) return login;
+        }
+        return name;
     }
 
-    private String getAvatar(OAuth2User oAuth2User) {
-        return oAuth2User.getAttribute("picture");
+    private String extractAvatar(OAuth2User user, String provider) {
+        String picture = user.getAttribute("picture");   // Google
+        if (picture == null) picture = user.getAttribute("avatar_url"); // GitHub
+        return picture;
     }
 
-    // ── User persistence helpers ───────────────────────────────────────────────
+    private String extractProviderId(OAuth2User user, String provider) {
+        // Google: "sub"  |  GitHub & Facebook: "id" (may come as Integer)
+        Object id = switch (provider) {
+            case "google" -> user.getAttribute("sub");
+            default       -> user.getAttribute("id");
+        };
+        return id != null ? id.toString() : null;
+    }
 
-    private User createNewUser(String provider, String email, String name, String avatar) {
-        String[] nameParts = parseName(name);
+    // ── User helpers ──────────────────────────────────────────────────────────
+
+    private User buildNewOAuthUser(String provider, String email, String name, String avatar) {
+        String[] parts = splitName(name);
         return User.builder()
                 .email(email)
-                .username(generateUniqueUsername(email, provider))
-                .firstName(nameParts[0])
-                .lastName(nameParts[1])
+                .username(uniqueUsername(email, provider))
+                // OAuth users have no password — set a random unguessable hash
+                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .firstName(parts[0])
+                .lastName(parts[1])
                 .profileImageUrl(avatar)
                 .role(Role.CUSTOMER)
-                .isActive(true)
+                .status(UserStatus.ACTIVE)
+                .isEmailVerified(true)   // provider has already verified the email
                 .isLocked(false)
                 .lastPasswordChange(LocalDateTime.now())
                 .build();
     }
 
-    private void updateExistingUser(User user, String name, String avatar) {
+    private void patchExistingUser(User user, String name, String avatar) {
         if (name != null) {
-            String[] nameParts = parseName(name);
-            if (user.getFirstName() == null)
-                user.setFirstName(nameParts[0]);
-            if (user.getLastName() == null)
-                user.setLastName(nameParts[1]);
+            String[] parts = splitName(name);
+            if (user.getFirstName() == null) user.setFirstName(parts[0]);
+            if (user.getLastName()  == null) user.setLastName(parts[1]);
         }
         if (avatar != null && user.getProfileImageUrl() == null) {
             user.setProfileImageUrl(avatar);
         }
-    }
-
-    // ── Utility ────────────────────────────────────────────────────────────────
-
-    private String[] parseName(String name) {
-        if (name != null && name.contains(" ")) {
-            return name.split(" ", 2);
+        // Mark email verified for any existing account that logs in via OAuth
+        if (!Boolean.TRUE.equals(user.getIsEmailVerified())) {
+            user.setIsEmailVerified(true);
         }
-        return new String[] { name != null ? name : "User", "" };
     }
 
-    /**
-     * Generates a username that is unique even when two users share the same
-     * email prefix and provider, by appending a short random suffix when the
-     * naive candidate is already taken.
-     */
-    private String generateUniqueUsername(String email, String provider) {
-        String base = email.split("@")[0].replaceAll("[^a-zA-Z0-9_]", "_");
-        String providerSuffix = provider.substring(0, Math.min(3, provider.length()));
-        String candidate = base + "_" + providerSuffix;
+    private void upsertLinkedIdentity(UUID userId, String provider,
+                                       String providerId, String email,
+                                       String name, String avatar) {
+        if (providerId == null) return;
+        linkedIdentityRepository.findByProviderAndProviderUserId(provider, providerId)
+                .ifPresentOrElse(
+                        existing -> {
+                            existing.setDisplayName(name);
+                            existing.setAvatarUrl(avatar);
+                            linkedIdentityRepository.save(existing);
+                        },
+                        () -> linkedIdentityRepository.save(LinkedIdentity.builder()
+                                .userId(userId)
+                                .provider(provider)
+                                .providerUserId(providerId)
+                                .email(email)
+                                .displayName(name)
+                                .avatarUrl(avatar)
+                                .build()));
+    }
 
-        // Retry with a random suffix until we find a free slot.
+    // ── Utility ───────────────────────────────────────────────────────────────
+
+    private String[] splitName(String name) {
+        if (name != null && name.contains(" ")) return name.split(" ", 2);
+        return new String[]{ name != null ? name : "User", "" };
+    }
+
+    private String uniqueUsername(String email, String provider) {
+        String base = email.split("@")[0].replaceAll("[^a-zA-Z0-9_]", "_");
+        String suffix = provider.substring(0, Math.min(3, provider.length()));
+        String candidate = base + "_" + suffix;
         while (userRepository.existsByUsername(candidate)) {
-            candidate = base + "_" + providerSuffix + "_" + UUID.randomUUID().toString().substring(0, 5);
+            candidate = base + "_" + suffix + "_" + UUID.randomUUID().toString().substring(0, 5);
         }
         return candidate;
     }

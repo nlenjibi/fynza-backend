@@ -4,6 +4,7 @@ import ecommerce.common.response.ApiResponse;
 import ecommerce.modules.auth.dto.AuthResponse;
 import ecommerce.modules.auth.dto.ChangePasswordRequest;
 import ecommerce.modules.auth.dto.ForgotPasswordRequest;
+import ecommerce.modules.auth.dto.LinkedIdentityResponse;
 import ecommerce.modules.auth.dto.LoginRequest;
 import ecommerce.modules.auth.dto.LogoutRequest;
 import ecommerce.modules.auth.dto.MfaDisableRequest;
@@ -156,5 +157,22 @@ public class AuthController {
             @Valid @RequestBody MfaVerifyRequest request) {
         AuthResponse response = authService.verifyMfa(request.getChallengeToken(), request.getTotpCode());
         return ResponseEntity.ok(ApiResponse.success("MFA verified, login successful", response));
+    }
+
+    @GetMapping("/social-accounts")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<List<LinkedIdentityResponse>>> listSocialAccounts(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        List<LinkedIdentityResponse> accounts = authService.listLinkedIdentities(principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Linked social accounts retrieved", accounts));
+    }
+
+    @DeleteMapping("/social-accounts/{provider}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> unlinkSocialAccount(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable String provider) {
+        authService.unlinkSocialAccount(principal.getId(), provider.toLowerCase());
+        return ResponseEntity.ok(ApiResponse.success("Social account unlinked", null));
     }
 }

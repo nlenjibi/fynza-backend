@@ -9,5 +9,6 @@
     <include file="changes/002-seed-data.sql" relativeToChangelogFile="true"/>
     <include file="changes/003-verification-tokens.sql" relativeToChangelogFile="true"/>
     <include file="changes/004-mfa-columns.sql" relativeToChangelogFile="true"/>
+    <include file="changes/005-linked-identities.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

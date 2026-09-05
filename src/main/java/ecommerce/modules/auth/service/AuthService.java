@@ -1,6 +1,7 @@
 package ecommerce.modules.auth.service;
 
 import ecommerce.modules.auth.dto.AuthResponse;
+import ecommerce.modules.auth.dto.LinkedIdentityResponse;
 import ecommerce.modules.auth.dto.LoginRequest;
 import ecommerce.modules.auth.dto.MfaSetupResponse;
 import ecommerce.modules.auth.dto.RegisterRequest;
@@ -45,4 +46,8 @@ public interface AuthService {
     void disableMfa(UUID userId, String totpCode);
 
     AuthResponse verifyMfa(String challengeToken, String totpCode);
+
+    List<LinkedIdentityResponse> listLinkedIdentities(UUID userId);
+
+    void unlinkSocialAccount(UUID userId, String provider);
 }
