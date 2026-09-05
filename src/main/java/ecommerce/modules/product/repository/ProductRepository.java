@@ -87,6 +87,15 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @Query("SELECT COUNT(p) FROM Product p WHERE p.seller.id = :sellerId AND p.inventoryStatus = 'LOW_STOCK'")
     long countBySellerIdAndLowStock(@Param("sellerId") Long sellerId);
 
+    long countBySeller_Id(UUID sellerId);
+
+    long countBySeller_IdAndStatus(UUID sellerId, ProductStatus status);
+
+    long countBySeller_IdAndInventoryStatus(UUID sellerId, InventoryStatus inventoryStatus);
+
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.seller.id = :sellerId AND p.inventoryStatus = 'LOW_STOCK'")
+    long countBySeller_IdAndLowStock(@Param("sellerId") UUID sellerId);
+
     @EntityGraph(attributePaths = {"category", "seller"})
     Page<Product> findByStatusAndIsApproved(ProductStatus status, Boolean isApproved, Pageable pageable);
 

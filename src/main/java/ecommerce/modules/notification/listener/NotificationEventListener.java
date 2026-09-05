@@ -228,7 +228,7 @@ public class NotificationEventListener {
     public void onProductLowStock(ProductLowStockEvent event) {
         log.debug("[NotificationEvent] SELLER_LOW_STOCK productId={}", event.productId());
         notificationService.send(
-            NotificationType.SELLER_LOW_STOCK,
+            NotificationType.SELLER_LOW_STOCK_ALERT,
             event.sellerId(),
             event.sellerId(),
             Map.of(

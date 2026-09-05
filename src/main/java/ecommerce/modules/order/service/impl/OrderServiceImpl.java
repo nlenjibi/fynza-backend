@@ -236,7 +236,7 @@ public class OrderServiceImpl implements OrderService {
             return null;
         }
         
-        Address address = addressRepository.findById(addressId)
+        Address address = addressRepository.findByPublicId(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException(addressType + " address not found"));
         
         if (!address.getUser().getId().equals(userId)) {
@@ -347,9 +347,9 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public OrderResponse getOrderById(UUID id, UUID userId) {
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.findByPublicId(id)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Order", id));
-        
+
         validateOrderAccess(order, userId);
         return mapToOrderResponse(order);
     }
@@ -409,9 +409,9 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse cancelOrder(UUID id, String reason) {
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.findByPublicId(id)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Order", id));
-        
+
         order.setStatus(OrderStatus.CANCELLED);
         order.setNotes(reason);
         
@@ -454,9 +454,9 @@ public class OrderServiceImpl implements OrderService {
      * @return The updated order response
      */
     private OrderResponse cancelOrderWithValidation(UUID id, UUID userId, String reason) {
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.findByPublicId(id)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Order", id));
-        
+
         // Validate ownership
         if (!order.getCustomer().getId().equals(userId)) {
             throw new UnauthorizedException("You are not authorized to cancel this order");
@@ -517,9 +517,9 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse updateOrderStatus(UUID id, OrderStatus status) {
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.findByPublicId(id)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Order", id));
-        
+
         order.setStatus(status);
         
         // Auto-update payment status when order is confirmed
@@ -540,9 +540,9 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse updateOrderStatus(UUID id, OrderStatusUpdateRequest request) {
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.findByPublicId(id)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Order", id));
-        
+
         if (request.getStatus() != null) {
             order.setStatus(request.getStatus());
             
@@ -696,7 +696,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return OrderTrackingResponse.builder()
-                .orderId(order.getId())
+                .orderId(order.getPublicId())
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus().name())
                 .displayName(order.getStatus().getDisplayName())
@@ -754,7 +754,7 @@ public class OrderServiceImpl implements OrderService {
                 .description(activity.getDescription())
                 .oldValue(activity.getOldValue())
                 .newValue(activity.getNewValue())
-                .timestamp(activity.getCreatedAt())
+                .timestamp(activity.getCreatedAt() != null ? activity.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
                 .icon(getIconForActivityType(activity.getActivityType()))
                 .color(getColorForActivityType(activity.getActivityType()))
                 .build();

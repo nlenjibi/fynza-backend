@@ -188,7 +188,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         if (request.getCategoryId() != null) {
-            Category category = categoryRepository.findById(request.getCategoryId())
+            Category category = categoryRepository.findByPublicId(request.getCategoryId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Category not found with id: " + request.getCategoryId()));
             product.setCategory(category);
@@ -216,7 +216,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public Page<ProductResponse> findBySellerId(UUID sellerId, Pageable pageable) {
         log.info("Finding products for seller: {}", sellerId);
-        Page<Product> products = productRepository.findBySellerId(sellerId, pageable);
+        Page<Product> products = productRepository.findBySeller_PublicId(sellerId, pageable);
         return mapPageToResponse(products);
     }
 
@@ -230,12 +230,12 @@ public class ProductServiceImpl implements ProductService {
             return products.map(this::mapToResponse);
         }
 
-        // Collect all product IDs for batch fetching
+        // Collect all product public IDs for batch fetching
         List<UUID> productIds = products.getContent().stream()
-                .map(Product::getId)
+                .map(Product::getPublicId)
                 .collect(Collectors.toList());
 
-        // Collect unique seller IDs
+        // Collect unique seller IDs (User.id is UUID)
         List<UUID> sellerIds = products.getContent().stream()
                 .map(p -> p.getSeller() != null ? p.getSeller().getId() : null)
                 .filter(id -> id != null)
@@ -243,12 +243,12 @@ public class ProductServiceImpl implements ProductService {
                 .collect(Collectors.toList());
 
         // Batch fetch variants for all products (single query)
-        Map<UUID, List<ProductVariant>> variantsMap = productVariantRepository.findByProductIdIn(productIds)
+        Map<UUID, List<ProductVariant>> variantsMap = productVariantRepository.findByProduct_PublicIdIn(productIds)
                 .stream()
-                .collect(Collectors.groupingBy(v -> v.getProduct().getId()));
+                .collect(Collectors.groupingBy(v -> v.getProduct().getPublicId()));
 
         // Batch fetch seller profiles for all sellers (single query)
-        Map<UUID, SellerProfile> sellerProfileMap = sellerProfileRepository.findByUserIdIn(sellerIds)
+        Map<UUID, SellerProfile> sellerProfileMap = sellerProfileRepository.findByUser_PublicIdIn(sellerIds)
                 .stream()
                 .collect(Collectors.toMap(sp -> sp.getUser().getId(), sp -> sp));
 
@@ -265,10 +265,10 @@ public class ProductServiceImpl implements ProductService {
 
         // Use pre-fetched variants
         List<ProductVariantResponse> variantResponses = new ArrayList<>();
-        if (product.getId() != null && variantsMap.containsKey(product.getId())) {
-            variantResponses = variantsMap.get(product.getId()).stream()
+        if (product.getPublicId() != null && variantsMap.containsKey(product.getPublicId())) {
+            variantResponses = variantsMap.get(product.getPublicId()).stream()
                     .map(variant -> ProductVariantResponse.builder()
-                            .id(variant.getId())
+                            .id(variant.getPublicId())
                             .sku(variant.getSku())
                             .size(variant.getSize())
                             .color(variant.getColor())
@@ -282,7 +282,7 @@ public class ProductServiceImpl implements ProductService {
         CategoryInfo categoryInfo = null;
         if (product.getCategory() != null) {
             categoryInfo = CategoryInfo.builder()
-                    .id(product.getCategory().getId())
+                    .id(product.getCategory().getPublicId())
                     .name(product.getCategory().getName())
                     .slug(product.getCategory().getSlug())
                     .build();
@@ -295,7 +295,7 @@ public class ProductServiceImpl implements ProductService {
 
             if (sellerProfile != null) {
                 sellerInfo = SellerInfo.builder()
-                        .id(sellerProfile.getId())
+                        .id(sellerProfile.getPublicId())
                         .storeName(sellerProfile.getStoreName())
                         .rating(sellerProfile.getRating())
                         .build();
@@ -308,7 +308,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         return ProductResponse.builder()
-                .id(product.getId())
+                .id(product.getPublicId())
                 .name(product.getName())
                 .slug(product.getSlug())
                 .description(product.getDescription())
@@ -345,7 +345,7 @@ public class ProductServiceImpl implements ProductService {
             List<ProductVariant> variants = productVariantRepository.findByProductId(product.getId());
             variantResponses = variants.stream()
                     .map(variant -> ProductVariantResponse.builder()
-                            .id(variant.getId())
+                            .id(variant.getPublicId())
                             .sku(variant.getSku())
                             .size(variant.getSize())
                             .color(variant.getColor())
@@ -358,7 +358,7 @@ public class ProductServiceImpl implements ProductService {
         CategoryInfo categoryInfo = null;
         if (product.getCategory() != null) {
             categoryInfo = CategoryInfo.builder()
-                    .id(product.getCategory().getId())
+                    .id(product.getCategory().getPublicId())
                     .name(product.getCategory().getName())
                     .slug(product.getCategory().getSlug())
                     .build();
@@ -367,12 +367,12 @@ public class ProductServiceImpl implements ProductService {
         SellerInfo sellerInfo = null;
         if (product.getSeller() != null) {
             SellerProfile sellerProfile = sellerProfileRepository
-                    .findByUserId(product.getSeller().getId())
+                    .findByUser_PublicId(product.getSeller().getId())
                     .orElse(null);
 
             if (sellerProfile != null) {
                 sellerInfo = SellerInfo.builder()
-                        .id(sellerProfile.getId())
+                        .id(sellerProfile.getPublicId())
                         .storeName(sellerProfile.getStoreName())
                         .rating(sellerProfile.getRating())
                         .build();
@@ -385,7 +385,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         return ProductResponse.builder()
-                .id(product.getId())
+                .id(product.getPublicId())
                 .name(product.getName())
                 .slug(product.getSlug())
                 .description(product.getDescription())
@@ -509,11 +509,11 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public SellerProductStatsResponse getSellerProductStats(UUID sellerId) {
-        long total = productRepository.countBySellerId(sellerId);
-        long active = productRepository.countBySellerIdAndStatus(sellerId, ProductStatus.ACTIVE);
-        long draft = productRepository.countBySellerIdAndStatus(sellerId, ProductStatus.DRAFT);
-        long outOfStock = productRepository.countBySellerIdAndInventoryStatus(sellerId, InventoryStatus.OUT_OF_STOCK);
-        long lowStock = productRepository.countBySellerIdAndLowStock(sellerId);
+        long total = productRepository.countBySeller_Id(sellerId);
+        long active = productRepository.countBySeller_IdAndStatus(sellerId, ProductStatus.ACTIVE);
+        long draft = productRepository.countBySeller_IdAndStatus(sellerId, ProductStatus.DRAFT);
+        long outOfStock = productRepository.countBySeller_IdAndInventoryStatus(sellerId, InventoryStatus.OUT_OF_STOCK);
+        long lowStock = productRepository.countBySeller_IdAndLowStock(sellerId);
 
         return SellerProductStatsResponse.builder()
                 .totalProducts(total)

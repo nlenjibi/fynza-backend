@@ -17,5 +17,8 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     @Query("SELECT v FROM ProductVariant v WHERE v.product.id IN :productIds")
     List<ProductVariant> findByProductIdIn(java.util.Collection<Long> productIds);
 
+    @Query("SELECT v FROM ProductVariant v WHERE v.product.publicId IN :publicIds")
+    List<ProductVariant> findByProduct_PublicIdIn(@org.springframework.data.repository.query.Param("publicIds") List<UUID> publicIds);
+
     Optional<ProductVariant> findBySku(String sku);
 }
