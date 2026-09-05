@@ -1,6 +1,6 @@
 package ecommerce.modules.cache.impl;
 
-import com.aoms.aomsbackend.cache.RedisCacheService;
+import ecommerce.modules.cache.RedisCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
