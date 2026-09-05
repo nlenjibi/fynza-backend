@@ -1,10 +1,8 @@
 package ecommerce.common.exception;
 
-import org.springframework.http.HttpStatus;
-
-public class InvalidTokenException extends FynzaException {
+public class InvalidTokenException extends UnauthorizedException {
 
     public InvalidTokenException(String message) {
-        super(message, HttpStatus.UNAUTHORIZED, "INVALID_TOKEN");
+        super(message, "INVALID_TOKEN");
     }
 }

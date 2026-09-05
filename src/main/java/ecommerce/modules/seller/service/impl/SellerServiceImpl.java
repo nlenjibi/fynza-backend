@@ -7,7 +7,6 @@ import ecommerce.modules.notification.repository.SellerNotificationSettingsRepos
 import ecommerce.modules.order.dto.OrderResponse;
 import ecommerce.modules.order.dto.OrderStatusUpdateRequest;
 import ecommerce.modules.order.dto.SellerOrderDto;
-import ecommerce.modules.order.mapper.OrderMapper;
 import ecommerce.modules.order.repository.OrderItemRepository;
 import ecommerce.modules.order.service.OrderService;
 import ecommerce.modules.product.entity.Product;
@@ -30,6 +29,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -49,7 +50,6 @@ public class SellerServiceImpl implements SellerService {
     private final OrderService orderService;
     private final OrderItemRepository orderItemRepository;
     private final ProductRepository productRepository;
-    private final OrderMapper orderMapper;
     private final SellerProfileRepository sellerProfileRepository;
     private final ReviewRepository reviewRepository;
     private final TagService tagService;
@@ -60,7 +60,7 @@ public class SellerServiceImpl implements SellerService {
     public SellerDashboardResponse getDashboard(UUID sellerId) {
         log.info("Getting seller dashboard for: {}", sellerId);
         
-        var products = productRepository.findBySellerId(sellerId, Pageable.unpaged()).getContent();
+        var products = productRepository.findBySeller_PublicId(sellerId, Pageable.unpaged()).getContent();
         
         long totalProducts = products.size();
         long activeProducts = products.stream().filter(p -> p.getIsActive()).count();
@@ -114,7 +114,7 @@ public class SellerServiceImpl implements SellerService {
     public SellerAnalyticsResponse getSalesAnalytics(UUID sellerId, int days) {
         SellerOrderDto.SellerOrderAnalytics analytics = orderService.getSellerOrderAnalytics(sellerId, days);
 
-        long totalViews = productRepository.findBySellerId(sellerId, Pageable.unpaged()).getContent().stream()
+        long totalViews = productRepository.findBySeller_PublicId(sellerId, Pageable.unpaged()).getContent().stream()
                 .mapToLong(p -> p.getViewCount() != null ? p.getViewCount().longValue() : 0L)
                 .sum();
         double conversionRate = totalViews > 0 ? (double) analytics.getTotalOrders() / totalViews * 100 : 0.0;
@@ -176,7 +176,7 @@ public class SellerServiceImpl implements SellerService {
 
     @Override
     public StoreResponse getStore(UUID sellerId) {
-        SellerProfile profile = sellerProfileRepository.findByUserId(sellerId)
+        SellerProfile profile = sellerProfileRepository.findByUser_PublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
         return mapToStoreResponse(profile);
     }
@@ -184,7 +184,7 @@ public class SellerServiceImpl implements SellerService {
     @Override
     @Transactional
     public StoreResponse updateStore(UUID sellerId, UpdateStoreRequest request) {
-        SellerProfile profile = sellerProfileRepository.findByUserId(sellerId)
+        SellerProfile profile = sellerProfileRepository.findByUser_PublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
 
         if (request.getStoreName() != null) profile.setStoreName(request.getStoreName());
@@ -212,9 +212,9 @@ public class SellerServiceImpl implements SellerService {
 
     @Override
     public Page<ReviewResponse> getSellerReviews(UUID sellerId, Pageable pageable) {
-        List<UUID> productIds = productRepository.findBySellerId(sellerId, Pageable.unpaged()).getContent()
+        List<UUID> productIds = productRepository.findBySeller_PublicId(sellerId, Pageable.unpaged()).getContent()
                 .stream()
-                .map(p -> p.getId())
+                .map(p -> p.getPublicId())
                 .collect(Collectors.toList());
 
         if (productIds.isEmpty()) {
@@ -222,7 +222,7 @@ public class SellerServiceImpl implements SellerService {
         }
 
         List<ReviewResponse> reviews = reviewRepository.findAll().stream()
-                .filter(r -> productIds.contains(r.getProduct().getId()))
+                .filter(r -> productIds.contains(r.getProduct().getPublicId()))
                 .map(this::mapToReviewResponse)
                 .collect(Collectors.toList());
 
@@ -246,7 +246,7 @@ public class SellerServiceImpl implements SellerService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
-        if (!product.getSeller().getId().equals(sellerId)) {
+        if (!product.getSeller().getPublicId().equals(sellerId)) {
             throw new ResourceNotFoundException("Product does not belong to this seller");
         }
 
@@ -258,7 +258,7 @@ public class SellerServiceImpl implements SellerService {
 
     private StoreResponse mapToStoreResponse(SellerProfile profile) {
         return StoreResponse.builder()
-                .id(profile.getId())
+                .id(profile.getPublicId())
                 .storeName(profile.getStoreName())
                 .storeDescription(profile.getStoreDescription())
                 .storeWebsite(profile.getStoreWebsite())
@@ -286,11 +286,11 @@ public class SellerServiceImpl implements SellerService {
 
     private ReviewResponse mapToReviewResponse(Review review) {
         return ReviewResponse.builder()
-                .id(review.getId())
-                .productId(review.getProduct().getId())
+                .id(review.getPublicId())
+                .productId(review.getProduct().getPublicId())
                 .productName(review.getProduct().getName())
                 .user(ReviewResponse.UserInfo.builder()
-                        .id(review.getCustomer().getId())
+                        .id(review.getCustomer().getPublicId())
                         .email(review.getCustomer().getEmail())
                         .build())
                 .rating(review.getRating())
@@ -305,23 +305,23 @@ public class SellerServiceImpl implements SellerService {
 
     @Override
     public SellerPaymentSettingsResponse getPaymentSettings(UUID sellerId) {
-        SellerProfile profile = sellerProfileRepository.findByUserId(sellerId)
+        SellerProfile profile = sellerProfileRepository.findByUser_PublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
         return SellerPaymentSettingsResponse.builder()
-                .id(profile.getId())
+                .id(profile.getPublicId())
                 .bankName(profile.getBankName())
                 .accountHolderName(profile.getAccountHolderName())
                 .accountNumber(maskAccountNumber(profile.getAccountNumber()))
                 .branch(profile.getBranch())
                 .payoutSchedule(profile.getPayoutSchedule())
-                .updatedAt(profile.getUpdatedAt())
+                .updatedAt(profile.getUpdatedAt() != null ? LocalDateTime.ofInstant(profile.getUpdatedAt(), ZoneId.systemDefault()) : null)
                 .build();
     }
 
     @Override
     @Transactional
     public SellerPaymentSettingsResponse updatePaymentSettings(UUID sellerId, SellerPaymentSettingsRequest request) {
-        SellerProfile profile = sellerProfileRepository.findByUserId(sellerId)
+        SellerProfile profile = sellerProfileRepository.findByUser_PublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
 
         if (request.getBankName() != null) profile.setBankName(request.getBankName());
@@ -334,19 +334,19 @@ public class SellerServiceImpl implements SellerService {
         log.info("Updated payment settings for seller: {}", sellerId);
 
         return SellerPaymentSettingsResponse.builder()
-                .id(saved.getId())
+                .id(saved.getPublicId())
                 .bankName(saved.getBankName())
                 .accountHolderName(saved.getAccountHolderName())
                 .accountNumber(maskAccountNumber(saved.getAccountNumber()))
                 .branch(saved.getBranch())
                 .payoutSchedule(saved.getPayoutSchedule())
-                .updatedAt(saved.getUpdatedAt())
+                .updatedAt(saved.getUpdatedAt() != null ? LocalDateTime.ofInstant(saved.getUpdatedAt(), ZoneId.systemDefault()) : null)
                 .build();
     }
 
     @Override
     public SellerShippingSettingsResponse getShippingSettings(UUID sellerId) {
-        SellerProfile profile = sellerProfileRepository.findByUserId(sellerId)
+        SellerProfile profile = sellerProfileRepository.findByUser_PublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
 
         List<ShippingZoneResponse> zones = shippingZoneRepository.findBySellerIdAndIsActiveTrue(profile.getId())
@@ -355,17 +355,17 @@ public class SellerServiceImpl implements SellerService {
                 .collect(Collectors.toList());
 
         return SellerShippingSettingsResponse.builder()
-                .id(profile.getId())
+                .id(profile.getPublicId())
                 .returnPolicy(profile.getReturnPolicy())
                 .shippingZones(zones)
-                .updatedAt(profile.getUpdatedAt())
+                .updatedAt(profile.getUpdatedAt() != null ? LocalDateTime.ofInstant(profile.getUpdatedAt(), ZoneId.systemDefault()) : null)
                 .build();
     }
 
     @Override
     @Transactional
     public SellerShippingSettingsResponse updateShippingSettings(UUID sellerId, SellerShippingSettingsRequest request) {
-        SellerProfile profile = sellerProfileRepository.findByUserId(sellerId)
+        SellerProfile profile = sellerProfileRepository.findByUser_PublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
 
         if (request.getReturnPolicy() != null) {
@@ -381,17 +381,17 @@ public class SellerServiceImpl implements SellerService {
                 .collect(Collectors.toList());
 
         return SellerShippingSettingsResponse.builder()
-                .id(saved.getId())
+                .id(saved.getPublicId())
                 .returnPolicy(saved.getReturnPolicy())
                 .shippingZones(zones)
-                .updatedAt(saved.getUpdatedAt())
+                .updatedAt(saved.getUpdatedAt() != null ? LocalDateTime.ofInstant(saved.getUpdatedAt(), ZoneId.systemDefault()) : null)
                 .build();
     }
 
     @Override
     @Transactional
     public ShippingZoneResponse createShippingZone(UUID sellerId, ShippingZoneRequest request) {
-        SellerProfile profile = sellerProfileRepository.findByUserId(sellerId)
+        SellerProfile profile = sellerProfileRepository.findByUser_PublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
 
         ShippingZone zone = ShippingZone.builder()
@@ -415,7 +415,7 @@ public class SellerServiceImpl implements SellerService {
     @Override
     @Transactional
     public ShippingZoneResponse updateShippingZone(UUID sellerId, UUID zoneId, ShippingZoneRequest request) {
-        SellerProfile profile = sellerProfileRepository.findByUserId(sellerId)
+        SellerProfile profile = sellerProfileRepository.findByUser_PublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
 
         ShippingZone zone = shippingZoneRepository.findById(zoneId)
@@ -442,7 +442,7 @@ public class SellerServiceImpl implements SellerService {
     @Override
     @Transactional
     public void deleteShippingZone(UUID sellerId, UUID zoneId) {
-        SellerProfile profile = sellerProfileRepository.findByUserId(sellerId)
+        SellerProfile profile = sellerProfileRepository.findByUser_PublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
 
         ShippingZone zone = shippingZoneRepository.findById(zoneId)
@@ -459,7 +459,7 @@ public class SellerServiceImpl implements SellerService {
 
     @Override
     public List<ShippingZoneResponse> getShippingZones(UUID sellerId) {
-        SellerProfile profile = sellerProfileRepository.findByUserId(sellerId)
+        SellerProfile profile = sellerProfileRepository.findByUser_PublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
 
         return shippingZoneRepository.findBySellerId(profile.getId())
@@ -470,7 +470,7 @@ public class SellerServiceImpl implements SellerService {
 
     @Override
     public SellerNotificationSettingsResponse getNotificationSettings(UUID sellerId) {
-        SellerProfile profile = sellerProfileRepository.findByUserId(sellerId)
+        SellerProfile profile = sellerProfileRepository.findByUser_PublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
 
         SellerNotificationSettings settings = sellerNotificationSettingsRepository.findBySellerId(profile.getId())
@@ -482,7 +482,7 @@ public class SellerServiceImpl implements SellerService {
     @Override
     @Transactional
     public SellerNotificationSettingsResponse updateNotificationSettings(UUID sellerId, SellerNotificationSettingsRequest request) {
-        SellerProfile profile = sellerProfileRepository.findByUserId(sellerId)
+        SellerProfile profile = sellerProfileRepository.findByUser_PublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
 
         SellerNotificationSettings settings = sellerNotificationSettingsRepository.findBySellerId(profile.getId())
@@ -509,7 +509,7 @@ public class SellerServiceImpl implements SellerService {
 
     private ShippingZoneResponse mapToShippingZoneResponse(ShippingZone zone) {
         return ShippingZoneResponse.builder()
-                .id(zone.getId())
+                .id(zone.getPublicId())
                 .zoneName(zone.getZoneName())
                 .zoneDescription(zone.getZoneDescription())
                 .region(zone.getRegion())
@@ -518,7 +518,7 @@ public class SellerServiceImpl implements SellerService {
                 .freeShippingMin(zone.getFreeShippingMin())
                 .estimatedDays(zone.getEstimatedDays())
                 .isActive(zone.getIsActive())
-                .updatedAt(zone.getUpdatedAt())
+                .updatedAt(zone.getUpdatedAt() != null ? LocalDateTime.ofInstant(zone.getUpdatedAt(), ZoneId.systemDefault()) : null)
                 .build();
     }
 

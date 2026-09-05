@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -18,15 +19,15 @@ public interface ReviewRepository extends JpaRepository<Review, Long>, JpaSpecif
 
     Optional<Review> findByPublicId(UUID publicId);
 
-    boolean existsByCustomerIdAndProductId(Long customerId, Long productId);
+    boolean existsByCustomer_PublicIdAndProduct_PublicId(UUID customerPublicId, UUID productPublicId);
 
-    Page<Review> findByProductIdAndApproved(Long productId, Boolean approved, Pageable pageable);
+    Page<Review> findByProduct_PublicIdAndApproved(UUID productPublicId, Boolean approved, Pageable pageable);
 
-    Page<Review> findByProductIdAndVerifiedPurchase(Long productId, Boolean verifiedPurchase, Pageable pageable);
+    Page<Review> findByProduct_PublicIdAndVerifiedPurchase(UUID productPublicId, Boolean verifiedPurchase, Pageable pageable);
 
-    Page<Review> findByProductIdAndRating(Long productId, Integer rating, Pageable pageable);
+    Page<Review> findByProduct_PublicIdAndRating(UUID productPublicId, Integer rating, Pageable pageable);
 
-    Page<Review> findByCustomerId(Long customerId, Pageable pageable);
+    Page<Review> findByCustomer_PublicId(UUID customerPublicId, Pageable pageable);
 
     @Query("SELECT r FROM Review r WHERE r.product.id = :productId AND r.deleted = false ORDER BY r.helpful DESC")
     List<Review> findMostHelpfulReviews(@Param("productId") Long productId, @Param("limit") int limit);
@@ -37,8 +38,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long>, JpaSpecif
     @Query("SELECT r FROM Review r WHERE r.hasImages = true AND r.deleted = false")
     Page<Review> findByHasImagesTrueAndIsActiveTrue(Pageable pageable);
 
-    @Query("SELECT r FROM Review r LEFT JOIN FETCH r.customer LEFT JOIN FETCH r.product WHERE r.id = :reviewId AND r.deleted = false")
-    Optional<Review> findByIdWithUserAndProduct(@Param("reviewId") Long reviewId);
+    @Query("SELECT r FROM Review r LEFT JOIN FETCH r.customer LEFT JOIN FETCH r.product WHERE r.publicId = :publicId AND r.deleted = false")
+    Optional<Review> findByPublicIdWithUserAndProduct(@Param("publicId") UUID publicId);
 
     @Query("SELECT COUNT(r), AVG(r.rating), SUM(CASE WHEN r.verifiedPurchase = true THEN 1 ELSE 0 END) FROM Review r WHERE r.product.id = :productId AND r.deleted = false")
     Object[] getProductRatingStats(@Param("productId") Long productId);
@@ -52,11 +53,13 @@ public interface ReviewRepository extends JpaRepository<Review, Long>, JpaSpecif
     @Query("SELECT r.cons FROM Review r WHERE r.product.id = :productId AND r.cons IS NOT NULL AND r.deleted = false GROUP BY r.cons ORDER BY COUNT(r.cons) DESC")
     List<String> getMostCommonCons(@Param("productId") Long productId, int limit);
 
-    @Query("UPDATE Review r SET r.approved = true WHERE r.id IN :reviewIds")
-    int approveReviews(List<Long> reviewIds);
+    @Modifying
+    @Query("UPDATE Review r SET r.approved = true WHERE r.publicId IN :publicIds")
+    int approveReviews(@Param("publicIds") List<UUID> publicIds);
 
-    @Query("UPDATE Review r SET r.approved = false, r.rejectionReason = :reason WHERE r.id IN :reviewIds")
-    int rejectReviews(List<Long> reviewIds, String reason);
+    @Modifying
+    @Query("UPDATE Review r SET r.approved = false, r.rejectionReason = :reason WHERE r.publicId IN :publicIds")
+    int rejectReviews(@Param("publicIds") List<UUID> publicIds, @Param("reason") String reason);
 
     @Query("SELECT COUNT(r), AVG(r.rating) FROM Review r WHERE r.deleted = false")
     Object[] getAdminReviewStats();

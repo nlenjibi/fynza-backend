@@ -17,7 +17,6 @@ import ecommerce.modules.order.entity.Order;
 import ecommerce.modules.order.entity.OrderItem;
 import ecommerce.modules.order.entity.OrderStats;
 import ecommerce.modules.order.entity.OrderTimeline;
-import ecommerce.modules.order.mapper.OrderMapper;
 import ecommerce.modules.order.repository.OrderRepository;
 import ecommerce.modules.order.repository.OrderTimelineRepository;
 import ecommerce.modules.order.service.OrderService;
@@ -81,7 +80,6 @@ public class OrderServiceImpl implements OrderService {
     // =================================================================
     
     private final OrderRepository orderRepository;
-    private final OrderMapper orderMapper;
     private final UserRepository userRepository;
     private final AddressRepository addressRepository;
     private final CartRepository cartRepository;
@@ -220,7 +218,7 @@ public class OrderServiceImpl implements OrderService {
         cartRepository.save(cart);
 
         log.info("Order created successfully with order number: {}", orderNumber);
-        return orderMapper.toResponse(savedOrder);
+        return mapToOrderResponse(savedOrder);
     }
 
     /**
@@ -351,7 +349,7 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Order", id));
         
         validateOrderAccess(order, userId);
-        return orderMapper.toResponse(order);
+        return mapToOrderResponse(order);
     }
 
     /**
@@ -367,7 +365,7 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with orderNumber: " + orderNumber));
         
         validateOrderAccess(order, userId);
-        return orderMapper.toResponse(order);
+        return mapToOrderResponse(order);
     }
 
     /**
@@ -380,7 +378,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Page<OrderResponse> getUserOrders(UUID userId, Pageable pageable) {
         return orderRepository.findByCustomerId(userId, pageable)
-                .map(orderMapper::toResponse);
+                .map(this::mapToOrderResponse);
     }
 
     /**
@@ -415,7 +413,7 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.CANCELLED);
         order.setNotes(reason);
         
-        return orderMapper.toResponse(orderRepository.save(order));
+        return mapToOrderResponse(orderRepository.save(order));
     }
 
     /**
@@ -473,7 +471,7 @@ public class OrderServiceImpl implements OrderService {
             order.setNotes(reason);
         }
         
-        return orderMapper.toResponse(orderRepository.save(order));
+        return mapToOrderResponse(orderRepository.save(order));
     }
 
     // =================================================================
@@ -489,7 +487,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Page<OrderResponse> getAllOrders(Pageable pageable) {
         return orderRepository.findAll(pageable)
-                .map(orderMapper::toResponse);
+                .map(this::mapToOrderResponse);
     }
 
     /**
@@ -502,7 +500,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Page<OrderResponse> getOrdersByStatus(OrderStatus status, Pageable pageable) {
         return orderRepository.findByStatus(status, pageable)
-                .map(orderMapper::toResponse);
+                .map(this::mapToOrderResponse);
     }
 
     /**
@@ -527,7 +525,7 @@ public class OrderServiceImpl implements OrderService {
             order.setPaymentStatus(ecommerce.modules.order.entity.PaymentStatus.PAID);
         }
         
-        return orderMapper.toResponse(orderRepository.save(order));
+        return mapToOrderResponse(orderRepository.save(order));
     }
 
     /**
@@ -556,7 +554,7 @@ public class OrderServiceImpl implements OrderService {
             order.setNotes(request.getNotes());
         }
         
-        return orderMapper.toResponse(orderRepository.save(order));
+        return mapToOrderResponse(orderRepository.save(order));
     }
 
     /**
@@ -605,7 +603,7 @@ public class OrderServiceImpl implements OrderService {
                 pageable
         );
 
-        return orders.map(orderMapper::toResponse);
+        return orders.map(this::mapToOrderResponse);
     }
 
     /**
@@ -1072,7 +1070,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public Page<OrderResponse> getSellerOrders(UUID sellerId, Pageable pageable) {
         return orderRepository.findBySellerId(sellerId, pageable)
-                .map(orderMapper::toResponse);
+                .map(this::mapToOrderResponse);
     }
 
     /**
@@ -1083,7 +1081,7 @@ public class OrderServiceImpl implements OrderService {
     public Page<OrderResponse> getSellerOrders(UUID sellerId, OrderStatus status, LocalDateTime dateFrom,
             LocalDateTime dateTo, String query, Pageable pageable) {
         return orderRepository.findSellerOrdersWithFilters(sellerId, status, dateFrom, dateTo, query, pageable)
-                .map(orderMapper::toResponse);
+                .map(this::mapToOrderResponse);
     }
 
     /**
@@ -1203,7 +1201,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order = orderRepository.save(order);
-        return orderMapper.toResponse(order);
+        return mapToOrderResponse(order);
     }
 
     /**

@@ -41,6 +41,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     Page<Product> findBySellerId(Long sellerId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"category", "seller"})
+    Page<Product> findBySeller_PublicId(UUID sellerPublicId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"category", "seller"})
     Page<Product> findByStatus(ProductStatus status, Pageable pageable);
 
     @EntityGraph(attributePaths = {"category", "seller"})

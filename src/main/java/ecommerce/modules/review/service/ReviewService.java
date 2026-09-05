@@ -1,17 +1,14 @@
 package ecommerce.modules.review.service;
 
-import com.querydsl.core.types.Predicate;
 import ecommerce.modules.review.dto.*;
+import ecommerce.modules.review.entity.Review;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Service interface for review operations
- * Provides business logic for managing product reviews
- */
 public interface ReviewService {
 
     // ==================== Basic CRUD Operations ====================
@@ -68,10 +65,7 @@ public interface ReviewService {
 
 
 
-    /**
-     * Find reviews with QueryDSL predicate for advanced filtering
-     */
-    Page<ReviewResponse> findReviewsWithPredicate(Predicate predicate, Pageable pageable);
+    Page<ReviewResponse> findReviewsWithPredicate(Specification<Review> spec, Pageable pageable);
 
     // ==================== Additional Query Operations ====================
 

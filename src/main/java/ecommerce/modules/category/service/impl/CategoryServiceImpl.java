@@ -4,7 +4,6 @@ import ecommerce.common.exception.ResourceNotFoundException;
 import ecommerce.modules.category.dto.CategoryCreateRequest;
 import ecommerce.modules.category.dto.CategoryResponse;
 import ecommerce.modules.category.entity.Category;
-import ecommerce.modules.category.mapper.CategoryMapper;
 import ecommerce.modules.category.repository.CategoryRepository;
 import ecommerce.modules.category.service.CategoryService;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,14 +29,47 @@ import java.util.UUID;
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
-    private final CategoryMapper categoryMapper;
+
+    private CategoryResponse toCategoryResponse(Category category) {
+        LocalDateTime createdAt = category.getCreatedAt() != null
+                ? LocalDateTime.ofInstant(category.getCreatedAt(), ZoneId.systemDefault()) : null;
+        LocalDateTime updatedAt = category.getUpdatedAt() != null
+                ? LocalDateTime.ofInstant(category.getUpdatedAt(), ZoneId.systemDefault()) : null;
+        UUID parentId = category.getParentCategory() != null
+                ? category.getParentCategory().getPublicId() : null;
+        return CategoryResponse.builder()
+                .id(category.getPublicId())
+                .name(category.getName())
+                .description(category.getDescription())
+                .parentCategoryId(parentId)
+                .featured(category.getFeatured())
+                .image(category.getImage())
+                .slug(category.getSlug())
+                .isActive(category.getIsActive())
+                .createdAt(createdAt)
+                .updatedAt(updatedAt)
+                .build();
+    }
+
+    private void updateCategoryFields(Category category, CategoryCreateRequest request) {
+        if (request.getName() != null) category.setName(request.getName());
+        if (request.getDescription() != null) category.setDescription(request.getDescription());
+        if (request.getImage() != null) category.setImage(request.getImage());
+        if (request.getFeatured() != null) category.setFeatured(request.getFeatured());
+        if (request.getIsActive() != null) category.setIsActive(request.getIsActive());
+        if (request.getParentCategoryId() != null) {
+            Category parent = categoryRepository.findByPublicId(request.getParentCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent category not found: " + request.getParentCategoryId()));
+            category.setParentCategory(parent);
+        }
+    }
 
     @Override
     @Cacheable(value = "categories", key = "'all'")
     public List<CategoryResponse> findAll() {
         log.debug("Fetching all categories");
         return categoryRepository.findAll().stream()
-                .map(categoryMapper::toSimpleResponse)
+                .map(this::toCategoryResponse)
                 .toList();
     }
 
@@ -43,9 +77,9 @@ public class CategoryServiceImpl implements CategoryService {
     @Cacheable(value = "categories", key = "#id")
     public CategoryResponse findById(UUID id) {
         log.debug("Fetching category by ID: {}", id);
-        Category category = categoryRepository.findById(id)
+        Category category = categoryRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with ID: " + id));
-        return categoryMapper.toSimpleResponse(category);
+        return toCategoryResponse(category);
     }
 
     @Override
@@ -64,18 +98,29 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponse create(CategoryCreateRequest request) {
         log.info("Creating new category: {}", request.getName());
 
-        String slug = generateSlug(request.getName());
+        String slug = request.getSlug() != null ? request.getSlug() : generateSlug(request.getName());
         if (categoryRepository.existsBySlug(slug)) {
             slug = generateUniqueSlug(slug);
         }
 
-        Category category = categoryMapper.toEntityFromRequest(request);
-        category.setSlug(slug);
+        Category.CategoryBuilder builder = Category.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .image(request.getImage())
+                .slug(slug)
+                .featured(request.getFeatured() != null ? request.getFeatured() : false)
+                .isActive(request.getIsActive() != null ? request.getIsActive() : true);
 
-        Category savedCategory = categoryRepository.save(category);
-        log.info("Category created successfully with ID: {}", savedCategory.getId());
+        if (request.getParentCategoryId() != null) {
+            Category parent = categoryRepository.findByPublicId(request.getParentCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent category not found: " + request.getParentCategoryId()));
+            builder.parentCategory(parent);
+        }
 
-        return categoryMapper.toSimpleResponse(savedCategory);
+        Category savedCategory = categoryRepository.save(builder.build());
+        log.info("Category created successfully with ID: {}", savedCategory.getPublicId());
+
+        return toCategoryResponse(savedCategory);
     }
 
     @Override
@@ -88,19 +133,18 @@ public class CategoryServiceImpl implements CategoryService {
 
         if (request.getName() != null && !request.getName().equals(category.getName())) {
             String newSlug = generateSlug(request.getName());
-            if (!newSlug.equals(category.getSlug()) &&
-                    categoryRepository.existsBySlug(newSlug)) {
+            if (!newSlug.equals(category.getSlug()) && categoryRepository.existsBySlug(newSlug)) {
                 newSlug = generateUniqueSlug(newSlug);
             }
             category.setSlug(newSlug);
         }
 
-        categoryMapper.updateEntityFromRequest(request, category);
+        updateCategoryFields(category, request);
 
         Category updatedCategory = categoryRepository.save(category);
-        log.info("Category updated successfully: {}", updatedCategory.getId());
+        log.info("Category updated successfully: {}", updatedCategory.getPublicId());
 
-        return categoryMapper.toSimpleResponse(updatedCategory);
+        return toCategoryResponse(updatedCategory);
     }
 
     @Override
@@ -108,14 +152,13 @@ public class CategoryServiceImpl implements CategoryService {
     @CacheEvict(value = "categories", allEntries = true)
     public void delete(UUID id) {
         log.info("Deleting category with ID: {}", id);
-
         Category category = findCategoryById(id);
         categoryRepository.delete(category);
         log.info("Category deleted successfully: {}", id);
     }
 
     private Category findCategoryById(UUID id) {
-        return categoryRepository.findById(id)
+        return categoryRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with ID: " + id));
     }
 
@@ -130,17 +173,15 @@ public class CategoryServiceImpl implements CategoryService {
     private String generateUniqueSlug(String baseSlug) {
         String uniqueSlug = baseSlug;
         int counter = 1;
-
         while (categoryRepository.existsBySlug(uniqueSlug)) {
             uniqueSlug = baseSlug + "-" + counter;
             counter++;
         }
-
         return uniqueSlug;
     }
 
     private CategoryResponse buildTree(Category category) {
-        CategoryResponse response = categoryMapper.toSimpleResponse(category);
+        CategoryResponse response = toCategoryResponse(category);
         List<CategoryResponse> children = category.getSubcategories().stream()
                 .map(this::buildTree)
                 .toList();
@@ -152,40 +193,26 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public CategoryResponse mapToResponse(Category category) {
-        return categoryMapper.toSimpleResponse(category);
+        return toCategoryResponse(category);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<CategoryResponse> getAllCategories(Pageable pageable) {
-        return categoryRepository.findAll(pageable)
-                .map(categoryMapper::toSimpleResponse);
+        return categoryRepository.findAll(pageable).map(this::toCategoryResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
     public CategoryResponse getCategoryById(UUID id) {
-        Category category = categoryRepository.findById(id)
+        Category category = categoryRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with ID: " + id));
-        return categoryMapper.toSimpleResponse(category);
+        return toCategoryResponse(category);
     }
 
     @Transactional
     public CategoryResponse createCategory(CategoryCreateRequest request) {
-        log.info("Creating new category via GraphQL: {}", request.getName());
-
-        String slug = generateSlug(request.getName());
-        if (categoryRepository.existsBySlug(slug)) {
-            slug = generateUniqueSlug(slug);
-        }
-
-        Category category = categoryMapper.toEntityFromRequest(request);
-        category.setSlug(slug);
-
-        Category savedCategory = categoryRepository.save(category);
-        log.info("Category created successfully with ID: {}", savedCategory.getId());
-
-        return categoryMapper.toSimpleResponse(savedCategory);
+        return create(request);
     }
 
     @Override
@@ -193,7 +220,7 @@ public class CategoryServiceImpl implements CategoryService {
     public List<CategoryResponse> findActiveCategories() {
         log.debug("Fetching active categories");
         return categoryRepository.findByIsActive(true).stream()
-                .map(categoryMapper::toSimpleResponse)
+                .map(this::toCategoryResponse)
                 .toList();
     }
 
@@ -202,12 +229,12 @@ public class CategoryServiceImpl implements CategoryService {
     @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponse updateStatus(UUID id, Boolean isActive) {
         log.info("Updating category {} status to: {}", id, isActive);
-        Category category = categoryRepository.findById(id)
+        Category category = categoryRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with ID: " + id));
         category.setIsActive(isActive);
         Category saved = categoryRepository.save(category);
         log.info("Category {} status updated to: {}", id, isActive);
-        return categoryMapper.toSimpleResponse(saved);
+        return toCategoryResponse(saved);
     }
 
     @Override
