@@ -1,5 +1,6 @@
 package ecommerce.graphql.resolver.auth;
 
+import ecommerce.common.security.UserPrincipal;
 import ecommerce.graphql.dto.AuthPayload;
 import ecommerce.graphql.dto.AuthUser;
 import ecommerce.graphql.input.LoginInput;
@@ -12,12 +13,10 @@ import ecommerce.modules.auth.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.ContextValue;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
-
-import java.util.UUID;
 
 @Controller
 @RequiredArgsConstructor
@@ -67,9 +66,9 @@ public class AuthResolver {
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
     public boolean logout(@Argument RefreshTokenInput input,
-                          @ContextValue UUID userId) {
-        log.info("GQL logout(user={})", userId);
-        authService.logout(userId, input.getRefreshToken());
+                          @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL logout(user={})", principal.getId());
+        authService.logout(principal.getId(), input.getRefreshToken());
         return true;
     }
 
