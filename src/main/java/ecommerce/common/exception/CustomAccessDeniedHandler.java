@@ -1,27 +1,24 @@
 package ecommerce.common.exception;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import ecommerce.common.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.time.Instant;
 
 /**
  * Handles all 403 Forbidden errors within the Spring Security filter chain.
  *
  * <p>Invoked when a fully authenticated user attempts to access a resource for
- * which they lack the required role or permission. This replaces the inline lambda
- * previously defined in {@code SecurityConfig}.
+ * which they lack the required role or permission.
  *
  * <p>Note: Do not confuse this with {@code CustomAuthenticationEntryPoint}.
  * <ul>
@@ -31,40 +28,34 @@ import java.util.Map;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class CustomAccessDeniedHandler implements AccessDeniedHandler {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    private final ObjectMapper objectMapper;
 
     @Override
     public void handle(HttpServletRequest request,
                        HttpServletResponse response,
                        AccessDeniedException accessDeniedException) throws IOException {
 
-        String exceptionName = accessDeniedException.getClass().getSimpleName();
-        String username = (request.getUserPrincipal() != null)
-                ? request.getUserPrincipal().getName()
-                : "anonymous";
+        String username = request.getUserPrincipal() != null
+                ? request.getUserPrincipal().getName() : "anonymous";
 
         log.warn("Access denied [{}] for user '{}' on '{}': {}",
-                exceptionName, username, request.getRequestURI(), accessDeniedException.getMessage());
+                accessDeniedException.getClass().getSimpleName(), username,
+                request.getRequestURI(), accessDeniedException.getMessage());
 
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("message", resolveMessage(accessDeniedException));
+        ErrorResponse body = ErrorResponse.builder()
+                .code("FORBIDDEN")
+                .message("You do not have permission to access this resource.")
+                .timestamp(Instant.now())
+                .path(request.getRequestURI())
+                .status(HttpServletResponse.SC_FORBIDDEN)
+                .build();
 
-        MAPPER.writeValue(response.getOutputStream(), body);
-    }
-
-    private String resolveMessage(AccessDeniedException ex) {
-        // InsufficientAuthenticationException can be thrown when a resource requires
-        // a higher authentication level than the current session provides.
-        if (ex.getCause() instanceof InsufficientAuthenticationException) {
-            return "Elevated authentication is required to access this resource.";
-        }
-        return "You do not have permission to access this resource.";
+        objectMapper.writeValue(response.getOutputStream(), body);
     }
 }

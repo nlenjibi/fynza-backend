@@ -1,10 +1,8 @@
 package ecommerce.common.exception;
 
-import org.springframework.http.HttpStatus;
-
-public class TokenNotFoundException extends FynzaException {
+public class TokenNotFoundException extends ResourceNotFoundException {
 
     public TokenNotFoundException(String message) {
-        super(message, HttpStatus.NOT_FOUND, "TOKEN_NOT_FOUND");
+        super(message, "TOKEN_NOT_FOUND");
     }
 }

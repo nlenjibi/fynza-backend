@@ -57,6 +57,10 @@ public final class ReviewSpec {
         return (root, query, cb) -> date == null ? null : cb.lessThanOrEqualTo(root.get("createdAt"), date);
     }
 
+    public static Specification<Review> withImages(Boolean withImages) {
+        return (root, query, cb) -> Boolean.TRUE.equals(withImages) ? cb.isTrue(root.get("hasImages")) : null;
+    }
+
     public static Specification<Review> isActive() {
         return (root, query, cb) -> cb.isTrue(root.get("isActive"));
     }

@@ -124,11 +124,11 @@ public class Review {
     private LocalDateTime deletedAt;
 
     public boolean canBeEditedBy(UUID userId) {
-        return customer.getId().equals(userId) && !Boolean.TRUE.equals(deleted);
+        return customer.getPublicId().equals(userId) && !Boolean.TRUE.equals(deleted);
     }
 
     public boolean canBeDeletedBy(UUID userId) {
-        return customer.getId().equals(userId);
+        return customer.getPublicId().equals(userId);
     }
 
     public void softDelete() {
