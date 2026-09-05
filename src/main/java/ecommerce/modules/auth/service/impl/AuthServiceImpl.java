@@ -2,6 +2,9 @@ package ecommerce.modules.auth.service.impl;
 
 import ecommerce.common.enums.Role;
 import ecommerce.common.enums.UserStatus;
+import ecommerce.common.event.FynzaEventPublisher;
+import ecommerce.common.event.user.PasswordResetRequestedEvent;
+import ecommerce.common.event.user.UserRegisteredEvent;
 import ecommerce.common.exception.BadRequestException;
 import ecommerce.common.exception.DuplicateResourceException;
 import ecommerce.common.exception.InvalidTokenException;
@@ -9,7 +12,10 @@ import ecommerce.modules.auth.dto.AuthResponse;
 import ecommerce.modules.auth.dto.LoginRequest;
 import ecommerce.modules.auth.dto.RegisterRequest;
 import ecommerce.modules.auth.entity.Auth;
+import ecommerce.modules.auth.entity.VerificationToken;
+import ecommerce.modules.auth.entity.VerificationTokenType;
 import ecommerce.modules.auth.repository.AuthRepository;
+import ecommerce.modules.auth.repository.VerificationTokenRepository;
 import ecommerce.modules.auth.service.AuthService;
 import ecommerce.common.security.JwtTokenProvider;
 import ecommerce.common.security.LoginAttemptService;
@@ -30,7 +36,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.HexFormat;
 import java.util.UUID;
 
 @Service
@@ -42,14 +50,18 @@ public class AuthServiceImpl implements AuthService {
     private static final String AUTH_PROVIDER_PASSWORD = "PASSWORD";
     private static final String INVALID_CREDENTIALS = "Invalid email or password";
 
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     private final UserRepository userRepository;
     private final CustomerProfileRepository customerProfileRepository;
     private final SellerProfileRepository sellerProfileRepository;
     private final AuthRepository authRepository;
+    private final VerificationTokenRepository verificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final LoginAttemptService loginAttemptService;
     private final SecurityEventLogger securityEventLogger;
+    private final FynzaEventPublisher eventPublisher;
 
     @Value("${jwt.access-token.expiration:900000}")
     private Long accessTokenExpiration;
@@ -104,6 +116,18 @@ public class AuthServiceImpl implements AuthService {
                     .build();
             customerProfileRepository.save(customerProfile);
         }
+
+        String verificationToken = generateSecureToken();
+        verificationTokenRepository.save(VerificationToken.builder()
+                .userId(user.getId())
+                .token(verificationToken)
+                .tokenType(VerificationTokenType.EMAIL_VERIFICATION)
+                .expiresAt(LocalDateTime.now().plusHours(24))
+                .build());
+
+        eventPublisher.publish(new UserRegisteredEvent(
+                user.getId(), user.getEmail(), user.getFirstName() + " " + user.getLastName(),
+                user.getRole(), false, verificationToken));
 
         String accessToken = jwtTokenProvider.generateAccessToken(
                 user.getPublicId(), user.getEmail(), user.getRole().name(), AUTH_PROVIDER_PASSWORD);
@@ -259,7 +283,140 @@ public class AuthServiceImpl implements AuthService {
         return buildAuthResponse(user, accessToken, refreshToken);
     }
 
+    @Override
+    @Transactional
+    public void verifyEmail(String token) {
+        VerificationToken vt = verificationTokenRepository
+                .findByTokenAndTokenType(token, VerificationTokenType.EMAIL_VERIFICATION)
+                .orElseThrow(() -> new InvalidTokenException("Invalid or expired verification token"));
+
+        if (!vt.isValid()) {
+            throw new InvalidTokenException("Verification token has expired or already been used");
+        }
+
+        User user = userRepository.findByPublicId(vt.getUserId())
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        user.setIsEmailVerified(true);
+        userRepository.save(user);
+
+        vt.setIsUsed(true);
+        vt.setUsedAt(LocalDateTime.now());
+        verificationTokenRepository.save(vt);
+
+        log.info("Email verified for user: {}", user.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public void resendVerificationEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("No account found with that email"));
+
+        if (Boolean.TRUE.equals(user.getIsEmailVerified())) {
+            throw new BadRequestException("Email is already verified");
+        }
+
+        verificationTokenRepository.invalidateByUserIdAndType(user.getId(), VerificationTokenType.EMAIL_VERIFICATION);
+
+        String token = generateSecureToken();
+        verificationTokenRepository.save(VerificationToken.builder()
+                .userId(user.getId())
+                .token(token)
+                .tokenType(VerificationTokenType.EMAIL_VERIFICATION)
+                .expiresAt(LocalDateTime.now().plusHours(24))
+                .build());
+
+        eventPublisher.publish(new UserRegisteredEvent(
+                user.getId(), user.getEmail(), user.getFirstName() + " " + user.getLastName(),
+                user.getRole(), false, token));
+
+        log.info("Verification email resent for: {}", email);
+    }
+
+    @Override
+    @Transactional
+    public void forgotPassword(String email) {
+        userRepository.findByEmail(email).ifPresent(user -> {
+            verificationTokenRepository.invalidateByUserIdAndType(user.getId(), VerificationTokenType.PASSWORD_RESET);
+
+            String token = generateSecureToken();
+            verificationTokenRepository.save(VerificationToken.builder()
+                    .userId(user.getId())
+                    .token(token)
+                    .tokenType(VerificationTokenType.PASSWORD_RESET)
+                    .expiresAt(LocalDateTime.now().plusMinutes(15))
+                    .build());
+
+            eventPublisher.publish(new PasswordResetRequestedEvent(
+                    user.getId(), user.getEmail(), user.getFirstName() + " " + user.getLastName(),
+                    token, 15));
+
+            log.info("Password reset requested for user: {}", email);
+        });
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(String token, String newPassword, String confirmPassword) {
+        if (!newPassword.equals(confirmPassword)) {
+            throw new BadRequestException("Passwords do not match");
+        }
+
+        VerificationToken vt = verificationTokenRepository
+                .findByTokenAndTokenType(token, VerificationTokenType.PASSWORD_RESET)
+                .orElseThrow(() -> new InvalidTokenException("Invalid or expired reset token"));
+
+        if (!vt.isValid()) {
+            throw new InvalidTokenException("Reset token has expired or already been used");
+        }
+
+        User user = userRepository.findByPublicId(vt.getUserId())
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setLastPasswordChange(LocalDateTime.now());
+        userRepository.save(user);
+
+        vt.setIsUsed(true);
+        vt.setUsedAt(LocalDateTime.now());
+        verificationTokenRepository.save(vt);
+
+        authRepository.invalidateAllUserSessions(user.getId(), LocalDateTime.now());
+
+        log.info("Password reset completed for user: {}", user.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(UUID userId, String currentPassword, String newPassword, String confirmPassword) {
+        if (!newPassword.equals(confirmPassword)) {
+            throw new BadRequestException("Passwords do not match");
+        }
+
+        User user = userRepository.findByPublicId(userId)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new BadRequestException("Current password is incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setLastPasswordChange(LocalDateTime.now());
+        userRepository.save(user);
+
+        authRepository.invalidateAllUserSessions(userId, LocalDateTime.now());
+
+        log.info("Password changed for user: {}", user.getEmail());
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private String generateSecureToken() {
+        byte[] bytes = new byte[32];
+        SECURE_RANDOM.nextBytes(bytes);
+        return HexFormat.of().formatHex(bytes);
+    }
 
     private void persistSession(User user, String accessToken, String refreshToken) {
         HttpServletRequest req = currentRequest();
