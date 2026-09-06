@@ -7,8 +7,6 @@ import ecommerce.graphql.dto.ContactOptions;
 import ecommerce.graphql.dto.FAQStats;
 import ecommerce.graphql.dto.HelpCategory;
 import ecommerce.graphql.input.FAQFilterInput;
-import ecommerce.graphql.input.FAQCreateInput;
-import ecommerce.graphql.input.FAQUpdateInput;
 import ecommerce.graphql.input.PageInput;
 import ecommerce.graphql.input.SortDirection;
 import ecommerce.modules.faq.dto.ContactOptionsResponse;
@@ -16,7 +14,6 @@ import ecommerce.modules.faq.dto.CreateFAQRequest;
 import ecommerce.modules.faq.dto.FAQResponse;
 import ecommerce.modules.faq.dto.FAQStatsResponse;
 import ecommerce.modules.faq.dto.HelpCategoryResponse;
-import ecommerce.modules.faq.dto.UpdateFAQRequest;
 import ecommerce.modules.faq.service.FAQService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +22,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -137,58 +133,6 @@ public class FAQResolver {
                 .draftFAQs(r.getDraftFAQs())
                 .totalViews(r.getTotalViews())
                 .build();
-    }
-
-    // =========================================================================
-    // ADMIN MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public FAQResponse createFAQ(@Argument FAQCreateInput input) {
-        log.info("GQL createFAQ");
-        CreateFAQRequest request = CreateFAQRequest.builder()
-                .question(input.getQuestion())
-                .answer(input.getAnswer())
-                .category(input.getCategory())
-                .displayOrder(input.getDisplayOrder())
-                .build();
-        return faqService.createFAQ(request);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public FAQResponse updateFAQ(@Argument UUID id, @Argument FAQUpdateInput input) {
-        log.info("GQL updateFAQ(id={})", id);
-        UpdateFAQRequest request = UpdateFAQRequest.builder()
-                .question(input.getQuestion())
-                .answer(input.getAnswer())
-                .category(input.getCategory())
-                .displayOrder(input.getDisplayOrder())
-                .build();
-        return faqService.updateFAQ(id, request);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public boolean deleteFAQ(@Argument UUID id) {
-        log.info("GQL deleteFAQ(id={})", id);
-        faqService.deleteFAQ(id);
-        return true;
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public FAQResponse toggleFAQActive(@Argument UUID id) {
-        log.info("GQL toggleFAQActive(id={})", id);
-        return faqService.toggleFAQStatus(id);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public boolean reorderFAQs(@Argument List<UUID> faqIds) {
-        log.info("GQL reorderFAQs");
-        return true;
     }
 
     // =========================================================================

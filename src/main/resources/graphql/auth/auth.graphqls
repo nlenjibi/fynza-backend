@@ -138,42 +138,6 @@ extend type Query {
 # Mutations
 # ─────────────────────────────────────────────────────────────────────────────
 
-extend type Mutation {
-
-    # ── Core auth ─────────────────────────────────────────────────────────────
-    register(input: RegisterInput!): AuthPayload!
-    login(input: LoginInput!): AuthPayload!
-    refreshToken(input: RefreshTokenInput!): AuthPayload!
-    # Pass refreshToken to revoke the specific session.
-    logout(input: RefreshTokenInput!): Boolean!
-
-    # ── Email verification ─────────────────────────────────────────────────────
-    verifyEmail(input: VerifyEmailInput!): Boolean!
-    resendVerification(input: ResendVerificationInput!): Boolean!
-
-    # ── Password recovery ──────────────────────────────────────────────────────
-    # Always returns true — never reveals whether the email exists.
-    forgotPassword(input: ForgotPasswordInput!): Boolean!
-    resetPassword(input: ResetPasswordInput!): Boolean!
-    # Authenticated. Invalidates all active sessions on success.
-    changePassword(input: ChangePasswordInput!): Boolean!
-
-    # ── Session management  (authenticated) ────────────────────────────────────
-    revokeSession(input: RevokeSessionInput!): Boolean!
-    revokeOtherSessions(input: RevokeOtherSessionsInput!): Boolean!
-
-    # ── MFA — TOTP, Google Authenticator compatible  (authenticated) ───────────
-    # Step 1: generate secret + QR code. MFA is NOT active yet.
-    setupMfa: MfaSetupPayload!
-    # Step 2: confirm with first code to activate MFA.
-    enableMfa(input: MfaEnableInput!): Boolean!
-    # Requires a valid TOTP code to prevent accidental disabling.
-    disableMfa(input: MfaDisableInput!): Boolean!
-    # Public — exchange an MFA challenge token + TOTP for real JWT tokens.
-    verifyMfa(input: MfaVerifyInput!): AuthPayload!
-
-    # ── Social / OAuth2 accounts  (authenticated) ──────────────────────────────
-    # provider: "google" | "github" | "facebook"
-    # Fails when only one provider is linked and no password login exists.
-    unlinkSocialAccount(provider: String!): Boolean!
-}
+# Auth mutations (login, register, refresh, logout, verify, password reset, MFA, sessions)
+# are handled exclusively by the REST API: POST /v1/auth/*
+# GraphQL is query-only for auth — it consumes the authenticated identity.

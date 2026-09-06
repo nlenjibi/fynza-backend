@@ -3,13 +3,13 @@ package ecommerce.graphql.resolver.review;
 import ecommerce.common.response.PaginatedResponse;
 import ecommerce.common.security.UserPrincipal;
 import ecommerce.graphql.dto.ReviewPage;
-import ecommerce.graphql.input.AdminResponseInput;
 import ecommerce.graphql.input.PageInput;
-import ecommerce.graphql.input.ReviewCreateInput;
 import ecommerce.graphql.input.ReviewFilterInput;
-import ecommerce.graphql.input.ReviewUpdateInput;
 import ecommerce.graphql.input.SortDirection;
-import ecommerce.modules.review.dto.*;
+import ecommerce.modules.review.dto.ReviewFilterRequest;
+import ecommerce.modules.review.dto.ReviewResponse;
+import ecommerce.modules.review.dto.ReviewStatsResponse;
+import ecommerce.modules.review.dto.ReviewSummaryResponse;
 import ecommerce.modules.review.entity.Review;
 import ecommerce.modules.review.service.ReviewService;
 import ecommerce.modules.review.spec.ReviewSpec;
@@ -133,119 +133,15 @@ public class ReviewResolver {
     }
 
     // =========================================================================
-    // AUTHENTICATED MUTATIONS
+    // UX STATE MUTATIONS
     // =========================================================================
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
-    public ReviewResponse createReview(@Argument ReviewCreateInput input,
-                                       @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL createReview(user={})", principal.getId());
-        ReviewCreateRequest request = ReviewCreateRequest.builder()
-                .productId(input.getProductId())
-                .rating(input.getRating())
-                .title(input.getTitle())
-                .comment(input.getComment())
-                .pros(input.getPros())
-                .cons(input.getCons())
-                .images(input.getImages())
-                .build();
-        return reviewService.createReview(request, principal.getId());
-    }
-
-    @MutationMapping
-    @PreAuthorize("isAuthenticated()")
-    public ReviewResponse updateReview(@Argument UUID id,
-                                       @Argument ReviewUpdateInput input,
-                                       @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL updateReview(id={}, user={})", id, principal.getId());
-        ReviewUpdateRequest request = ReviewUpdateRequest.builder()
-                .rating(input.getRating())
-                .title(input.getTitle())
-                .comment(input.getComment())
-                .pros(input.getPros())
-                .cons(input.getCons())
-                .build();
-        return reviewService.updateReview(id, request, principal.getId());
-    }
-
-    @MutationMapping
-    @PreAuthorize("isAuthenticated()")
-    public boolean deleteReview(@Argument UUID id, @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL deleteReview(id={}, user={})", id, principal.getId());
-        reviewService.deleteReview(id, principal.getId());
-        return true;
-    }
-
-    @MutationMapping
-    @PreAuthorize("isAuthenticated()")
-    public ReviewResponse restoreReview(@Argument UUID id, @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL restoreReview(id={}, user={})", id, principal.getId());
-        return reviewService.restoreReview(id, principal.getId());
-    }
-
-    @MutationMapping
     public ReviewResponse markReviewHelpful(@Argument UUID id) {
         log.info("GQL markReviewHelpful(id={})", id);
         reviewService.markHelpful(id);
         return reviewService.getReview(id);
-    }
-
-    // =========================================================================
-    // ADMIN MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ReviewResponse approveReview(@Argument UUID id) {
-        log.info("GQL approveReview(id={})", id);
-        return reviewService.approveReview(id);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ReviewResponse rejectReview(@Argument UUID id, @Argument String reason) {
-        log.info("GQL rejectReview(id={})", id);
-        return reviewService.rejectReview(id, reason);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ReviewResponse addAdminResponse(@Argument UUID id, @Argument AdminResponseInput input) {
-        log.info("GQL addAdminResponse(id={})", id);
-        ecommerce.modules.review.dto.AdminResponseRequest request =
-                ecommerce.modules.review.dto.AdminResponseRequest.builder()
-                        .response(input.getResponse())
-                        .build();
-        return reviewService.addAdminResponse(id, request);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ReviewResponse removeAdminResponse(@Argument UUID id) {
-        log.info("GQL removeAdminResponse(id={})", id);
-        return reviewService.removeAdminResponse(id);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public int bulkApproveReviews(@Argument List<UUID> ids) {
-        log.info("GQL bulkApproveReviews(ids={})", ids);
-        return reviewService.bulkApproveReviews(ids);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public int bulkRejectReviews(@Argument List<UUID> ids, @Argument String reason) {
-        log.info("GQL bulkRejectReviews(ids={})", ids);
-        return reviewService.bulkRejectReviews(ids, reason);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public int bulkDeleteReviews(@Argument List<UUID> ids) {
-        log.info("GQL bulkDeleteReviews(ids={})", ids);
-        return reviewService.bulkDeleteReviews(ids);
     }
 
     // =========================================================================

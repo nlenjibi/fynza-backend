@@ -3,9 +3,7 @@ package ecommerce.graphql.resolver.category;
 import ecommerce.common.response.PaginatedResponse;
 import ecommerce.graphql.dto.CategoryPage;
 import ecommerce.graphql.dto.CategoryStats;
-import ecommerce.graphql.input.CategoryCreateInput;
 import ecommerce.graphql.input.CategoryFilterInput;
-import ecommerce.graphql.input.CategoryUpdateInput;
 import ecommerce.graphql.input.PageInput;
 import ecommerce.graphql.input.SortDirection;
 import ecommerce.modules.category.dto.CategoryCreateRequest;
@@ -18,7 +16,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -138,63 +135,6 @@ public class CategoryResolver {
                 .featuredCategories((Long) stats.getOrDefault("featuredCategories", 0L))
                 .rootCategories((Long) stats.getOrDefault("rootCategories", 0L))
                 .build();
-    }
-
-    // =========================================================================
-    // SELLER/ADMIN MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public CategoryResponse createCategory(@Argument CategoryCreateInput input) {
-        log.info("GQL createCategory(name={})", input.getName());
-        CategoryCreateRequest request = CategoryCreateRequest.builder()
-                .name(input.getName())
-                .description(input.getDescription())
-                .parentCategoryId(input.getParentCategoryId())
-                .image(input.getImage())
-                .slug(input.getSlug())
-                .featured(input.getFeatured())
-                .isActive(input.getIsActive())
-                .build();
-        return categoryService.create(request);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public CategoryResponse updateCategory(@Argument UUID id,
-                                            @Argument CategoryUpdateInput input) {
-        log.info("GQL updateCategory(id={})", id);
-        CategoryCreateRequest request = CategoryCreateRequest.builder()
-                .name(input.getName())
-                .description(input.getDescription())
-                .parentCategoryId(input.getParentCategoryId())
-                .image(input.getImage())
-                .slug(input.getSlug())
-                .featured(input.getFeatured())
-                .isActive(input.getIsActive())
-                .build();
-        return categoryService.update(id, request);
-    }
-
-    // =========================================================================
-    // ADMIN MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public boolean deleteCategory(@Argument UUID id) {
-        log.info("GQL deleteCategory(id={})", id);
-        categoryService.delete(id);
-        return true;
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public CategoryResponse updateCategoryStatus(@Argument UUID id,
-                                                   @Argument boolean isActive) {
-        log.info("GQL updateCategoryStatus(id={}, active={})", id, isActive);
-        return categoryService.updateStatus(id, isActive);
     }
 
     // =========================================================================

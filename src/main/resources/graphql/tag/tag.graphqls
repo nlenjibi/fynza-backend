@@ -21,22 +21,6 @@ type Tag {
 # Inputs
 # ─────────────────────────────────────────────────────────────────────────────
 
-input TagCreateInput {
-    name: String!
-    description: String
-    color: String
-    icon: String
-    isFeatured: Boolean = false
-}
-
-input TagUpdateInput {
-    name: String
-    description: String
-    color: String
-    icon: String
-    isFeatured: Boolean
-}
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Queries
 # ─────────────────────────────────────────────────────────────────────────────
@@ -51,14 +35,3 @@ extend type Query {
     tag(id: ID!): Tag
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Mutations
-# ─────────────────────────────────────────────────────────────────────────────
-
-extend type Mutation {
-
-    # ── Admin Tag CRUD (ADMIN) ───────────────────────────────────────────
-    createTag(input: TagCreateInput!): Tag!
-    updateTag(id: ID!, input: TagUpdateInput!): Tag!
-    deleteTag(id: ID!): Boolean!
-}
