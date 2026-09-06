@@ -15,6 +15,8 @@ import java.util.UUID;
 @Repository
 public interface SellerFlashSaleApplicationRepository extends JpaRepository<SellerFlashSaleApplication, Long> {
 
+    Optional<SellerFlashSaleApplication> findByPublicId(UUID publicId);
+
     Optional<SellerFlashSaleApplication> findByFlashSaleIdAndSellerId(UUID flashSaleId, UUID sellerId);
 
     Page<SellerFlashSaleApplication> findBySellerId(UUID sellerId, Pageable pageable);

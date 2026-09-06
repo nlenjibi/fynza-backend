@@ -243,7 +243,7 @@ public class SellerServiceImpl implements SellerService {
     @Override
     @Transactional
     public void assignTagsToProduct(UUID productId, List<String> tagNames, UUID sellerId) {
-        Product product = productRepository.findById(productId)
+        Product product = productRepository.findByPublicId(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
         if (!product.getSeller().getPublicId().equals(sellerId)) {
@@ -418,7 +418,7 @@ public class SellerServiceImpl implements SellerService {
         SellerProfile profile = sellerProfileRepository.findByUser_PublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
 
-        ShippingZone zone = shippingZoneRepository.findById(zoneId)
+        ShippingZone zone = shippingZoneRepository.findByPublicId(zoneId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shipping zone not found"));
 
         if (!zone.getSeller().getId().equals(profile.getId())) {
@@ -445,7 +445,7 @@ public class SellerServiceImpl implements SellerService {
         SellerProfile profile = sellerProfileRepository.findByUser_PublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
 
-        ShippingZone zone = shippingZoneRepository.findById(zoneId)
+        ShippingZone zone = shippingZoneRepository.findByPublicId(zoneId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shipping zone not found"));
 
         if (!zone.getSeller().getId().equals(profile.getId())) {

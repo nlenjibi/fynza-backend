@@ -9,6 +9,7 @@ import java.util.UUID;
 
 @Repository
 public interface ShippingZoneRepository extends JpaRepository<ShippingZone, Long> {
+    java.util.Optional<ShippingZone> findByPublicId(UUID publicId);
     List<ShippingZone> findBySellerIdAndIsActiveTrue(UUID sellerId);
     List<ShippingZone> findBySellerId(UUID sellerId);
 }

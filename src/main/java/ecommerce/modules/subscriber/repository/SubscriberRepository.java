@@ -9,9 +9,12 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface SubscriberRepository extends JpaRepository<Subscriber, Long> {
+
+    Optional<Subscriber> findByPublicId(UUID publicId);
 
     Optional<Subscriber> findByEmail(String email);
 

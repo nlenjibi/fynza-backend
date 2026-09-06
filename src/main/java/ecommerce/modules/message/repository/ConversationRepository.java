@@ -16,6 +16,8 @@ import java.util.UUID;
 @Repository
 public interface ConversationRepository extends JpaRepository<Conversation, Long> {
 
+    Optional<Conversation> findByPublicId(UUID publicId);
+
     Page<Conversation> findByParticipantIdOrderByCreatedAtDesc(UUID participantId, Pageable pageable);
 
     Page<Conversation> findByParticipantIdAndStatusOrderByCreatedAtDesc(UUID participantId, MessageStatus status, Pageable pageable);

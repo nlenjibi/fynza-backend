@@ -10,9 +10,13 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface PromotionRepository extends JpaRepository<Promotion, Long> {
+
+    Optional<Promotion> findByPublicId(UUID publicId);
 
     Page<Promotion> findByIsActiveTrue(Pageable pageable);
 

@@ -28,9 +28,9 @@ public class AnalyticsEventHandler {
     @Async("analyticsExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onOrderPlaced(OrderPlacedEvent event) {
-        log.debug("Analytics: ORDER_PLACED {}", event.orderId());
-        analyticsService.recordEvent("ORDER_PLACED", event.orderId(), Map.of(
-                "customerId", event.customerId(),
+        log.debug("Analytics: ORDER_PLACED {}", event.publicOrderId());
+        analyticsService.recordEvent("ORDER_PLACED", event.publicOrderId(), Map.<String, Object>of(
+                "customerId", String.valueOf(event.customerId()),
                 "totalAmount", event.totalAmount()
         ));
         analyticsService.refreshAnalyticsCache();
@@ -39,18 +39,18 @@ public class AnalyticsEventHandler {
     @Async("analyticsExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onOrderCancelled(OrderCancelledEvent event) {
-        log.debug("Analytics: ORDER_CANCELLED {}", event.orderId());
-        analyticsService.recordEvent("ORDER_CANCELLED", event.orderId(), Map.of(
-                "customerId", event.customerId()
+        log.debug("Analytics: ORDER_CANCELLED {}", event.publicOrderId());
+        analyticsService.recordEvent("ORDER_CANCELLED", event.publicOrderId(), Map.<String, Object>of(
+                "customerId", String.valueOf(event.customerId())
         ));
     }
 
     @Async("analyticsExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onPaymentSucceeded(PaymentSucceededEvent event) {
-        log.debug("Analytics: PAYMENT_SUCCEEDED {}", event.paymentId());
-        analyticsService.recordEvent("PAYMENT_SUCCEEDED", event.paymentId(), Map.of(
-                "orderId", event.orderId(),
+        log.debug("Analytics: PAYMENT_SUCCEEDED {}", event.publicPaymentId());
+        analyticsService.recordEvent("PAYMENT_SUCCEEDED", event.publicPaymentId(), Map.<String, Object>of(
+                "orderId", String.valueOf(event.orderId()),
                 "amount",  event.amount()
         ));
     }

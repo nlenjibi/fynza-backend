@@ -161,7 +161,7 @@ public class ActivityLogService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logAudit(ActivityLog auditLog) {
         try {
-            auditLog.setCreatedAt(LocalDateTime.now());
+            auditLog.setCreatedAt(Instant.now());
             activityLogRepository.save(auditLog);
             log.debug("Audit log persisted: {} - {}", auditLog.getAction(), auditLog.getStatus());
         } catch (Exception e) {

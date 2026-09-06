@@ -74,7 +74,7 @@ public class MessageServiceImpl implements MessageService {
     @Override
     @Transactional(readOnly = true)
     public ConversationResponse getConversation(UUID conversationId, UUID userId) {
-        Conversation conversation = conversationRepository.findById(conversationId)
+        Conversation conversation = conversationRepository.findByPublicId(conversationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
 
         if (!conversation.getParticipantId().equals(userId)) {
@@ -103,7 +103,7 @@ public class MessageServiceImpl implements MessageService {
     @Override
     @Transactional
     public ConversationResponse replyToConversation(UUID conversationId, UUID senderId, MessageType senderType, String senderName, SendMessageRequest request) {
-        Conversation conversation = conversationRepository.findById(conversationId)
+        Conversation conversation = conversationRepository.findByPublicId(conversationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
 
         Message message = Message.builder()
@@ -122,7 +122,7 @@ public class MessageServiceImpl implements MessageService {
         String preview = request.getContent().length() > 100 ? 
             request.getContent().substring(0, 100) : request.getContent();
         conversation.setLastMessagePreview(preview);
-        conversation.setUpdatedAt(LocalDateTime.now());
+        conversation.setUpdatedAt(java.time.Instant.now());
 
         if (conversation.getStatus() == MessageStatus.RESOLVED) {
             conversation.setStatus(MessageStatus.OPEN);
@@ -137,7 +137,7 @@ public class MessageServiceImpl implements MessageService {
     @Override
     @Transactional
     public ConversationResponse updateConversationStatus(UUID conversationId, MessageStatus status) {
-        Conversation conversation = conversationRepository.findById(conversationId)
+        Conversation conversation = conversationRepository.findByPublicId(conversationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
 
         conversation.setStatus(status);
@@ -150,7 +150,7 @@ public class MessageServiceImpl implements MessageService {
     @Override
     @Transactional
     public ConversationResponse toggleStar(UUID conversationId, UUID userId) {
-        Conversation conversation = conversationRepository.findById(conversationId)
+        Conversation conversation = conversationRepository.findByPublicId(conversationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
 
         if (!conversation.getParticipantId().equals(userId)) {
@@ -166,7 +166,7 @@ public class MessageServiceImpl implements MessageService {
     @Override
     @Transactional
     public ConversationResponse togglePin(UUID conversationId, UUID userId) {
-        Conversation conversation = conversationRepository.findById(conversationId)
+        Conversation conversation = conversationRepository.findByPublicId(conversationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
 
         if (!conversation.getParticipantId().equals(userId)) {
@@ -182,8 +182,8 @@ public class MessageServiceImpl implements MessageService {
     @Override
     @Transactional
     public void markAsRead(UUID conversationId) {
-        conversationRepository.findById(conversationId).ifPresent(conversation -> {
-            messageRepository.markAllAsRead(conversationId);
+        conversationRepository.findByPublicId(conversationId).ifPresent(conversation -> {
+            messageRepository.markAllAsRead(conversation.getPublicId());
             conversation.setUnreadCount(0);
             conversationRepository.save(conversation);
             log.info("Marked conversation {} as read", conversationId);
@@ -193,7 +193,7 @@ public class MessageServiceImpl implements MessageService {
     @Override
     @Transactional
     public void deleteConversation(UUID conversationId, UUID userId) {
-        Conversation conversation = conversationRepository.findById(conversationId)
+        Conversation conversation = conversationRepository.findByPublicId(conversationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
 
         if (!conversation.getParticipantId().equals(userId)) {
@@ -245,7 +245,7 @@ public class MessageServiceImpl implements MessageService {
 
     private ConversationResponse toConversationResponse(Conversation conversation, java.util.List<Message> messages) {
         return ConversationResponse.builder()
-                .id(conversation.getId())
+                .id(conversation.getPublicId())
                 .subject(conversation.getSubject())
                 .category(conversation.getCategory())
                 .priority(conversation.getPriority())
@@ -258,8 +258,8 @@ public class MessageServiceImpl implements MessageService {
                 .unreadCount(conversation.getUnreadCount())
                 .orderId(conversation.getOrderId())
                 .productId(conversation.getProductId())
-                .createdAt(conversation.getCreatedAt())
-                .updatedAt(conversation.getUpdatedAt())
+                .createdAt(conversation.getCreatedAt() != null ? conversation.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
+                .updatedAt(conversation.getUpdatedAt() != null ? conversation.getUpdatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
                 .messages(messages != null ? messages.stream()
                         .map(this::toMessageResponse)
                         .collect(Collectors.toList()) : null)
@@ -268,8 +268,8 @@ public class MessageServiceImpl implements MessageService {
 
     private MessageResponse toMessageResponse(Message message) {
         return MessageResponse.builder()
-                .id(message.getId())
-                .conversationId(message.getConversation().getId())
+                .id(message.getPublicId())
+                .conversationId(message.getConversation().getPublicId())
                 .senderId(message.getSenderId())
                 .senderType(message.getSenderType())
                 .senderName(message.getSenderName())
@@ -278,7 +278,7 @@ public class MessageServiceImpl implements MessageService {
                 .readAt(message.getReadAt())
                 .isSystemMessage(message.getIsSystemMessage())
                 .attachmentUrl(message.getAttachmentUrl())
-                .createdAt(message.getCreatedAt())
+                .createdAt(message.getCreatedAt() != null ? message.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 }

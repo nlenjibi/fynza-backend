@@ -46,7 +46,7 @@ public class FollowServiceImpl implements FollowService {
         User customer = userRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 
-        SellerProfile seller = sellerProfileRepository.findById(sellerId)
+        SellerProfile seller = sellerProfileRepository.findByPublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller not found"));
 
         StoreFollow follow = StoreFollow.builder()
@@ -133,7 +133,7 @@ public class FollowServiceImpl implements FollowService {
                 .sum();
 
         return FollowerResponse.builder()
-                .id(follow.getId())
+                .id(follow.getPublicId())
                 .customerId(customer.getId())
                 .customerName(customer.getFirstName() + " " + customer.getLastName())
                 .customerEmail(customer.getEmail())
@@ -149,8 +149,8 @@ public class FollowServiceImpl implements FollowService {
         SellerProfile seller = follow.getSeller();
         
         return FollowedStoreResponse.builder()
-                .id(follow.getId())
-                .sellerId(seller.getId())
+                .id(follow.getPublicId())
+                .sellerId(seller.getPublicId())
                 .storeName(seller.getStoreName())
                 .storeLogo(seller.getStoreLogo())
                 .isVerified(seller.getVerificationStatus() == ecommerce.common.enums.VerificationStatus.VERIFIED)
