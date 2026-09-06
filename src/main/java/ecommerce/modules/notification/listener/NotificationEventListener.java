@@ -148,7 +148,7 @@ public class NotificationEventListener {
     public void onReviewSubmitted(ProductReviewSubmittedEvent event) {
         log.debug("[NotificationEvent] REVIEW_RECEIVED productId={}", event.productId());
         notificationService.send(
-            NotificationType.REVIEW_RECEIVED,
+            NotificationType.PRODUCT_REVIEW_RECEIVED,
             event.sellerId(),
             event.sellerId(),
             Map.of(

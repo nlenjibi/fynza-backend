@@ -47,7 +47,7 @@ public class RefundServiceImpl implements RefundService {
     @Override
     @Transactional
     public RefundResponse createRefund(RefundRequest request, UUID customerId) {
-        Order order = orderRepository.findById(request.getOrderId())
+        Order order = orderRepository.findByPublicId(request.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         if (!order.getCustomer().getId().equals(customerId)) {
@@ -66,7 +66,7 @@ public class RefundServiceImpl implements RefundService {
             throw new IllegalArgumentException("Refund amount cannot exceed order total");
         }
 
-        UUID sellerId = order.getOrderItems().isEmpty() ? null : order.getOrderItems().get(0).getProduct().getSeller().getId();
+        UUID sellerId = order.getOrderItems().isEmpty() ? null : order.getOrderItems().get(0).getProduct().getSeller().getPublicId();
 
         Refund refund = Refund.builder()
                 .refundNumber(Refund.generateRefundNumber())
@@ -90,14 +90,14 @@ public class RefundServiceImpl implements RefundService {
 
     @Override
     public RefundResponse getRefundById(UUID refundId) {
-        Refund refund = refundRepository.findById(refundId)
+        Refund refund = refundRepository.findByPublicId(refundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Refund not found"));
         return mapToResponse(refund);
     }
 
     @Override
     public RefundResponse getRefundByOrderId(UUID orderId) {
-        Refund refund = refundRepository.findByOrderId(orderId)
+        Refund refund = refundRepository.findByOrder_PublicId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Refund not found for this order"));
         return mapToResponse(refund);
     }
@@ -145,7 +145,7 @@ public class RefundServiceImpl implements RefundService {
     @Override
     @Transactional
     public RefundResponse approveRefund(UUID refundId, UUID adminId, String adminNote) {
-        Refund refund = refundRepository.findById(refundId)
+        Refund refund = refundRepository.findByPublicId(refundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Refund not found"));
 
         if (refund.getStatus() != RefundStatus.PENDING) {
@@ -170,7 +170,7 @@ public class RefundServiceImpl implements RefundService {
     @Override
     @Transactional
     public RefundResponse rejectRefund(UUID refundId, UUID adminId, String rejectionReason) {
-        Refund refund = refundRepository.findById(refundId)
+        Refund refund = refundRepository.findByPublicId(refundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Refund not found"));
 
         if (refund.getStatus() != RefundStatus.PENDING) {
@@ -198,7 +198,7 @@ public class RefundServiceImpl implements RefundService {
     @Override
     @Transactional
     public RefundResponse completeRefund(UUID refundId, String transactionId) {
-        Refund refund = refundRepository.findById(refundId)
+        Refund refund = refundRepository.findByPublicId(refundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Refund not found"));
 
         if (refund.getStatus() != RefundStatus.APPROVED) {
@@ -318,9 +318,9 @@ public class RefundServiceImpl implements RefundService {
         }
 
         return RefundResponse.builder()
-                .id(refund.getId())
+                .id(refund.getPublicId())
                 .refundNumber(refund.getRefundNumber())
-                .orderId(order.getId())
+                .orderId(order.getPublicId())
                 .orderNumber(order.getOrderNumber())
                 .customerId(refund.getCustomerId())
                 .customerName(customerName)
@@ -338,8 +338,8 @@ public class RefundServiceImpl implements RefundService {
                 .reviewedBy(refund.getReviewedBy())
                 .completedAt(refund.getCompletedAt())
                 .transactionId(refund.getTransactionId())
-                .createdAt(refund.getCreatedAt())
-                .updatedAt(refund.getUpdatedAt())
+                .createdAt(refund.getCreatedAt() != null ? refund.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
+                .updatedAt(refund.getUpdatedAt() != null ? refund.getUpdatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 }

@@ -11,9 +11,13 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface AdminFlashSaleRepository extends JpaRepository<AdminFlashSale, Long> {
+
+    Optional<AdminFlashSale> findByPublicId(UUID publicId);
 
     Page<AdminFlashSale> findAllByOrderByStartDatetimeDesc(Pageable pageable);
 
@@ -33,6 +37,9 @@ public interface AdminFlashSaleRepository extends JpaRepository<AdminFlashSale, 
 
     @Query("UPDATE AdminFlashSale f SET f.currentProductsCount = f.currentProductsCount + :count WHERE f.id = :id")
     void incrementProductCount(@Param("id") Long id, @Param("count") int count);
+
+    @Query("UPDATE AdminFlashSale f SET f.currentProductsCount = f.currentProductsCount + :count WHERE f.publicId = :publicId")
+    void incrementProductCountByPublicId(@Param("publicId") UUID publicId, @Param("count") int count);
 
     @Query("UPDATE AdminFlashSale f SET f.currentProductsCount = f.currentProductsCount - :count WHERE f.id = :id AND f.currentProductsCount >= :count")
     void decrementProductCount(@Param("id") Long id, @Param("count") int count);

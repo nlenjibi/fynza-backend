@@ -17,6 +17,8 @@ import java.util.UUID;
 @Repository
 public interface ReportScheduleRepository extends JpaRepository<ReportSchedule, Long> {
 
+    Optional<ReportSchedule> findByPublicId(UUID publicId);
+
     List<ReportSchedule> findByCreatedBy(UUID createdBy);
 
     Page<ReportSchedule> findByStatus(ReportSchedule.ScheduleStatus status, Pageable pageable);

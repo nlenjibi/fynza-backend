@@ -18,6 +18,8 @@ import java.util.UUID;
 @Repository
 public interface ReportRepository extends JpaRepository<Report, Long> {
 
+    Optional<Report> findByPublicId(UUID publicId);
+
     Optional<Report> findByReportNumber(String reportNumber);
 
     Page<Report> findByCreatedBy(UUID createdBy, Pageable pageable);

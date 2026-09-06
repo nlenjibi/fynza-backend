@@ -58,14 +58,15 @@ public class ReportServiceImpl implements ReportService {
                 .build();
 
         Report saved = reportRepository.save(report);
-        
+
         generateReportAsync(saved.getId());
-        
+
         return mapToResponse(saved);
+
     }
 
     @Async("reportExecutor")
-    public void generateReportAsync(UUID reportId) {
+    public void generateReportAsync(Long reportId) {
         try {
             Report report = reportRepository.findById(reportId)
                     .orElseThrow(() -> new ResourceNotFoundException("Report not found"));
@@ -87,7 +88,7 @@ public class ReportServiceImpl implements ReportService {
             
         } catch (Exception e) {
             log.error("Failed to generate report: {}", e.getMessage());
-            Report report = reportRepository.findById(reportId).orElse(null);
+            Report report = reportRepository.findById(reportId).orElse(null); // Long id
             if (report != null) {
                 report.setStatus(Report.ReportStatus.FAILED);
                 report.setErrorMessage(e.getMessage());
@@ -98,7 +99,7 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public ReportResponse getReportById(UUID reportId) {
-        Report report = reportRepository.findById(reportId)
+        Report report = reportRepository.findByPublicId(reportId)
                 .orElseThrow(() -> new ResourceNotFoundException("Report not found"));
         return mapToResponse(report);
     }
@@ -122,7 +123,7 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public byte[] downloadReport(UUID reportId) {
-        Report report = reportRepository.findById(reportId)
+        Report report = reportRepository.findByPublicId(reportId)
                 .orElseThrow(() -> new ResourceNotFoundException("Report not found"));
         
         if (report.getStatus() != Report.ReportStatus.COMPLETED) {
@@ -135,18 +136,18 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional
     public ReportResponse regenerateReport(UUID reportId) {
-        Report report = reportRepository.findById(reportId)
+        Report report = reportRepository.findByPublicId(reportId)
                 .orElseThrow(() -> new ResourceNotFoundException("Report not found"));
-        
+
         report.setStatus(Report.ReportStatus.PENDING);
         report.setFilePath(null);
         report.setFileSize(null);
         report.setCompletedAt(null);
         report.setErrorMessage(null);
-        
+
         reportRepository.save(report);
-        generateReportAsync(reportId);
-        
+        generateReportAsync(report.getId());
+
         return mapToResponse(report);
     }
 
@@ -209,7 +210,7 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public ReportScheduleResponse getScheduleById(UUID scheduleId) {
-        ReportSchedule schedule = reportScheduleRepository.findById(scheduleId)
+        ReportSchedule schedule = reportScheduleRepository.findByPublicId(scheduleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Schedule not found"));
         return mapScheduleToResponse(schedule);
     }
@@ -227,7 +228,7 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional
     public ReportScheduleResponse updateSchedule(UUID scheduleId, ReportScheduleRequest request) {
-        ReportSchedule schedule = reportScheduleRepository.findById(scheduleId)
+        ReportSchedule schedule = reportScheduleRepository.findByPublicId(scheduleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Schedule not found"));
         
         schedule.setScheduleName(request.getScheduleName());
@@ -252,7 +253,7 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional
     public ReportScheduleResponse pauseSchedule(UUID scheduleId) {
-        ReportSchedule schedule = reportScheduleRepository.findById(scheduleId)
+        ReportSchedule schedule = reportScheduleRepository.findByPublicId(scheduleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Schedule not found"));
         
         schedule.setStatus(ReportSchedule.ScheduleStatus.PAUSED);
@@ -263,7 +264,7 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional
     public ReportScheduleResponse resumeSchedule(UUID scheduleId) {
-        ReportSchedule schedule = reportScheduleRepository.findById(scheduleId)
+        ReportSchedule schedule = reportScheduleRepository.findByPublicId(scheduleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Schedule not found"));
         
         schedule.setStatus(ReportSchedule.ScheduleStatus.ACTIVE);
@@ -275,7 +276,7 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional
     public ReportScheduleResponse deleteSchedule(UUID scheduleId) {
-        ReportSchedule schedule = reportScheduleRepository.findById(scheduleId)
+        ReportSchedule schedule = reportScheduleRepository.findByPublicId(scheduleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Schedule not found"));
         
         schedule.setStatus(ReportSchedule.ScheduleStatus.STOPPED);
@@ -380,7 +381,7 @@ public class ReportServiceImpl implements ReportService {
 
     private ReportResponse mapToResponse(Report report) {
         return ReportResponse.builder()
-                .id(report.getId())
+                .id(report.getPublicId())
                 .reportNumber(report.getReportNumber())
                 .reportType(report.getReportType())
                 .reportTypeDisplayName(report.getReportType().getDisplayName())
@@ -395,11 +396,11 @@ public class ReportServiceImpl implements ReportService {
                 .createdBy(report.getCreatedBy())
                 .completedAt(report.getCompletedAt())
                 .errorMessage(report.getErrorMessage())
-                .downloadUrl(report.getStatus() == Report.ReportStatus.COMPLETED 
-                        ? "/api/v1/admin/reports/" + report.getId() + "/download" 
+                .downloadUrl(report.getStatus() == Report.ReportStatus.COMPLETED
+                        ? "/api/v1/admin/reports/" + report.getPublicId() + "/download"
                         : null)
-                .createdAt(report.getCreatedAt())
-                .updatedAt(report.getUpdatedAt())
+                .createdAt(report.getCreatedAt() != null ? report.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
+                .updatedAt(report.getUpdatedAt() != null ? report.getUpdatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 
@@ -409,7 +410,7 @@ public class ReportServiceImpl implements ReportService {
                 : Collections.emptyList();
         
         return ReportScheduleResponse.builder()
-                .id(schedule.getId())
+                .id(schedule.getPublicId())
                 .scheduleName(schedule.getScheduleName())
                 .reportType(schedule.getReportType())
                 .reportTypeDisplayName(schedule.getReportType().getDisplayName())
@@ -427,8 +428,8 @@ public class ReportServiceImpl implements ReportService {
                 .nextRunAt(schedule.getNextRunAt())
                 .recipients(recipients)
                 .createdBy(schedule.getCreatedBy())
-                .createdAt(schedule.getCreatedAt())
-                .updatedAt(schedule.getUpdatedAt())
+                .createdAt(schedule.getCreatedAt() != null ? schedule.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
+                .updatedAt(schedule.getUpdatedAt() != null ? schedule.getUpdatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 }

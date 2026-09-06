@@ -7,9 +7,12 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface DeliveryRegionRepository extends JpaRepository<DeliveryRegion, Long> {
+
+    Optional<DeliveryRegion> findByPublicId(UUID publicId);
 
     Optional<DeliveryRegion> findByCode(String code);
 

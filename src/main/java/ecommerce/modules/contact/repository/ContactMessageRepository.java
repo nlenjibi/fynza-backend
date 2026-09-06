@@ -128,6 +128,8 @@ public interface ContactMessageRepository extends JpaRepository<ContactMessage, 
      */
     Page<ContactMessage> findByAssignedToIsNull(Pageable pageable);
 
+    Optional<ContactMessage> findByPublicId(UUID publicId);
+
     /**
      * Search contact messages by multiple fields including assigned user.
      *
