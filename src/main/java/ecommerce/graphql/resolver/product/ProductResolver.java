@@ -1,13 +1,10 @@
 package ecommerce.graphql.resolver.product;
 
-import ecommerce.common.enums.ProductStatus;
 import ecommerce.common.response.PaginatedResponse;
 import ecommerce.common.security.UserPrincipal;
 import ecommerce.graphql.dto.ProductDto;
 import ecommerce.graphql.input.PageInput;
-import ecommerce.graphql.input.ProductCreateInput;
 import ecommerce.graphql.input.ProductFilterInput;
-import ecommerce.graphql.input.ProductUpdateInput;
 import ecommerce.graphql.input.SearchInput;
 import ecommerce.graphql.input.SortDirection;
 import ecommerce.modules.product.dto.*;
@@ -20,7 +17,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -176,156 +172,9 @@ public class ProductResolver {
         return productService.getSellerProductStats(principal.getId());
     }
 
-    // =========================================================================
-    // PRODUCT CRUD MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public ProductResponse createProduct(@Argument ProductCreateInput input,
-                                         @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL createProduct(name={}, user={})", input.getName(), principal.getId());
-        CreateProductRequest request = CreateProductRequest.builder()
-                .name(input.getName())
-                .description(input.getDescription())
-                .brand(input.getBrand())
-                .sku(input.getSku())
-                .price(input.getPrice())
-                .originalPrice(input.getOriginalPrice())
-                .categoryId(input.getCategoryId())
-                .stock(input.getStock())
-                .images(input.getImages())
-                .build();
-        return productService.create(request, principal.getId());
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public ProductResponse updateProduct(@Argument UUID id, @Argument ProductUpdateInput input) {
-        log.info("GQL updateProduct(id={})", id);
-        UpdateProductRequest request = UpdateProductRequest.builder()
-                .name(input.getName())
-                .description(input.getDescription())
-                .brand(input.getBrand())
-                .sku(input.getSku())
-                .price(input.getPrice())
-                .originalPrice(input.getOriginalPrice())
-                .categoryId(input.getCategoryId())
-                .stock(input.getStock())
-                .images(input.getImages())
-                .build();
-        return productService.update(id, request);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public boolean deleteProduct(@Argument UUID id) {
-        log.info("GQL deleteProduct(id={})", id);
-        productService.delete(id);
-        return true;
-    }
-
-    // =========================================================================
-    // STOCK MANAGEMENT MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public ProductResponse addStock(@Argument UUID id, @Argument int quantity) {
-        log.info("GQL addStock(id={}, quantity={})", id, quantity);
-        return productService.addStock(id, quantity);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public ProductResponse reduceStock(@Argument UUID id, @Argument int quantity) {
-        log.info("GQL reduceStock(id={}, quantity={})", id, quantity);
-        return productService.reduceStock(id, quantity);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public ProductResponse reserveStock(@Argument UUID id, @Argument int quantity) {
-        log.info("GQL reserveStock(id={}, quantity={})", id, quantity);
-        return productService.reserveStock(id, quantity);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public ProductResponse releaseReservedStock(@Argument UUID id, @Argument int quantity) {
-        log.info("GQL releaseReservedStock(id={}, quantity={})", id, quantity);
-        return productService.releaseReservedStock(id, quantity);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public ProductResponse restoreStock(@Argument UUID id, @Argument int quantity) {
-        log.info("GQL restoreStock(id={}, quantity={})", id, quantity);
-        return productService.restoreStock(id, quantity);
-    }
-
-    // =========================================================================
-    // ADMIN MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ProductResponse approveProduct(@Argument UUID id) {
-        log.info("GQL approveProduct(id={})", id);
-        return productService.approveProduct(id);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ProductResponse rejectProduct(@Argument UUID id, @Argument String reason) {
-        log.info("GQL rejectProduct(id={}, reason={})", id, reason);
-        return productService.rejectProduct(id, reason);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public boolean bulkUpdateFeatured(@Argument List<UUID> productIds, @Argument boolean featured) {
-        log.info("GQL bulkUpdateFeatured(productIds={}, featured={})", productIds, featured);
-        for (UUID id : productIds) {
-            try {
-                productService.updateProductStatus(id, featured ? ProductStatus.ACTIVE : ProductStatus.INACTIVE);
-            } catch (Exception e) {
-                log.warn("Failed to update product {}: {}", id, e.getMessage());
-            }
-        }
-        return true;
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public boolean bulkDelete(@Argument List<UUID> productIds) {
-        log.info("GQL bulkDelete(productIds={})", productIds);
-        for (UUID id : productIds) {
-            try {
-                productService.delete(id);
-            } catch (Exception e) {
-                log.warn("Failed to delete product {}: {}", id, e.getMessage());
-            }
-        }
-        return true;
-    }
-
-    // =========================================================================
-    // ANALYTICS MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    public boolean incrementViewCount(@Argument UUID id) {
-        log.info("GQL incrementViewCount(id={})", id);
-        return productService.incrementViewCount(id);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SELLER')")
-    public ProductResponse updateRating(@Argument UUID id, @Argument float rating) {
-        log.info("GQL updateRating(id={}, rating={})", id, rating);
-        return productService.updateRating(id, rating);
-    }
+    // Product mutations are REST-only per PRD §86.
+    // Use: POST /v1/products, PUT /v1/products/{id}, DELETE /v1/products/{id}
+    //      POST /v1/products/{id}/stock/*, PATCH /v1/products/{id}/moderation
 
     // =========================================================================
     // HELPERS

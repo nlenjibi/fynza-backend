@@ -5,9 +5,7 @@ import ecommerce.common.security.UserPrincipal;
 import ecommerce.graphql.dto.AdminPromotionPage;
 import ecommerce.graphql.dto.AdminPromotionStats;
 import ecommerce.graphql.dto.SellerPromotionPage;
-import ecommerce.graphql.input.AdminPromotionCreateInput;
 import ecommerce.graphql.input.PageInput;
-import ecommerce.graphql.input.SellerPromotionCreateInput;
 import ecommerce.graphql.input.SortDirection;
 import ecommerce.modules.promotion.entity.AdminPromotion;
 import ecommerce.modules.promotion.dto.SellerPromotionDto;
@@ -20,7 +18,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -90,72 +87,6 @@ public class PromotionResolver {
     public List<SellerPromotionDto> activeSellerPromotions(@AuthenticationPrincipal UserPrincipal principal) {
         log.info("GQL activeSellerPromotions(seller={})", principal.getId());
         return sellerPromotionService.getActivePromotions(principal.getId());
-    }
-
-    // =========================================================================
-    // ADMIN MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public AdminPromotion createAdminPromotion(@Argument AdminPromotionCreateInput input,
-                                               @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL createAdminPromotion(admin={})", principal.getId());
-        return adminPromotionService.createPromotion(
-                principal.getId(),
-                input.getName(),
-                AdminPromotion.PromotionType.valueOf(input.getPromotionType().toUpperCase()),
-                input.getCode(),
-                input.getDiscountValue(),
-                input.getMinPurchase(),
-                input.getMaxDiscount(),
-                input.getStartDate(),
-                input.getEndDate(),
-                input.getUsageLimit(),
-                input.getCategoryId(),
-                input.getIsGlobal() != null ? input.getIsGlobal() : false,
-                "0.0.0.0"
-        );
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public boolean deleteAdminPromotion(@Argument UUID id,
-                                        @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL deleteAdminPromotion(id={}, admin={})", id, principal.getId());
-        adminPromotionService.deletePromotion(principal.getId(), id, "0.0.0.0");
-        return true;
-    }
-
-    // =========================================================================
-    // SELLER MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("hasRole('SELLER')")
-    public SellerPromotionDto createSellerPromotion(@Argument SellerPromotionCreateInput input,
-                                                    @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL createSellerPromotion(seller={})", principal.getId());
-        return sellerPromotionService.createPromotion(
-                principal.getId(),
-                input.getName(),
-                input.getPromotionType(),
-                input.getDiscountValue(),
-                input.getMinPurchase(),
-                input.getStartDate(),
-                input.getEndDate(),
-                input.getUsageLimit(),
-                "0.0.0.0"
-        );
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('SELLER')")
-    public boolean deleteSellerPromotion(@Argument UUID id,
-                                         @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL deleteSellerPromotion(id={}, seller={})", id, principal.getId());
-        sellerPromotionService.deletePromotion(principal.getId(), id, "0.0.0.0");
-        return true;
     }
 
     // =========================================================================

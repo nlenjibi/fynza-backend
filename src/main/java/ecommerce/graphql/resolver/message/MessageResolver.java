@@ -1,18 +1,13 @@
 package ecommerce.graphql.resolver.message;
 
 import ecommerce.common.enums.MessageStatus;
-import ecommerce.common.enums.MessageType;
 import ecommerce.common.response.PaginatedResponse;
 import ecommerce.common.security.UserPrincipal;
 import ecommerce.graphql.dto.ConversationConnection;
-import ecommerce.graphql.input.CreateConversationInput;
 import ecommerce.graphql.input.PageInput;
-import ecommerce.graphql.input.SendMessageInput;
 import ecommerce.graphql.input.SortDirection;
 import ecommerce.modules.message.dto.ConversationResponse;
 import ecommerce.modules.message.dto.ConversationStatsResponse;
-import ecommerce.modules.message.dto.CreateConversationRequest;
-import ecommerce.modules.message.dto.SendMessageRequest;
 import ecommerce.modules.message.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -97,35 +92,8 @@ public class MessageResolver {
     }
 
     // =========================================================================
-    // AUTHENTICATED MUTATIONS
+    // UX STATE MUTATIONS
     // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("isAuthenticated()")
-    public ConversationResponse createConversation(@Argument CreateConversationInput input,
-                                                   @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL createConversation(user={})", principal.getId());
-        CreateConversationRequest request = CreateConversationRequest.builder()
-                .subject(input.getSubject())
-                .category(input.getCategory())
-                .initialMessage(input.getContent())
-                .orderId(input.getOrderId())
-                .productId(input.getProductId())
-                .build();
-        return messageService.createConversation(principal.getId(), MessageType.CUSTOMER, request);
-    }
-
-    @MutationMapping
-    @PreAuthorize("isAuthenticated()")
-    public ConversationResponse replyToConversation(@Argument UUID id,
-                                                    @Argument SendMessageInput input,
-                                                    @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL replyToConversation(id={}, user={})", id, principal.getId());
-        SendMessageRequest request = SendMessageRequest.builder()
-                .content(input.getContent())
-                .build();
-        return messageService.replyToConversation(id, principal.getId(), MessageType.CUSTOMER, principal.getId().toString(), request);
-    }
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
@@ -141,47 +109,6 @@ public class MessageResolver {
                                                        @AuthenticationPrincipal UserPrincipal principal) {
         log.info("GQL toggleConversationStar(id={}, user={})", id, principal.getId());
         return messageService.toggleStar(id, principal.getId());
-    }
-
-    @MutationMapping
-    @PreAuthorize("isAuthenticated()")
-    public boolean deleteConversation(@Argument UUID id,
-                                      @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL deleteConversation(id={}, user={})", id, principal.getId());
-        messageService.deleteConversation(id, principal.getId());
-        return true;
-    }
-
-    // =========================================================================
-    // ADMIN MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ConversationResponse adminReplyToConversation(@Argument UUID id,
-                                                         @Argument SendMessageInput input) {
-        log.info("GQL adminReplyToConversation(id={})", id);
-        SendMessageRequest request = SendMessageRequest.builder()
-                .content(input.getContent())
-                .build();
-        UUID adminId = UUID.fromString("00000000-0000-0000-0000-000000000000");
-        return messageService.replyToConversation(id, adminId, MessageType.SUPPORT, "Fynza Admin", request);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ConversationResponse updateConversationStatus(@Argument UUID id, @Argument String status) {
-        log.info("GQL updateConversationStatus(id={}, status={})", id, status);
-        return messageService.updateConversationStatus(id, MessageStatus.valueOf(status.toUpperCase()));
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public boolean adminDeleteConversation(@Argument UUID id) {
-        log.info("GQL adminDeleteConversation(id={})", id);
-        UUID adminId = UUID.fromString("00000000-0000-0000-0000-000000000000");
-        messageService.deleteConversation(id, adminId);
-        return true;
     }
 
     // =========================================================================

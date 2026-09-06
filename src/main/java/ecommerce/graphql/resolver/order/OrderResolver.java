@@ -7,9 +7,7 @@ import ecommerce.graphql.dto.OrderResponseDto;
 import ecommerce.graphql.input.*;
 import ecommerce.modules.order.dto.*;
 import ecommerce.modules.order.service.OrderService;
-import ecommerce.modules.order.service.OrderService.CancelRequest;
 import ecommerce.modules.order.service.OrderService.OrderSearchCriteria;
-import ecommerce.modules.order.service.OrderService.RefundRequest;
 import ecommerce.modules.seller.service.SellerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,13 +16,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,12 +37,14 @@ public class OrderResolver {
     // =========================================================================
 
     @QueryMapping
+    @PreAuthorize("isAuthenticated()")
     public OrderResponse order(@Argument UUID id, @AuthenticationPrincipal UserPrincipal principal) {
         log.debug("GQL order(id={}, user={})", id, principal.getId());
         return orderService.getOrderById(id, principal.getId());
     }
 
     @QueryMapping
+    @PreAuthorize("isAuthenticated()")
     public OrderResponse orderByNumber(@Argument String orderNumber,
                                        @AuthenticationPrincipal UserPrincipal principal) {
         log.debug("GQL orderByNumber({}, user={})", orderNumber, principal.getId());
@@ -54,6 +52,7 @@ public class OrderResolver {
     }
 
     @QueryMapping
+    @PreAuthorize("isAuthenticated()")
     public OrderResponseDto myOrders(@Argument PageInput pagination,
                                      @AuthenticationPrincipal UserPrincipal principal) {
         log.debug("GQL myOrders(user={})", principal.getId());
@@ -151,129 +150,8 @@ public class OrderResolver {
         return orderService.getSellerOrderStats(principal.getId());
     }
 
-    // =========================================================================
-    // CUSTOMER MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    public OrderResponse createOrder(@Argument OrderCreateInput input,
-                                     @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL createOrder(user={})", principal.getId());
-        CreateOrderRequest request = CreateOrderRequest.builder()
-                .shippingAddressId(input.getShippingAddressId())
-                .billingAddressId(input.getBillingAddressId())
-                .paymentMethod(input.getPaymentMethod())
-                .couponCode(input.getCouponCode())
-                .build();
-        return orderService.createOrder(request, principal.getId());
-    }
-
-    @MutationMapping
-    public OrderResponse cancelOrder(@Argument UUID id,
-                                     @Argument String reason,
-                                     @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL cancelOrder(id={}, user={})", id, principal.getId());
-        return orderService.cancelOrder(id, principal.getId(), reason);
-    }
-
-    @MutationMapping
-    public OrderResponse requestOrderRefund(@Argument UUID orderId,
-                                            @Argument RefundOrderInput input,
-                                            @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL requestOrderRefund(orderId={}, user={})", orderId, principal.getId());
-        RefundRequest request = RefundRequest.builder()
-                .reason(input != null ? input.getReason() : null)
-                .userId(principal.getId())
-                .build();
-        return orderService.requestRefund(orderId, request);
-    }
-
-    // =========================================================================
-    // ADMIN MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public OrderResponse adminUpdateOrderStatus(@Argument UUID id,
-                                                @Argument OrderStatusUpdateInput input) {
-        log.info("GQL adminUpdateOrderStatus(id={}, status={})", id, input.getStatus());
-        OrderStatusUpdateRequest request = OrderStatusUpdateRequest.builder()
-                .status(OrderStatus.valueOf(input.getStatus().toUpperCase()))
-                .trackingNumber(input.getTrackingNumber())
-                .notes(input.getNotes())
-                .build();
-        return orderService.updateOrderStatus(id, request);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public OrderResponse adminCancelOrder(@Argument UUID id, @Argument String reason) {
-        log.info("GQL adminCancelOrder(id={})", id);
-        return orderService.cancelOrder(id, reason);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    public OrderResponse confirmOrder(@Argument UUID id) {
-        log.info("GQL confirmOrder(id={})", id);
-        return orderService.updateOrderStatus(id, OrderStatus.CONFIRMED);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    public OrderResponse processOrder(@Argument UUID id) {
-        log.info("GQL processOrder(id={})", id);
-        return orderService.updateOrderStatus(id, OrderStatus.PROCESSING);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    public OrderResponse shipOrder(@Argument UUID id,
-                                   @Argument String trackingNumber,
-                                   @Argument String carrier) {
-        log.info("GQL shipOrder(id={}, tracking={})", id, trackingNumber);
-        OrderStatusUpdateRequest request = OrderStatusUpdateRequest.builder()
-                .status(OrderStatus.SHIPPED)
-                .trackingNumber(trackingNumber)
-                .notes(carrier != null ? "Carrier: " + carrier : null)
-                .build();
-        return orderService.updateOrderStatus(id, request);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    public OrderResponse deliverOrder(@Argument UUID id) {
-        log.info("GQL deliverOrder(id={})", id);
-        return orderService.updateOrderStatus(id, OrderStatus.DELIVERED);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    public OrderResponse refundOrder(@Argument UUID id,
-                                     @Argument BigDecimal amount,
-                                     @Argument String reason) {
-        log.info("GQL refundOrder(id={}, amount={})", id, amount);
-        RefundRequest request = RefundRequest.builder().reason(reason).build();
-        return orderService.requestRefund(id, request);
-    }
-
-    // =========================================================================
-    // SELLER MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("hasRole('SELLER')")
-    public OrderResponse sellerUpdateOrderStatus(@Argument UUID orderId,
-                                                 @Argument OrderStatusUpdateInput input,
-                                                 @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL sellerUpdateOrderStatus(orderId={}, seller={})", orderId, principal.getId());
-        OrderStatusUpdateRequest request = OrderStatusUpdateRequest.builder()
-                .status(OrderStatus.valueOf(input.getStatus().toUpperCase()))
-                .trackingNumber(input.getTrackingNumber())
-                .notes(input.getNotes())
-                .build();
-        return orderService.updateSellerOrderStatus(orderId, request, principal.getId());
-    }
+    // Order mutations are REST-only per PRD §19 & §86.
+    // Use: POST /v1/checkout, POST /v1/orders/{id}/cancel, POST /v1/orders/{id}/refund
 
     // =========================================================================
     // HELPERS

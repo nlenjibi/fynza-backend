@@ -53,14 +53,6 @@ type FollowedStoreConnection {
 # Queries
 # ─────────────────────────────────────────────────────────────────────────────
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Inputs
-# ─────────────────────────────────────────────────────────────────────────────
-
-input FollowInput {
-    sellerId: ID!
-}
-
 extend type Query {
 
     # ── Customer Queries (CUSTOMER) ──────────────────────────────────────
@@ -76,13 +68,3 @@ extend type Query {
     storeFollowerCount(sellerId: ID!): Long!
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Mutations
-# ─────────────────────────────────────────────────────────────────────────────
-
-extend type Mutation {
-
-    # ── Customer Mutations (CUSTOMER) ────────────────────────────────────
-    followStore(input: FollowInput!): Boolean!
-    unfollowStore(sellerId: ID!): Boolean!
-}

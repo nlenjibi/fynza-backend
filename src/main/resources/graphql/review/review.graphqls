@@ -86,28 +86,6 @@ type ReviewPage {
 # Inputs
 # ─────────────────────────────────────────────────────────────────────────────
 
-input ReviewCreateInput {
-    productId: ID!
-    rating: Int!
-    title: String
-    comment: String!
-    pros: [String!]
-    cons: [String!]
-    images: [String!]
-}
-
-input ReviewUpdateInput {
-    rating: Int
-    title: String
-    comment: String
-    pros: [String!]
-    cons: [String!]
-}
-
-input AdminResponseInput {
-    response: String!
-}
-
 input ReviewFilterInput {
     productId: ID
     customerId: ID
@@ -155,19 +133,6 @@ extend type Query {
 
 extend type Mutation {
 
-    # ── Authenticated Review Mutations ───────────────────────────────────
-    createReview(input: ReviewCreateInput!): Review!
-    updateReview(id: ID!, input: ReviewUpdateInput!): Review!
-    deleteReview(id: ID!): Boolean!
-    restoreReview(id: ID!): Review!
+    # ── UX State (AUTHENTICATED) ─────────────────────────────────────────
     markReviewHelpful(id: ID!): Review!
-
-    # ── Admin Review Mutations (ADMIN) ───────────────────────────────────
-    approveReview(id: ID!): Review!
-    rejectReview(id: ID!, reason: String!): Review!
-    addAdminResponse(id: ID!, input: AdminResponseInput!): Review!
-    removeAdminResponse(id: ID!): Review!
-    bulkApproveReviews(ids: [ID!]!): Int!
-    bulkRejectReviews(ids: [ID!]!, reason: String!): Int!
-    bulkDeleteReviews(ids: [ID!]!): Int!
 }
