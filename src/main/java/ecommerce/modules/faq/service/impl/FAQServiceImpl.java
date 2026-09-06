@@ -57,7 +57,7 @@ public class FAQServiceImpl implements FAQService {
     @Override
     public FAQResponse getFAQById(UUID id) {
         log.debug("Getting FAQ by id: {}", id);
-        FAQ faq = faqRepository.findById(id)
+        FAQ faq = faqRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FAQ not found"));
         return toResponse(faq);
     }
@@ -88,7 +88,7 @@ public class FAQServiceImpl implements FAQService {
     public FAQResponse updateFAQ(UUID id, UpdateFAQRequest request) {
         log.info("Updating FAQ with id: {}", id);
         
-        FAQ faq = faqRepository.findById(id)
+        FAQ faq = faqRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FAQ not found"));
         
         if (request.getQuestion() != null) {
@@ -115,11 +115,10 @@ public class FAQServiceImpl implements FAQService {
     public void deleteFAQ(UUID id) {
         log.info("Deleting FAQ with id: {}", id);
         
-        if (!faqRepository.existsById(id)) {
-            throw new ResourceNotFoundException("FAQ not found");
-        }
-        
-        faqRepository.deleteById(id);
+        FAQ faqToDelete = faqRepository.findByPublicId(id)
+                .orElseThrow(() -> new ResourceNotFoundException("FAQ not found"));
+
+        faqRepository.delete(faqToDelete);
         log.info("FAQ deleted with id: {}", id);
     }
 
@@ -129,7 +128,7 @@ public class FAQServiceImpl implements FAQService {
     public FAQResponse toggleFAQStatus(UUID id) {
         log.info("Toggling FAQ status for id: {}", id);
         
-        FAQ faq = faqRepository.findById(id)
+        FAQ faq = faqRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FAQ not found"));
         
         faq.setIsActive(!faq.getIsActive());
@@ -208,7 +207,7 @@ public class FAQServiceImpl implements FAQService {
     public FAQResponse incrementViewCount(UUID id) {
         log.debug("Incrementing view count for FAQ: {}", id);
         
-        FAQ faq = faqRepository.findById(id)
+        FAQ faq = faqRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FAQ not found"));
         
         faq.setViewCount((faq.getViewCount() != null ? faq.getViewCount() : 0) + 1);
@@ -219,15 +218,15 @@ public class FAQServiceImpl implements FAQService {
 
     private FAQResponse toResponse(FAQ faq) {
         return FAQResponse.builder()
-                .id(faq.getId())
+                .id(faq.getPublicId())
                 .question(faq.getQuestion())
                 .answer(faq.getAnswer())
                 .category(faq.getCategory())
                 .isActive(faq.getIsActive())
                 .viewCount(faq.getViewCount())
                 .displayOrder(faq.getDisplayOrder())
-                .createdAt(faq.getCreatedAt())
-                .updatedAt(faq.getUpdatedAt())
+                .createdAt(faq.getCreatedAt() != null ? faq.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
+                .updatedAt(faq.getUpdatedAt() != null ? faq.getUpdatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 }

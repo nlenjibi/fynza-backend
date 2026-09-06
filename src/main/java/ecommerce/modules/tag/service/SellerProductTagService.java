@@ -37,7 +37,7 @@ public class SellerProductTagService {
             throw new BadRequestException("Tag already assigned to this product");
         }
 
-        Tag tag = tagRepository.findById(tagId)
+        Tag tag = tagRepository.findByPublicId(tagId)
                 .orElseThrow(() -> new BadRequestException("Tag not found"));
 
         SellerProductTag sellerProductTag = SellerProductTag.builder()
@@ -58,7 +58,7 @@ public class SellerProductTagService {
         SellerProductTag sellerProductTag = sellerProductTagRepository.findByProductIdAndTagId(productId, tagId)
                 .orElseThrow(() -> new BadRequestException("Tag not assigned to this product"));
 
-        Tag tag = tagRepository.findById(tagId)
+        Tag tag = tagRepository.findByPublicId(tagId)
                 .orElseThrow(() -> new BadRequestException("Tag not found"));
 
         sellerProductTagRepository.delete(sellerProductTag);

@@ -30,17 +30,17 @@ public class DeliveryFeeResponse {
 
     public static DeliveryFeeResponse from(DeliveryFee fee) {
         return DeliveryFeeResponse.builder()
-                .id(fee.getId())
+                .id(fee.getPublicId())
                 .townName(fee.getTownName())
                 .deliveryMethod(fee.getDeliveryMethod())
                 .baseFee(fee.getBaseFee())
                 .perKmFee(fee.getPerKmFee())
                 .estimatedDays(fee.getEstimatedDays())
-                .regionId(fee.getRegion() != null ? fee.getRegion().getId() : null)
+                .regionId(fee.getRegion() != null ? fee.getRegion().getPublicId() : null)
                 .regionName(fee.getRegion() != null ? fee.getRegion().getName() : null)
                 .isActive(fee.getIsActive())
-                .createdAt(fee.getCreatedAt())
-                .updatedAt(fee.getUpdatedAt())
+                .createdAt(fee.getCreatedAt() != null ? fee.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
+                .updatedAt(fee.getUpdatedAt() != null ? fee.getUpdatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 }

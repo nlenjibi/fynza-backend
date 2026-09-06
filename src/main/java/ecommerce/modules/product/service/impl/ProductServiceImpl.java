@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -331,8 +332,8 @@ public class ProductServiceImpl implements ProductService {
                 .status(product.getStatus() != null ? product.getStatus().name() : null)
                 .isApproved(product.getIsApproved())
                 .inventoryStatus(product.getInventoryStatus() != null ? product.getInventoryStatus().name() : null)
-                .createdAt(product.getCreatedAt())
-                .updatedAt(product.getUpdatedAt())
+                .createdAt(product.getCreatedAt() != null ? product.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
+                .updatedAt(product.getUpdatedAt() != null ? product.getUpdatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 
@@ -408,8 +409,8 @@ public class ProductServiceImpl implements ProductService {
                 .status(product.getStatus() != null ? product.getStatus().name() : null)
                 .isApproved(product.getIsApproved())
                 .inventoryStatus(product.getInventoryStatus() != null ? product.getInventoryStatus().name() : null)
-                .createdAt(product.getCreatedAt())
-                .updatedAt(product.getUpdatedAt())
+                .createdAt(product.getCreatedAt() != null ? product.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
+                .updatedAt(product.getUpdatedAt() != null ? product.getUpdatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 
@@ -588,7 +589,7 @@ public class ProductServiceImpl implements ProductService {
     public boolean canUpdate(String productId, String userId) {
         UUID productUuid = UUID.fromString(productId);
         UUID userUuid = UUID.fromString(userId);
-        Product product = productRepository.findById(productUuid).orElse(null);
+        Product product = productRepository.findByPublicId(productUuid).orElse(null);
         if (product == null) {
             return false;
         }
@@ -601,7 +602,7 @@ public class ProductServiceImpl implements ProductService {
     public boolean canDelete(String productId, String userId) {
         UUID productUuid = UUID.fromString(productId);
         UUID userUuid = UUID.fromString(userId);
-        Product product = productRepository.findById(productUuid).orElse(null);
+        Product product = productRepository.findByPublicId(productUuid).orElse(null);
         if (product == null) {
             return false;
         }

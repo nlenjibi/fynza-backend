@@ -47,7 +47,7 @@ public class TagServiceImpl implements TagService {
 
     @Override
     public TagResponse getTag(UUID tagId) {
-        Tag tag = tagRepository.findById(tagId)
+        Tag tag = tagRepository.findByPublicId(tagId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Tag", tagId));
         return mapToResponse(tag);
     }
@@ -83,7 +83,7 @@ public class TagServiceImpl implements TagService {
     @Override
     @Transactional
     public TagResponse updateTag(UUID tagId, CreateTagRequest request) {
-        Tag tag = tagRepository.findById(tagId)
+        Tag tag = tagRepository.findByPublicId(tagId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Tag", tagId));
 
         if (!tag.getName().equalsIgnoreCase(request.getName()) && tagRepository.existsByName(request.getName())) {

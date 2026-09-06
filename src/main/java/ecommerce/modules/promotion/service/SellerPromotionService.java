@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -119,7 +120,7 @@ public class SellerPromotionService {
 
     private SellerPromotionDto mapToDto(SellerPromotion promotion) {
         return SellerPromotionDto.builder()
-                .id(promotion.getId())
+                .id(promotion.getPublicId())
                 .sellerId(promotion.getSellerId())
                 .name(promotion.getName())
                 .promotionType(promotion.getPromotionType().name())
@@ -133,7 +134,7 @@ public class SellerPromotionService {
                 .usageCount(promotion.getUsageCount())
                 .status(promotion.getStatus().name())
                 .isActive(promotion.getIsActive())
-                .createdAt(promotion.getCreatedAt())
+                .createdAt(promotion.getCreatedAt() != null ? promotion.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 }
