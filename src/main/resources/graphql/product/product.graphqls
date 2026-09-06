@@ -258,27 +258,10 @@ extend type Query {
 # Mutations
 # ─────────────────────────────────────────────────────────────────────────────
 
-extend type Mutation {
-
-    # ── Product CRUD (SELLER/ADMIN) ──────────────────────────────────────
-    createProduct(input: ProductCreateInput!): ProductResponse!
-    updateProduct(id: ID!, input: ProductUpdateInput!): ProductResponse!
-    deleteProduct(id: ID!): Boolean!
-
-    # ── Stock Management (SELLER/ADMIN) ──────────────────────────────────
-    addStock(id: ID!, quantity: Int!): ProductResponse!
-    reduceStock(id: ID!, quantity: Int!): ProductResponse!
-    reserveStock(id: ID!, quantity: Int!): ProductResponse!
-    releaseReservedStock(id: ID!, quantity: Int!): ProductResponse!
-    restoreStock(id: ID!, quantity: Int!): ProductResponse!
-
-    # ── Admin Operations (ADMIN) ─────────────────────────────────────────
-    approveProduct(id: ID!): ProductResponse!
-    rejectProduct(id: ID!, reason: String!): ProductResponse!
-    bulkUpdateFeatured(productIds: [ID!]!, featured: Boolean!): Boolean!
-    bulkDelete(productIds: [ID!]!): Boolean!
-
-    # ── Analytics ────────────────────────────────────────────────────────
-    incrementViewCount(id: ID!): Boolean!
-    updateRating(id: ID!, rating: Float!): ProductResponse!
-}
+# Product mutations (CRUD, inventory, moderation) are handled exclusively by REST per PRD §86:
+#   POST   /v1/products                  — create product
+#   PUT    /v1/products/{id}             — update product
+#   DELETE /v1/products/{id}             — delete product
+#   POST   /v1/products/{id}/stock/add   — add stock
+#   POST   /v1/products/{id}/stock/reduce — reduce stock
+#   PATCH  /v1/products/{id}/moderation  — approve/reject (admin)

@@ -4,7 +4,6 @@ import ecommerce.common.response.PaginatedResponse;
 import ecommerce.common.security.UserPrincipal;
 import ecommerce.graphql.dto.FollowedStoreConnection;
 import ecommerce.graphql.dto.FollowerPage;
-import ecommerce.graphql.input.FollowInput;
 import ecommerce.graphql.input.PageInput;
 import ecommerce.graphql.input.SortDirection;
 import ecommerce.modules.follow.dto.FollowStatsResponse;
@@ -18,7 +17,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -98,28 +96,6 @@ public class FollowResolver {
         log.info("GQL storeFollowerCount(seller={})", sellerId);
         FollowStatsResponse stats = followService.getSellerFollowStats(sellerId);
         return stats.getTotalFollowers();
-    }
-
-    // =========================================================================
-    // CUSTOMER MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("hasRole('CUSTOMER')")
-    public boolean followStore(@Argument FollowInput input,
-                               @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL followStore(user={}, seller={})", principal.getId(), input.getSellerId());
-        followService.followStore(principal.getId(), input.getSellerId());
-        return true;
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('CUSTOMER')")
-    public boolean unfollowStore(@Argument UUID sellerId,
-                                 @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL unfollowStore(user={}, seller={})", principal.getId(), sellerId);
-        followService.unfollowStore(principal.getId(), sellerId);
-        return true;
     }
 
     // =========================================================================

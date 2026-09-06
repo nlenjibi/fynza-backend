@@ -5,7 +5,6 @@ import ecommerce.graphql.input.ContentAnalyticsInput;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -134,38 +133,4 @@ public class PerformanceResolver {
         return "{}";
     }
 
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public boolean warmupCache() {
-        log.info("GraphQL Mutation: warmupCache");
-        return true;
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public boolean clearAllCaches() {
-        log.info("GraphQL Mutation: clearAllCaches");
-        return true;
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public boolean clearSpecificCache(@Argument String cacheName) {
-        log.info("GraphQL Mutation: clearSpecificCache(cacheName: {})", cacheName);
-        return true;
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public boolean cleanupSecurityData() {
-        log.info("GraphQL Mutation: cleanupSecurityData");
-        return true;
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public boolean refreshMetrics() {
-        log.info("GraphQL Mutation: refreshMetrics");
-        return true;
-    }
 }

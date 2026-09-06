@@ -3,12 +3,8 @@ package ecommerce.graphql.resolver.wishlist;
 import ecommerce.common.response.PaginatedResponse;
 import ecommerce.common.security.UserPrincipal;
 import ecommerce.graphql.dto.WishlistItemPage;
-import ecommerce.graphql.input.AddToWishlistInput;
 import ecommerce.graphql.input.PageInput;
 import ecommerce.graphql.input.SortDirection;
-import ecommerce.graphql.input.UpdateWishlistItemInput;
-import ecommerce.modules.wishlist.dto.AddToWishlistRequest;
-import ecommerce.modules.wishlist.dto.UpdateWishlistItemRequest;
 import ecommerce.modules.wishlist.dto.WishlistItemDto;
 import ecommerce.modules.wishlist.dto.WishlistSummaryDto;
 import ecommerce.modules.wishlist.service.WishlistService;
@@ -19,7 +15,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -81,75 +76,6 @@ public class WishlistResolver {
     public List<WishlistItemDto> wishlistItemsWithPriceDrops(@AuthenticationPrincipal UserPrincipal principal) {
         log.info("GQL wishlistItemsWithPriceDrops(user={})", principal.getId());
         return wishlistService.getItemsWithPriceDrops(principal.getId());
-    }
-
-    // =========================================================================
-    // MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    public WishlistItemDto addToWishlist(@Argument AddToWishlistInput input,
-                                         @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL addToWishlist(productId={}, user={})", input.getProductId(), principal.getId());
-        AddToWishlistRequest request = AddToWishlistRequest.builder()
-                .productId(input.getProductId())
-                .priority(input.getPriority())
-                .notes(input.getNotes())
-                .desiredQuantity(input.getDesiredQuantity())
-                .targetPrice(input.getTargetPrice())
-                .notifyOnPriceDrop(input.getNotifyOnPriceDrop())
-                .notifyOnStock(input.getNotifyOnStock())
-                .isPublic(input.getIsPublic())
-                .collectionName(input.getCollectionName())
-                .build();
-        return wishlistService.addToWishlist(principal.getId(), request);
-    }
-
-    @MutationMapping
-    public WishlistItemDto updateWishlistItem(@Argument UUID productId,
-                                              @Argument UpdateWishlistItemInput input,
-                                              @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL updateWishlistItem(productId={}, user={})", productId, principal.getId());
-        UpdateWishlistItemRequest request = UpdateWishlistItemRequest.builder()
-                .priority(input.getPriority())
-                .notes(input.getNotes())
-                .desiredQuantity(input.getDesiredQuantity())
-                .targetPrice(input.getTargetPrice())
-                .notifyOnPriceDrop(input.getNotifyOnPriceDrop())
-                .notifyOnStock(input.getNotifyOnStock())
-                .isPublic(input.getIsPublic())
-                .build();
-        return wishlistService.updateWishlistItem(principal.getId(), productId, request);
-    }
-
-    @MutationMapping
-    public boolean removeFromWishlist(@Argument UUID productId,
-                                      @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL removeFromWishlist(productId={}, user={})", productId, principal.getId());
-        wishlistService.removeFromWishlist(principal.getId(), productId);
-        return true;
-    }
-
-    @MutationMapping
-    public boolean clearWishlist(@AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL clearWishlist(user={})", principal.getId());
-        wishlistService.clearWishlist(principal.getId());
-        return true;
-    }
-
-    @MutationMapping
-    public WishlistItemDto markWishlistItemPurchased(@Argument UUID productId,
-                                                     @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL markWishlistItemPurchased(productId={}, user={})", productId, principal.getId());
-        return wishlistService.markAsPurchased(principal.getId(), productId);
-    }
-
-    @MutationMapping
-    public boolean moveWishlistItemToCart(@Argument UUID productId,
-                                          @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL moveWishlistItemToCart(productId={}, user={})", productId, principal.getId());
-        wishlistService.moveToCart(principal.getId(), productId);
-        return true;
     }
 
     // =========================================================================
