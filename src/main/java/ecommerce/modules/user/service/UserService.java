@@ -31,6 +31,11 @@ public interface UserService {
     UserDto getCustomerProfile(UUID userId);
     UserDto updateCustomerProfile(UUID userId, UserDto request);
 
+    // Customer dashboard & loyalty
+    CustomerDashboardResponse getCustomerDashboard(UUID userId);
+    LoyaltyRedemptionResponse getLoyaltyBalance(UUID userId);
+    LoyaltyRedemptionResponse redeemLoyaltyPoints(UUID userId, int pointsToRedeem, String rewardType);
+
     // Address operations
     List<AddressDto> getCustomerAddresses(UUID userId);
     AddressDto addCustomerAddress(UUID userId, AddressRequest request);

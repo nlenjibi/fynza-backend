@@ -24,7 +24,7 @@ public class SubscriberResponse {
 
     public static SubscriberResponse from(Subscriber subscriber) {
         return SubscriberResponse.builder()
-                .id(subscriber.getId())
+                .id(subscriber.getPublicId())
                 .email(subscriber.getEmail())
                 .status(subscriber.getStatus())
                 .subscribedAt(subscriber.getSubscribedAt())
