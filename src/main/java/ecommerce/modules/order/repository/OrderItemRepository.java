@@ -1,8 +1,8 @@
 package ecommerce.modules.order.repository;
 
-import ecommerce.common.base.BaseRepository;
 import ecommerce.modules.order.entity.OrderItem;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,16 +12,16 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface OrderItemRepository extends BaseRepository<OrderItem, UUID> {
+public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
     @EntityGraph(attributePaths = {"product"})
-    List<OrderItem> findByOrderId(UUID orderId);
+    List<OrderItem> findByOrderId(Long orderId);
 
     @EntityGraph(attributePaths = {"product"})
-    List<OrderItem> findByProductId(UUID productId);
+    List<OrderItem> findByProductId(Long productId);
 
     @EntityGraph(attributePaths = {"product"})
-    List<OrderItem> findByProductIdIn(List<UUID> productIds);
+    List<OrderItem> findByProductIdIn(List<Long> productIds);
 
     @Query("""
             SELECT oi.product.id, oi.product.name, SUM(oi.quantity) AS totalSold
@@ -38,7 +38,7 @@ public interface OrderItemRepository extends BaseRepository<OrderItem, UUID> {
             WHERE oi.product.id = :productId
               AND oi.order.status = 'DELIVERED'
             """)
-    long countTotalSoldByProduct(@Param("productId") UUID productId);
+    long countTotalSoldByProduct(@Param("productId") Long productId);
 
     @Query("SELECT COUNT(oi) FROM OrderItem oi WHERE oi.product.seller.id = :sellerId")
     long countByProductSellerId(@Param("sellerId") UUID sellerId);

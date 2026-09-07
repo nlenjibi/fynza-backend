@@ -1,14 +1,14 @@
 package ecommerce.modules.user.entity;
 
-import ecommerce.common.base.BaseEntity;
 import ecommerce.common.enums.PaymentMethod;
 import ecommerce.common.enums.Role;
 import ecommerce.common.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "users", indexes = {
@@ -21,8 +21,40 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@SuperBuilder
-public class User extends BaseEntity {
+@Builder
+public class User {
+
+    @Id
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
+
+    @Column(name = "id", insertable = false, updatable = false)
+    private UUID publicId;
+
+    @Column(name = "is_active", nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (id == null) id = UUID.randomUUID();
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
+        if (isActive == null) isActive = true;
+    }
+
+    public UUID getPublicId() { return publicId != null ? publicId : id; }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
 
     @Column(name = "email", unique = true, nullable = false, length = 255)
     private String email;
@@ -62,10 +94,6 @@ public class User extends BaseEntity {
     @Builder.Default
     private Boolean isEmailVerified = false;
 
-    @Column(name = "is_active")
-    @Builder.Default
-    private Boolean isActive = true;
-
     @Column(name = "is_locked")
     @Builder.Default
     private Boolean isLocked = false;
@@ -75,6 +103,13 @@ public class User extends BaseEntity {
 
     @Column(name = "last_password_change")
     private LocalDateTime lastPasswordChange;
+
+    @Column(name = "mfa_enabled", nullable = false)
+    @Builder.Default
+    private Boolean mfaEnabled = false;
+
+    @Column(name = "mfa_secret", length = 64)
+    private String mfaSecret;
 
     @Column(name = "google_id")
     private String googleId;

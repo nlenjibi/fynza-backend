@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.UUID;
 
 @Repository
-public interface SellerPromotionActivityRepository extends JpaRepository<SellerPromotionActivity, UUID> {
+public interface SellerPromotionActivityRepository extends JpaRepository<SellerPromotionActivity, Long> {
 
     Page<SellerPromotionActivity> findBySellerIdOrderByCreatedAtDesc(UUID sellerId, Pageable pageable);
 

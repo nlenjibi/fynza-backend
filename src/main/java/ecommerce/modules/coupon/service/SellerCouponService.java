@@ -59,7 +59,7 @@ public class SellerCouponService {
                                     DiscountType discountType, BigDecimal discountValue,
                                     BigDecimal minOrderAmount, BigDecimal maxDiscountAmount,
                                     LocalDateTime validFrom, LocalDateTime validUntil) {
-        SellerCoupon coupon = sellerCouponRepository.findById(id)
+        SellerCoupon coupon = sellerCouponRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon not found"));
 
         if (!coupon.getSellerId().equals(sellerId)) {
@@ -83,7 +83,7 @@ public class SellerCouponService {
 
     @Transactional
     public void deleteCoupon(UUID id, UUID sellerId) {
-        SellerCoupon coupon = sellerCouponRepository.findById(id)
+        SellerCoupon coupon = sellerCouponRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon not found"));
 
         if (!coupon.getSellerId().equals(sellerId)) {
@@ -97,7 +97,7 @@ public class SellerCouponService {
 
     @Transactional
     public SellerCoupon pauseCoupon(UUID id, UUID sellerId) {
-        SellerCoupon coupon = sellerCouponRepository.findById(id)
+        SellerCoupon coupon = sellerCouponRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon not found"));
 
         if (!coupon.getSellerId().equals(sellerId)) {
@@ -111,7 +111,7 @@ public class SellerCouponService {
 
     @Transactional
     public SellerCoupon activateCoupon(UUID id, UUID sellerId) {
-        SellerCoupon coupon = sellerCouponRepository.findById(id)
+        SellerCoupon coupon = sellerCouponRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon not found"));
 
         if (!coupon.getSellerId().equals(sellerId)) {
@@ -135,7 +135,7 @@ public class SellerCouponService {
 
     @Transactional(readOnly = true)
     public SellerCoupon getCoupon(UUID id) {
-        return sellerCouponRepository.findById(id)
+        return sellerCouponRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon not found"));
     }
 

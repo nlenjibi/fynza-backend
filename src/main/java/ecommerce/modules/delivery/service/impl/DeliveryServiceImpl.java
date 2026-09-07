@@ -64,7 +64,7 @@ public class DeliveryServiceImpl implements DeliveryService {
     public DeliveryRegionResponse updateRegion(UUID id, DeliveryRegionRequest request) {
         log.info("Updating delivery region: {}", id);
 
-        DeliveryRegion region = regionRepository.findById(id)
+        DeliveryRegion region = regionRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Region not found with ID: " + id));
 
         if (!region.getCode().equalsIgnoreCase(request.getCode()) 
@@ -89,7 +89,7 @@ public class DeliveryServiceImpl implements DeliveryService {
     public void deleteRegion(UUID id) {
         log.info("Deleting delivery region: {}", id);
 
-        DeliveryRegion region = regionRepository.findById(id)
+        DeliveryRegion region = regionRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Region not found with ID: " + id));
 
         region.setIsActive(false);
@@ -107,7 +107,7 @@ public class DeliveryServiceImpl implements DeliveryService {
     @Override
     @Transactional(readOnly = true)
     public DeliveryRegionResponse getRegionById(UUID id) {
-        DeliveryRegion region = regionRepository.findById(id)
+        DeliveryRegion region = regionRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Region not found with ID: " + id));
         return DeliveryRegionResponse.from(region);
     }
@@ -129,7 +129,7 @@ public class DeliveryServiceImpl implements DeliveryService {
 
         DeliveryRegion region = null;
         if (request.getRegionId() != null) {
-            region = regionRepository.findById(request.getRegionId())
+            region = regionRepository.findByPublicId(request.getRegionId())
                     .orElseThrow(() -> new ResourceNotFoundException("Region not found with ID: " + request.getRegionId()));
         }
 
@@ -154,12 +154,12 @@ public class DeliveryServiceImpl implements DeliveryService {
     public DeliveryFeeResponse updateDeliveryFee(UUID id, DeliveryFeeRequest request) {
         log.info("Updating delivery fee: {}", id);
 
-        DeliveryFee fee = feeRepository.findById(id)
+        DeliveryFee fee = feeRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Delivery fee not found with ID: " + id));
 
         DeliveryRegion region = null;
         if (request.getRegionId() != null) {
-            region = regionRepository.findById(request.getRegionId())
+            region = regionRepository.findByPublicId(request.getRegionId())
                     .orElseThrow(() -> new ResourceNotFoundException("Region not found with ID: " + request.getRegionId()));
         }
 
@@ -181,7 +181,7 @@ public class DeliveryServiceImpl implements DeliveryService {
     public void deleteDeliveryFee(UUID id) {
         log.info("Deleting delivery fee: {}", id);
 
-        DeliveryFee fee = feeRepository.findById(id)
+        DeliveryFee fee = feeRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Delivery fee not found with ID: " + id));
 
         fee.setIsActive(false);
@@ -199,7 +199,7 @@ public class DeliveryServiceImpl implements DeliveryService {
     @Override
     @Transactional(readOnly = true)
     public DeliveryFeeResponse getDeliveryFeeById(UUID id) {
-        DeliveryFee fee = feeRepository.findById(id)
+        DeliveryFee fee = feeRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Delivery fee not found with ID: " + id));
         return DeliveryFeeResponse.from(fee);
     }
@@ -215,7 +215,7 @@ public class DeliveryServiceImpl implements DeliveryService {
     @Override
     @Transactional(readOnly = true)
     public List<DeliveryFeeResponse> getDeliveryFeesByRegion(UUID regionId) {
-        return feeRepository.findByRegionId(regionId).stream()
+        return feeRepository.findByRegion_PublicId(regionId).stream()
                 .map(DeliveryFeeResponse::from)
                 .collect(Collectors.toList());
     }

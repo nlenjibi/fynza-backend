@@ -1,10 +1,7 @@
 package ecommerce.common.util;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,7 +12,6 @@ import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -23,7 +19,6 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class DatabaseMetricsService {
 
     @Autowired(required = false)
@@ -199,49 +194,5 @@ public class DatabaseMetricsService {
         queryPerf.put("status", status);
 
         return queryPerf;
-    }
-
-
-    /**
-     * Service to track failed login attempts and handle account lockout.
-     * Uses an in-memory Caffeine cache with a 15-minute expiration.
-     */
-    @Service
-    @Slf4j
-    public static class LoginAttemptService {
-
-        private static final int MAX_ATTEMPTS = 5;
-        private static final int LOCKOUT_DURATION_MINUTES = 15;
-
-        // Cache for tracking failed attempts: key = email, value = attempt count
-        private final Cache<String, Integer> attemptsCache;
-
-        public LoginAttemptService() {
-            this.attemptsCache = Caffeine.newBuilder()
-                    .expireAfterWrite(LOCKOUT_DURATION_MINUTES, TimeUnit.MINUTES)
-                    .build();
-        }
-
-        public void loginSucceeded(String key) {
-            attemptsCache.invalidate(key);
-        }
-
-        public void loginFailed(String key) {
-            int attempts = getAttempts(key);
-            attempts++;
-            attemptsCache.put(key, attempts);
-            if (attempts >= MAX_ATTEMPTS) {
-                log.warn("Account locked for key: {} after {} failed attempts", key, attempts);
-            }
-        }
-
-        public boolean isLocked(String key) {
-            return getAttempts(key) >= MAX_ATTEMPTS;
-        }
-
-        private int getAttempts(String key) {
-            Integer attempts = attemptsCache.getIfPresent(key);
-            return attempts == null ? 0 : attempts;
-        }
     }
 }

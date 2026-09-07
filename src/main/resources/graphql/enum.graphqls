@@ -5,3 +5,9 @@ enum SortDirection {
     ASC
     DESC
 }
+
+enum DeliveryMethod {
+    DIRECT_ADDRESS
+    BUS_STATION
+    SHIPPING
+}

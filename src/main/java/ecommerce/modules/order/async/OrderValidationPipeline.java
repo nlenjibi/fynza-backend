@@ -159,7 +159,7 @@ public class OrderValidationPipeline {
     }
 
     public OrderStatus getOrderValidationStatus(UUID orderId) {
-        return orderRepository.findById(orderId)
+        return orderRepository.findByPublicId(orderId)
                 .map(Order::getStatus)
                 .orElse(null);
     }

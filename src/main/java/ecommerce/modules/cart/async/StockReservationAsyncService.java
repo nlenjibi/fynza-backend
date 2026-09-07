@@ -42,18 +42,18 @@ public class StockReservationAsyncService {
         log.info("[{}] Starting async stock reservation for cart item: {}", correlationId, cartItemId);
 
         try {
-            CartItem cartItem = cartItemRepository.findById(cartItemId)
+            CartItem cartItem = cartItemRepository.findByPublicId(cartItemId)
                     .orElseThrow(() -> new IllegalArgumentException("Cart item not found: " + cartItemId));
 
             Product product = cartItem.getProduct();
             int requestedQty = cartItem.getQuantity();
 
-            StockReservation reservation = reservationRepository.findByCartItemId(cartItemId)
+            StockReservation reservation = reservationRepository.findByCartItem_PublicId(cartItemId)
                     .orElseGet(() -> createPendingReservation(cartItem, product, requestedQty));
 
             if (reservation.getStatus() == CONFIRMED) {
                 log.info("[{}] Stock already reserved for cart item: {}", correlationId, cartItemId);
-                return CompletableFuture.completedFuture(ReservationResponse.confirmed(reservation.getId()));
+                return CompletableFuture.completedFuture(ReservationResponse.confirmed(reservation.getPublicId()));
             }
 
             boolean reserved = attemptReservation(product, requestedQty);
@@ -63,9 +63,9 @@ public class StockReservationAsyncService {
                 reservation.setStatus(CONFIRMED);
                 reservation.setExpiresAt(LocalDateTime.now().plusMinutes(15));
                 reservationRepository.save(reservation);
-                log.info("[{}] Stock reservation confirmed for cart item: {}, qty: {}", 
+                log.info("[{}] Stock reservation confirmed for cart item: {}, qty: {}",
                         correlationId, cartItemId, requestedQty);
-                return CompletableFuture.completedFuture(ReservationResponse.confirmed(reservation.getId()));
+                return CompletableFuture.completedFuture(ReservationResponse.confirmed(reservation.getPublicId()));
             } else {
                 return handleReservationFailure(reservation, "Insufficient stock", correlationId);
             }
@@ -119,40 +119,40 @@ public class StockReservationAsyncService {
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
-                return reserveStockAsync(reservation.getCartItem().getId()).join();
+                return reserveStockAsync(reservation.getCartItem().getPublicId()).join();
             });
         } else {
             reservation.setStatus(FAILED);
             reservation.setErrorMessage("Max retries exceeded: " + errorMessage);
             reservationRepository.save(reservation);
             log.warn("[{}] Stock reservation failed after {} retries for reservation: {}",
-                    correlationId, MAX_RETRIES, reservation.getId());
+                    correlationId, MAX_RETRIES, reservation.getPublicId());
             return CompletableFuture.completedFuture(
-                    ReservationResponse.failed(reservation.getId(), 
-                            "Reservation failed after " + MAX_RETRIES + " retries", 
+                    ReservationResponse.failed(reservation.getPublicId(),
+                            "Reservation failed after " + MAX_RETRIES + " retries",
                             reservation.getRetryCount()));
         }
     }
 
     public ReservationResponse getReservationStatus(UUID reservationId) {
-        return reservationRepository.findById(reservationId)
+        return reservationRepository.findByPublicId(reservationId)
                 .map(res -> ReservationResponse.builder()
-                        .reservationId(res.getId())
+                        .reservationId(res.getPublicId())
                         .status(res.getStatus())
                         .retryCount(res.getRetryCount())
-                        .message(res.getErrorMessage() != null ? res.getErrorMessage() : 
+                        .message(res.getErrorMessage() != null ? res.getErrorMessage() :
                                 "Reservation " + res.getStatus().name().toLowerCase())
                         .build())
                 .orElse(ReservationResponse.failed(null, "Reservation not found", 0));
     }
 
     public ReservationResponse getReservationByCartItemId(UUID cartItemId) {
-        return reservationRepository.findByCartItemId(cartItemId)
+        return reservationRepository.findByCartItem_PublicId(cartItemId)
                 .map(res -> ReservationResponse.builder()
-                        .reservationId(res.getId())
+                        .reservationId(res.getPublicId())
                         .status(res.getStatus())
                         .retryCount(res.getRetryCount())
-                        .message(res.getErrorMessage() != null ? res.getErrorMessage() : 
+                        .message(res.getErrorMessage() != null ? res.getErrorMessage() :
                                 "Reservation " + res.getStatus().name().toLowerCase())
                         .build())
                 .orElse(ReservationResponse.failed(null, "No reservation found for cart item", 0));

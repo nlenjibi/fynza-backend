@@ -183,23 +183,34 @@ public class AsyncConfig {
         return executor;
     }
 
-    /**
-     * Dedicated executor for security event logging.
-     * Uses a smaller pool since security events are not high-volume.
-     */
     @Bean("securityEventExecutor")
     public Executor securityEventExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(2);  // Small pool for security events
+        executor.setCorePoolSize(2);
         executor.setMaxPoolSize(5);
-        executor.setQueueCapacity(200);  // Larger queue to handle bursts
+        executor.setQueueCapacity(200);
         executor.setThreadNamePrefix("security-");
         executor.setTaskDecorator(mdcTaskDecorator());
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(30);
         executor.initialize();
-        log.info("Security Event Executor initialized: corePoolSize=2, maxPoolSize=5, queueCapacity=200");
+        return executor;
+    }
+
+    // Analytics events are fire-and-forget after TX commit; small pool is sufficient.
+    @Bean("analyticsExecutor")
+    public Executor analyticsExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("analytics-");
+        executor.setTaskDecorator(mdcTaskDecorator());
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
+        executor.initialize();
         return executor;
     }
 }

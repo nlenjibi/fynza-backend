@@ -3,6 +3,7 @@ package ecommerce.common.security;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
+import ecommerce.common.config.TokenProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -16,18 +17,13 @@ import java.util.UUID;
 @Slf4j
 public class JwtTokenProvider {
 
-    @Value("${jwt.secret}")
-    private String jwtSecret;
+    private final TokenProperties tokenProperties;
+    private final SecretKey signingKey;
 
-    @Value("${jwt.access-token.expiration:900000}")
-    private Long accessTokenExpiration;
-
-    @Value("${jwt.refresh-token.expiration:604800000}")
-    private Long refreshTokenExpiration;
-
-    private SecretKey getSigningKey() {
-        byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
-        return Keys.hmacShaKeyFor(keyBytes);
+    public JwtTokenProvider(TokenProperties tokenProperties,
+                             @Value("${jwt.secret}") String jwtSecret) {
+        this.tokenProperties = tokenProperties;
+        this.signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateAccessToken(UUID userId, String email, String role) {
@@ -36,7 +32,7 @@ public class JwtTokenProvider {
 
     public String generateAccessToken(UUID userId, String email, String role, String authProvider) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + accessTokenExpiration);
+        Date expiryDate = new Date(now.getTime() + tokenProperties.accessMillis());
 
         return Jwts.builder()
                 .subject(userId.toString())
@@ -46,20 +42,20 @@ public class JwtTokenProvider {
                 .claim("authProvider", authProvider)
                 .issuedAt(now)
                 .expiration(expiryDate)
-                .signWith(getSigningKey(), Jwts.SIG.HS512)
+                .signWith(signingKey, Jwts.SIG.HS512)
                 .compact();
     }
 
     public String generateRefreshToken(UUID userId) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + refreshTokenExpiration);
+        Date expiryDate = new Date(now.getTime() + tokenProperties.refreshMillis());
 
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("type", "refresh")
                 .issuedAt(now)
                 .expiration(expiryDate)
-                .signWith(getSigningKey(), Jwts.SIG.HS512)
+                .signWith(signingKey, Jwts.SIG.HS512)
                 .compact();
     }
 
@@ -80,7 +76,7 @@ public class JwtTokenProvider {
 
     private Claims getClaims(String token) {
         return Jwts.parser()
-                .verifyWith(getSigningKey())
+                .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
@@ -128,6 +124,6 @@ public class JwtTokenProvider {
     }
 
     public long getAccessTokenExpiration() {
-        return accessTokenExpiration;
+        return tokenProperties.accessMillis();
     }
 }

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +37,7 @@ public class SellerProductTagService {
             throw new BadRequestException("Tag already assigned to this product");
         }
 
-        Tag tag = tagRepository.findById(tagId)
+        Tag tag = tagRepository.findByPublicId(tagId)
                 .orElseThrow(() -> new BadRequestException("Tag not found"));
 
         SellerProductTag sellerProductTag = SellerProductTag.builder()
@@ -57,7 +58,7 @@ public class SellerProductTagService {
         SellerProductTag sellerProductTag = sellerProductTagRepository.findByProductIdAndTagId(productId, tagId)
                 .orElseThrow(() -> new BadRequestException("Tag not assigned to this product"));
 
-        Tag tag = tagRepository.findById(tagId)
+        Tag tag = tagRepository.findByPublicId(tagId)
                 .orElseThrow(() -> new BadRequestException("Tag not found"));
 
         sellerProductTagRepository.delete(sellerProductTag);
@@ -96,7 +97,7 @@ public class SellerProductTagService {
     public List<Tag> getTagsForProduct(UUID productId) {
         List<SellerProductTag> productTags = sellerProductTagRepository.findByProductId(productId);
         List<UUID> tagIds = productTags.stream().map(SellerProductTag::getTagId).toList();
-        return tagRepository.findAllById(tagIds);
+        return tagRepository.findByPublicIdIn(tagIds);
     }
 
     @Transactional(readOnly = true)
@@ -116,7 +117,7 @@ public class SellerProductTagService {
                 .tagName(tagName)
                 .description(description)
                 .ipAddress(ipAddress)
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .build();
         tagActivityRepository.save(activity);
     }

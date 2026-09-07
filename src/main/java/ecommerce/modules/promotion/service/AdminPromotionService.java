@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -50,7 +51,7 @@ public class AdminPromotionService {
         
         promotion = promotionRepository.save(promotion);
         
-        logActivity(adminId, promotion.getId(), AdminPromotionActivity.ActivityType.PROMOTION_CREATED,
+        logActivity(adminId, promotion.getPublicId(), AdminPromotionActivity.ActivityType.PROMOTION_CREATED,
                 name, code, discountValue, "Promotion created", ipAddress);
         
         return promotion;
@@ -58,7 +59,7 @@ public class AdminPromotionService {
 
     @Transactional
     public void deletePromotion(UUID adminId, UUID promotionId, String ipAddress) {
-        AdminPromotion promotion = promotionRepository.findById(promotionId)
+        AdminPromotion promotion = promotionRepository.findByPublicId(promotionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Promotion not found"));
         
         promotion.setIsActive(false);
@@ -70,7 +71,7 @@ public class AdminPromotionService {
 
     @Transactional
     public void applyCoupon(UUID adminId, UUID promotionId, BigDecimal orderAmount, String ipAddress) {
-        AdminPromotion promotion = promotionRepository.findById(promotionId)
+        AdminPromotion promotion = promotionRepository.findByPublicId(promotionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Promotion not found"));
         
         promotion.setUsageCount(promotion.getUsageCount() + 1);
@@ -114,7 +115,7 @@ public class AdminPromotionService {
                 .discountValue(value)
                 .description(description)
                 .ipAddress(ipAddress)
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .build();
         activityRepository.save(activity);
         log.debug("Admin promotion activity logged: {} for promotion: {}", type, name);

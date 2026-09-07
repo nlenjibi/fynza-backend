@@ -1,20 +1,24 @@
 # =============================================================================
 # Auth GraphQL Schema
-# Covers: Login, Register, Token refresh, Logout
-# All mutations are public (no @PreAuthorize needed at the HTTP level).
-# Logout requires an authenticated session.
+# Covers: Login · Register · Token refresh · Logout
+#         Email verification · Password recovery · Change password
+#         Session management · MFA (TOTP) · Social / OAuth2 accounts
 # =============================================================================
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Response Types
+# Output Types
 # ─────────────────────────────────────────────────────────────────────────────
 
 type AuthPayload {
-    accessToken: String!
-    refreshToken: String!
-    tokenType:   String!
-    expiresIn:   Long!
-    user:        AuthUser!
+    accessToken:       String
+    refreshToken:      String
+    tokenType:         String
+    expiresIn:         Long
+    user:              AuthUser
+    # Present when credentials are correct but MFA is required.
+    # Real tokens are null until verifyMfa succeeds.
+    mfaRequired:       Boolean!
+    mfaChallengeToken: String
 }
 
 type AuthUser {
@@ -24,6 +28,30 @@ type AuthUser {
     firstName: String!
     lastName:  String!
     role:      String!
+}
+
+type SessionInfo {
+    sessionId:      ID!
+    deviceName:     String
+    ipAddress:      String
+    createdAt:      Instant!
+    lastActivityAt: DateTime
+    expiresAt:      DateTime!
+    current:        Boolean!
+}
+
+type MfaSetupPayload {
+    secret:          String!
+    qrCodeUri:       String!
+    manualEntryCode: String!
+}
+
+type LinkedAccount {
+    provider:    String!
+    displayName: String
+    email:       String
+    avatarUrl:   String
+    linkedAt:    Instant!
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -48,15 +76,68 @@ input RefreshTokenInput {
     refreshToken: String!
 }
 
+input VerifyEmailInput {
+    token: String!
+}
+
+input ResendVerificationInput {
+    email: String!
+}
+
+input ForgotPasswordInput {
+    email: String!
+}
+
+input ResetPasswordInput {
+    token:           String!
+    newPassword:     String!
+    confirmPassword: String!
+}
+
+input ChangePasswordInput {
+    currentPassword: String!
+    newPassword:     String!
+    confirmPassword: String!
+}
+
+input MfaEnableInput {
+    totpCode: String!
+}
+
+input MfaDisableInput {
+    totpCode: String!
+}
+
+input MfaVerifyInput {
+    challengeToken: String!
+    totpCode:       String!
+}
+
+input RevokeSessionInput {
+    sessionId: ID!
+}
+
+input RevokeOtherSessionsInput {
+    refreshToken: String!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Queries  (authenticated)
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Query {
+    # All active sessions for the authenticated user.
+    # Pass currentRefreshToken to mark which entry is the current device.
+    activeSessions(currentRefreshToken: String): [SessionInfo!]!
+
+    # OAuth2 providers linked to the authenticated account.
+    linkedAccounts: [LinkedAccount!]!
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Mutations
 # ─────────────────────────────────────────────────────────────────────────────
 
-extend type Mutation {
-    login(input: LoginInput!): AuthPayload!
-    register(input: RegisterInput!): AuthPayload!
-    refreshToken(input: RefreshTokenInput!): AuthPayload!
-
-    # Requires an authenticated session — pass refresh token to revoke it.
-    logout(input: RefreshTokenInput!): Boolean!
-}
+# Auth mutations (login, register, refresh, logout, verify, password reset, MFA, sessions)
+# are handled exclusively by the REST API: POST /v1/auth/*
+# GraphQL is query-only for auth — it consumes the authenticated identity.

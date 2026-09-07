@@ -1,26 +1,30 @@
 package ecommerce.graphql.resolver.analytics;
 
+import ecommerce.common.security.UserPrincipal;
 import ecommerce.graphql.dto.AdminStats;
 import ecommerce.graphql.dto.PerformanceMetrics;
-import ecommerce.modules.admin.dto.AdminAnalyticsDto;
-import ecommerce.modules.admin.dto.ContentAnalyticsDto;
-import ecommerce.modules.admin.service.AdminService;
-import ecommerce.modules.admin.service.AnalyticsService;
+import ecommerce.modules.analytics.dto.AdminAnalyticsDto;
+import ecommerce.modules.analytics.dto.ContentAnalyticsDto;
+import ecommerce.modules.analytics.service.AdminService;
+import ecommerce.modules.analytics.service.AnalyticsService;
 import ecommerce.modules.product.service.ProductService;
+import ecommerce.modules.analytics.dto.SellerAnalyticsDto;
+import ecommerce.modules.analytics.dto.SellerAnalyticsResponse;
+import ecommerce.modules.analytics.dto.SellerDashboardResponse;
+import ecommerce.modules.analytics.service.SellerAnalyticsService;
 import ecommerce.modules.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.ContextValue;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @Controller
 @RequiredArgsConstructor
@@ -31,6 +35,7 @@ public class AnalyticsResolver {
     private final AdminService adminService;
     private final UserService userService;
     private final ProductService productService;
+    private final SellerAnalyticsService sellerAnalyticsService;
 
     // =========================================================================
     // ADMIN ANALYTICS
@@ -138,17 +143,11 @@ public class AnalyticsResolver {
     @PreAuthorize("hasRole('ADMIN')")
     public PerformanceMetrics performanceMetrics() {
         log.info("GQL performanceMetrics");
-        Runtime runtime = Runtime.getRuntime();
-        long maxMemory = runtime.maxMemory();
-        long totalMemory = runtime.totalMemory();
-        long freeMemory = runtime.freeMemory();
-        long usedMemory = totalMemory - freeMemory;
-
         return PerformanceMetrics.builder()
                 .avgResponseTimeMs(0.0)
                 .cacheHitRate(0.95)
                 .activeConnections(0)
-                .uptimeSeconds((System.currentTimeMillis() - getStartTime()) / 1000)
+                .uptimeSeconds((System.currentTimeMillis() - START_TIME) / 1000)
                 .build();
     }
 
@@ -158,47 +157,46 @@ public class AnalyticsResolver {
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public Long sellerProductSales(@ContextValue UUID sellerId) {
-        log.info("GQL sellerProductSales(seller={})", sellerId);
-        return analyticsService.getProductSales(sellerId);
+    public Long sellerProductSales(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerProductSales(seller={})", principal.getId());
+        return analyticsService.getProductSales(principal.getId());
     }
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public BigDecimal sellerRevenue(@ContextValue UUID sellerId) {
-        log.info("GQL sellerRevenue(seller={})", sellerId);
-        return analyticsService.getSellerRevenue(sellerId);
+    public BigDecimal sellerRevenue(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerRevenue(seller={})", principal.getId());
+        return analyticsService.getSellerRevenue(principal.getId());
     }
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public BigDecimal sellerRevenueForPeriod(
-            @Argument LocalDateTime start,
-            @Argument LocalDateTime end,
-            @ContextValue UUID sellerId) {
-        log.info("GQL sellerRevenueForPeriod(seller={}, {}, {})", sellerId, start, end);
-        return analyticsService.getSellerRevenueForPeriod(sellerId, start, end);
+    public BigDecimal sellerRevenueForPeriod(@Argument LocalDateTime start,
+                                             @Argument LocalDateTime end,
+                                             @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerRevenueForPeriod(seller={}, {}, {})", principal.getId(), start, end);
+        return analyticsService.getSellerRevenueForPeriod(principal.getId(), start, end);
     }
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public Double sellerCancellationRate(@ContextValue UUID sellerId) {
-        log.info("GQL sellerCancellationRate(seller={})", sellerId);
-        return analyticsService.getSellerCancellationRate(sellerId);
+    public Double sellerCancellationRate(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerCancellationRate(seller={})", principal.getId());
+        return analyticsService.getSellerCancellationRate(principal.getId());
     }
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public Long sellerLowStockCount(@ContextValue UUID sellerId) {
-        log.info("GQL sellerLowStockCount(seller={})", sellerId);
-        return analyticsService.getLowStockCount(sellerId);
+    public Long sellerLowStockCount(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerLowStockCount(seller={})", principal.getId());
+        return analyticsService.getLowStockCount(principal.getId());
     }
 
     @QueryMapping
     @PreAuthorize("hasRole('SELLER')")
-    public AnalyticsService.SellerMetrics sellerMetrics(@ContextValue UUID sellerId) {
-        log.info("GQL sellerMetrics(seller={})", sellerId);
-        return analyticsService.getSellerMetrics(sellerId);
+    public AnalyticsService.SellerMetrics sellerMetrics(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerMetrics(seller={})", principal.getId());
+        return analyticsService.getSellerMetrics(principal.getId());
     }
 
     // =========================================================================
@@ -207,16 +205,42 @@ public class AnalyticsResolver {
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public BigDecimal customerTotalSpending(@ContextValue UUID userId) {
-        log.info("GQL customerTotalSpending(user={})", userId);
-        return analyticsService.getCustomerTotalSpending(userId);
+    public BigDecimal customerTotalSpending(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL customerTotalSpending(user={})", principal.getId());
+        return analyticsService.getCustomerTotalSpending(principal.getId());
     }
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public List<AnalyticsService.CategoryPreference> customerCategoryPreferences(@ContextValue UUID userId) {
-        log.info("GQL customerCategoryPreferences(user={})", userId);
-        return analyticsService.getCustomerCategoryPreferences(userId);
+    public List<AnalyticsService.CategoryPreference> customerCategoryPreferences(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL customerCategoryPreferences(user={})", principal.getId());
+        return analyticsService.getCustomerCategoryPreferences(principal.getId());
+    }
+
+    // =========================================================================
+    // SELLER DASHBOARD & ANALYTICS
+    // =========================================================================
+
+    @QueryMapping
+    @PreAuthorize("hasRole('SELLER')")
+    public SellerDashboardResponse sellerDashboard(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerDashboard(seller={})", principal.getId());
+        return sellerAnalyticsService.getDashboard(principal.getId());
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasRole('SELLER')")
+    public SellerAnalyticsDto sellerAnalytics(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerAnalytics(seller={})", principal.getId());
+        return sellerAnalyticsService.getSellerAnalytics(principal.getId());
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasRole('SELLER')")
+    public SellerAnalyticsResponse sellerSalesAnalytics(@Argument int days,
+                                                        @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerSalesAnalytics(seller={}, days={})", principal.getId(), days);
+        return sellerAnalyticsService.getSalesAnalytics(principal.getId(), days);
     }
 
     // =========================================================================
@@ -224,8 +248,4 @@ public class AnalyticsResolver {
     // =========================================================================
 
     private static final long START_TIME = System.currentTimeMillis();
-
-    private long getStartTime() {
-        return START_TIME;
-    }
 }

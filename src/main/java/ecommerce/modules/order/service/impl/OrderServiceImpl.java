@@ -17,7 +17,6 @@ import ecommerce.modules.order.entity.Order;
 import ecommerce.modules.order.entity.OrderItem;
 import ecommerce.modules.order.entity.OrderStats;
 import ecommerce.modules.order.entity.OrderTimeline;
-import ecommerce.modules.order.mapper.OrderMapper;
 import ecommerce.modules.order.repository.OrderRepository;
 import ecommerce.modules.order.repository.OrderTimelineRepository;
 import ecommerce.modules.order.service.OrderService;
@@ -35,7 +34,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -81,7 +82,6 @@ public class OrderServiceImpl implements OrderService {
     // =================================================================
     
     private final OrderRepository orderRepository;
-    private final OrderMapper orderMapper;
     private final UserRepository userRepository;
     private final AddressRepository addressRepository;
     private final CartRepository cartRepository;
@@ -220,7 +220,7 @@ public class OrderServiceImpl implements OrderService {
         cartRepository.save(cart);
 
         log.info("Order created successfully with order number: {}", orderNumber);
-        return orderMapper.toResponse(savedOrder);
+        return mapToOrderResponse(savedOrder);
     }
 
     /**
@@ -236,7 +236,7 @@ public class OrderServiceImpl implements OrderService {
             return null;
         }
         
-        Address address = addressRepository.findById(addressId)
+        Address address = addressRepository.findByPublicId(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException(addressType + " address not found"));
         
         if (!address.getUser().getId().equals(userId)) {
@@ -347,11 +347,11 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public OrderResponse getOrderById(UUID id, UUID userId) {
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.findByPublicId(id)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Order", id));
-        
+
         validateOrderAccess(order, userId);
-        return orderMapper.toResponse(order);
+        return mapToOrderResponse(order);
     }
 
     /**
@@ -367,7 +367,7 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with orderNumber: " + orderNumber));
         
         validateOrderAccess(order, userId);
-        return orderMapper.toResponse(order);
+        return mapToOrderResponse(order);
     }
 
     /**
@@ -380,7 +380,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Page<OrderResponse> getUserOrders(UUID userId, Pageable pageable) {
         return orderRepository.findByCustomerId(userId, pageable)
-                .map(orderMapper::toResponse);
+                .map(this::mapToOrderResponse);
     }
 
     /**
@@ -409,13 +409,13 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse cancelOrder(UUID id, String reason) {
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.findByPublicId(id)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Order", id));
-        
+
         order.setStatus(OrderStatus.CANCELLED);
         order.setNotes(reason);
         
-        return orderMapper.toResponse(orderRepository.save(order));
+        return mapToOrderResponse(orderRepository.save(order));
     }
 
     /**
@@ -454,9 +454,9 @@ public class OrderServiceImpl implements OrderService {
      * @return The updated order response
      */
     private OrderResponse cancelOrderWithValidation(UUID id, UUID userId, String reason) {
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.findByPublicId(id)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Order", id));
-        
+
         // Validate ownership
         if (!order.getCustomer().getId().equals(userId)) {
             throw new UnauthorizedException("You are not authorized to cancel this order");
@@ -473,7 +473,7 @@ public class OrderServiceImpl implements OrderService {
             order.setNotes(reason);
         }
         
-        return orderMapper.toResponse(orderRepository.save(order));
+        return mapToOrderResponse(orderRepository.save(order));
     }
 
     // =================================================================
@@ -489,7 +489,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Page<OrderResponse> getAllOrders(Pageable pageable) {
         return orderRepository.findAll(pageable)
-                .map(orderMapper::toResponse);
+                .map(this::mapToOrderResponse);
     }
 
     /**
@@ -502,7 +502,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Page<OrderResponse> getOrdersByStatus(OrderStatus status, Pageable pageable) {
         return orderRepository.findByStatus(status, pageable)
-                .map(orderMapper::toResponse);
+                .map(this::mapToOrderResponse);
     }
 
     /**
@@ -517,9 +517,9 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse updateOrderStatus(UUID id, OrderStatus status) {
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.findByPublicId(id)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Order", id));
-        
+
         order.setStatus(status);
         
         // Auto-update payment status when order is confirmed
@@ -527,7 +527,7 @@ public class OrderServiceImpl implements OrderService {
             order.setPaymentStatus(ecommerce.modules.order.entity.PaymentStatus.PAID);
         }
         
-        return orderMapper.toResponse(orderRepository.save(order));
+        return mapToOrderResponse(orderRepository.save(order));
     }
 
     /**
@@ -540,9 +540,9 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse updateOrderStatus(UUID id, OrderStatusUpdateRequest request) {
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.findByPublicId(id)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Order", id));
-        
+
         if (request.getStatus() != null) {
             order.setStatus(request.getStatus());
             
@@ -556,7 +556,7 @@ public class OrderServiceImpl implements OrderService {
             order.setNotes(request.getNotes());
         }
         
-        return orderMapper.toResponse(orderRepository.save(order));
+        return mapToOrderResponse(orderRepository.save(order));
     }
 
     /**
@@ -605,7 +605,7 @@ public class OrderServiceImpl implements OrderService {
                 pageable
         );
 
-        return orders.map(orderMapper::toResponse);
+        return orders.map(this::mapToOrderResponse);
     }
 
     /**
@@ -678,10 +678,10 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public OrderTrackingResponse getTrackingInfo(UUID orderId) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByPublicId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
 
-        List<OrderTimeline> timeline = orderTimelineRepository.findByOrderIdOrderByTimestampDesc(orderId);
+        List<OrderTimeline> timeline = orderTimelineRepository.findByOrderIdOrderByTimestampDesc(order.getId());
 
         // Format shipping address
         String shippingAddress = null;
@@ -696,7 +696,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return OrderTrackingResponse.builder()
-                .orderId(order.getId())
+                .orderId(order.getPublicId())
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus().name())
                 .displayName(order.getStatus().getDisplayName())
@@ -734,7 +734,9 @@ public class OrderServiceImpl implements OrderService {
         
         if (activities.isEmpty()) {
             // Fallback to legacy timeline for backward compatibility
-            List<OrderTimeline> timeline = orderTimelineRepository.findByOrderIdOrderByTimestampDesc(orderId);
+            Long orderLongId = orderRepository.findByPublicId(orderId).map(Order::getId).orElse(null);
+            if (orderLongId == null) return List.of();
+            List<OrderTimeline> timeline = orderTimelineRepository.findByOrderIdOrderByTimestampDesc(orderLongId);
             return timeline.stream().map(this::mapTimelineToResponse).collect(Collectors.toList());
         }
         
@@ -746,13 +748,13 @@ public class OrderServiceImpl implements OrderService {
      */
     private OrderTimelineResponse mapActivityToTimelineResponse(OrderActivityLog activity) {
         return OrderTimelineResponse.builder()
-                .activityId(activity.getId())
+                .activityId(activity.getPublicId())
                 .activityType(activity.getActivityType().name())
                 .status(activity.getActivityType().name())
                 .description(activity.getDescription())
                 .oldValue(activity.getOldValue())
                 .newValue(activity.getNewValue())
-                .timestamp(activity.getCreatedAt())
+                .timestamp(activity.getCreatedAt() != null ? activity.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
                 .icon(getIconForActivityType(activity.getActivityType()))
                 .color(getColorForActivityType(activity.getActivityType()))
                 .build();
@@ -805,7 +807,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse cancelOrderWithTracking(UUID orderId, CancelRequest request) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByPublicId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
 
         // Validate order can be cancelled
@@ -845,7 +847,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse requestRefund(UUID orderId, RefundRequest request) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByPublicId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
 
         // Validate order belongs to the customer
@@ -1009,7 +1011,7 @@ public class OrderServiceImpl implements OrderService {
                 .sellerName(sellerName)
                 .amount(order.getTotalAmount())
                 .status(order.getStatus().name())
-                .createdAt(order.getCreatedAt() != null ? order.getCreatedAt().format(FORMATTER) : "N/A")
+                .createdAt(order.getCreatedAt() != null ? FORMATTER.format(order.getCreatedAt().atZone(ZoneId.systemDefault())) : "N/A")
                 .build();
     }
 
@@ -1044,7 +1046,7 @@ public class OrderServiceImpl implements OrderService {
      */
     private OrderResponse mapToOrderResponse(Order order) {
         return OrderResponse.builder()
-                .id(order.getId())
+                .id(order.getPublicId())
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus().name())
                 .customerId(order.getCustomer().getId())
@@ -1057,7 +1059,7 @@ public class OrderServiceImpl implements OrderService {
                 .paymentStatus(order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null)
                 .trackingNumber(order.getTrackingNumber())
                 .estimatedDelivery(order.getEstimatedDelivery())
-                .createdAt(order.getCreatedAt())
+                .createdAt(order.getCreatedAt() != null ? order.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 
@@ -1072,7 +1074,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public Page<OrderResponse> getSellerOrders(UUID sellerId, Pageable pageable) {
         return orderRepository.findBySellerId(sellerId, pageable)
-                .map(orderMapper::toResponse);
+                .map(this::mapToOrderResponse);
     }
 
     /**
@@ -1083,7 +1085,7 @@ public class OrderServiceImpl implements OrderService {
     public Page<OrderResponse> getSellerOrders(UUID sellerId, OrderStatus status, LocalDateTime dateFrom,
             LocalDateTime dateTo, String query, Pageable pageable) {
         return orderRepository.findSellerOrdersWithFilters(sellerId, status, dateFrom, dateTo, query, pageable)
-                .map(orderMapper::toResponse);
+                .map(this::mapToOrderResponse);
     }
 
     /**
@@ -1134,16 +1136,18 @@ public class OrderServiceImpl implements OrderService {
     public String exportSellerOrdersToCSV(UUID sellerId, OrderStatus status, LocalDateTime dateFrom,
             LocalDateTime dateTo, String query) {
         List<Order> orders = orderRepository.findBySellerId(sellerId);
-        
+        Instant fromI = dateFrom != null ? dateFrom.atZone(ZoneId.systemDefault()).toInstant() : null;
+        Instant toI   = dateTo   != null ? dateTo.atZone(ZoneId.systemDefault()).toInstant()   : null;
+
         StringBuilder csv = new StringBuilder();
         csv.append("Order Number,Customer Name,Email,Phone,Total Amount,Status,Payment Status,Tracking Number,Created At\n");
-        
+
         for (Order order : orders) {
             boolean matches = true;
-            
+
             if (status != null && order.getStatus() != status) matches = false;
-            if (dateFrom != null && order.getCreatedAt().isBefore(dateFrom)) matches = false;
-            if (dateTo != null && order.getCreatedAt().isAfter(dateTo)) matches = false;
+            if (fromI != null && order.getCreatedAt() != null && order.getCreatedAt().isBefore(fromI)) matches = false;
+            if (toI   != null && order.getCreatedAt() != null && order.getCreatedAt().isAfter(toI))   matches = false;
             if (query != null && !query.isEmpty()) {
                 String q = query.toLowerCase();
                 boolean matchOrder = order.getOrderNumber().toLowerCase().contains(q);
@@ -1185,7 +1189,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse updateSellerOrderStatus(UUID orderId, OrderStatusUpdateRequest request, UUID sellerId) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByPublicId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         boolean hasSellerItem = order.getOrderItems().stream()
@@ -1203,7 +1207,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order = orderRepository.save(order);
-        return orderMapper.toResponse(order);
+        return mapToOrderResponse(order);
     }
 
     /**
@@ -1219,13 +1223,15 @@ public class OrderServiceImpl implements OrderService {
 
         LocalDateTime startOfMonth = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
         LocalDateTime startOfLastMonth = startOfMonth.minusMonths(1);
+        Instant startOfMonthI = startOfMonth.atZone(ZoneId.systemDefault()).toInstant();
+        Instant startOfLastMonthI = startOfLastMonth.atZone(ZoneId.systemDefault()).toInstant();
 
         List<Order> thisMonthOrders = paidSellerOrders.stream()
-                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startOfMonth))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startOfMonthI))
                 .collect(Collectors.toList());
 
         List<Order> lastMonthOrders = paidSellerOrders.stream()
-                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startOfLastMonth) && o.getCreatedAt().isBefore(startOfMonth))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startOfLastMonthI) && o.getCreatedAt().isBefore(startOfMonthI))
                 .collect(Collectors.toList());
 
         long totalOrders = allSellerOrders.size();
@@ -1289,10 +1295,11 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public SellerOrderDto.SellerOrderAnalytics getSellerOrderAnalytics(UUID sellerId, int days) {
         LocalDateTime startDate = LocalDateTime.now().minusDays(days);
+        Instant startDateI = startDate.atZone(ZoneId.systemDefault()).toInstant();
 
         List<Order> sellerOrders = orderRepository.findBySellerId(sellerId);
         List<Order> filteredOrders = sellerOrders.stream()
-                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startDate))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startDateI))
                 .filter(o -> o.getPaymentStatus() == ecommerce.modules.order.entity.PaymentStatus.PAID)
                 .collect(Collectors.toList());
 
@@ -1315,14 +1322,16 @@ public class OrderServiceImpl implements OrderService {
         for (int i = 0; i < days; i++) {
             LocalDateTime dayStart = LocalDateTime.now().minusDays(i).withHour(0).withMinute(0).withSecond(0);
             LocalDateTime dayEnd = dayStart.plusDays(1);
+            Instant dayStartI = dayStart.atZone(ZoneId.systemDefault()).toInstant();
+            Instant dayEndI = dayEnd.atZone(ZoneId.systemDefault()).toInstant();
 
             BigDecimal daySales = filteredOrders.stream()
-                    .filter(o -> o.getCreatedAt().isAfter(dayStart) && o.getCreatedAt().isBefore(dayEnd))
+                    .filter(o -> o.getCreatedAt().isAfter(dayStartI) && o.getCreatedAt().isBefore(dayEndI))
                     .map(Order::getTotalAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             long dayOrders = filteredOrders.stream()
-                    .filter(o -> o.getCreatedAt().isAfter(dayStart) && o.getCreatedAt().isBefore(dayEnd))
+                    .filter(o -> o.getCreatedAt().isAfter(dayStartI) && o.getCreatedAt().isBefore(dayEndI))
                     .count();
 
             dailySalesList.add(SellerOrderDto.DailySalesDto.builder()
@@ -1412,9 +1421,10 @@ public class OrderServiceImpl implements OrderService {
     /**
      * Calculates time ago string.
      */
-    private String calculateTimeAgo(LocalDateTime dateTime) {
-        if (dateTime == null) return "N/A";
+    private String calculateTimeAgo(Instant instant) {
+        if (instant == null) return "N/A";
 
+        LocalDateTime dateTime = instant.atZone(ZoneId.systemDefault()).toLocalDateTime();
         LocalDateTime now = LocalDateTime.now();
         long minutes = java.time.Duration.between(dateTime, now).toMinutes();
 
@@ -1433,7 +1443,7 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     @Transactional(readOnly = true)
-    public ecommerce.modules.seller.dto.SellerAnalyticsDto getSellerAnalytics(UUID sellerId) {
+    public ecommerce.modules.analytics.dto.SellerAnalyticsDto getSellerAnalytics(UUID sellerId) {
         List<Order> allOrders = orderRepository.findBySellerId(sellerId);
         List<Order> paidOrders = allOrders.stream()
                 .filter(o -> o.getPaymentStatus() == ecommerce.modules.order.entity.PaymentStatus.PAID)
@@ -1445,15 +1455,17 @@ public class OrderServiceImpl implements OrderService {
         LocalDateTime fourteenDaysAgo = now.minusDays(14);
         LocalDateTime sixMonthsAgo = now.minusMonths(6);
         LocalDateTime oneYearAgo = now.minusYears(1);
+        Instant sevenDaysAgoI = sevenDaysAgo.atZone(ZoneId.systemDefault()).toInstant();
+        Instant fourteenDaysAgoI = fourteenDaysAgo.atZone(ZoneId.systemDefault()).toInstant();
 
         // Current period orders
         List<Order> currentPeriodOrders = paidOrders.stream()
-                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(sevenDaysAgo))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(sevenDaysAgoI))
                 .collect(Collectors.toList());
-        
+
         // Previous period orders (8-14 days ago)
         List<Order> previousPeriodOrders = paidOrders.stream()
-                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(fourteenDaysAgo) && o.getCreatedAt().isBefore(sevenDaysAgo))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(fourteenDaysAgoI) && o.getCreatedAt().isBefore(sevenDaysAgoI))
                 .collect(Collectors.toList());
 
         // Revenue calculations
@@ -1511,20 +1523,22 @@ public class OrderServiceImpl implements OrderService {
         Double avgOrderValueGrowth = calculateGrowthDecimal(previousAvgOrderValue, currentAvgOrderValue);
 
         // Daily orders (last 7 days)
-        List<ecommerce.modules.seller.dto.SellerAnalyticsDto.DailyMetric> dailyMetrics = new java.util.ArrayList<>();
+        List<ecommerce.modules.analytics.dto.SellerAnalyticsDto.DailyMetric> dailyMetrics = new java.util.ArrayList<>();
         String[] dayNames = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
         for (int i = 6; i >= 0; i--) {
             LocalDateTime dayStart = now.minusDays(i).withHour(0).withMinute(0).withSecond(0);
             LocalDateTime dayEnd = dayStart.plusDays(1);
+            Instant dayStartI2 = dayStart.atZone(ZoneId.systemDefault()).toInstant();
+            Instant dayEndI2 = dayEnd.atZone(ZoneId.systemDefault()).toInstant();
             final int dayIndex = (now.getDayOfWeek().getValue() - i - 1 + 7) % 7;
-            
+
             List<Order> dayOrders = paidOrders.stream()
-                    .filter(o -> o.getCreatedAt() != null && 
-                            o.getCreatedAt().isAfter(dayStart) && 
-                            o.getCreatedAt().isBefore(dayEnd))
+                    .filter(o -> o.getCreatedAt() != null &&
+                            o.getCreatedAt().isAfter(dayStartI2) &&
+                            o.getCreatedAt().isBefore(dayEndI2))
                     .collect(Collectors.toList());
 
-            dailyMetrics.add(ecommerce.modules.seller.dto.SellerAnalyticsDto.DailyMetric.builder()
+            dailyMetrics.add(ecommerce.modules.analytics.dto.SellerAnalyticsDto.DailyMetric.builder()
                     .day(dayNames[dayIndex])
                     .orders((long) dayOrders.size())
                     .revenue(dayOrders.stream().map(Order::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add))
@@ -1533,19 +1547,21 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // Monthly revenue (last 6 months)
-        List<ecommerce.modules.seller.dto.SellerAnalyticsDto.MonthlyMetric> monthlyMetrics = new java.util.ArrayList<>();
+        List<ecommerce.modules.analytics.dto.SellerAnalyticsDto.MonthlyMetric> monthlyMetrics = new java.util.ArrayList<>();
         String[] monthNames = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
         for (int i = 5; i >= 0; i--) {
             LocalDateTime monthStart = now.minusMonths(i).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
             LocalDateTime monthEnd = monthStart.plusMonths(1);
-            
+            Instant monthStartI = monthStart.atZone(ZoneId.systemDefault()).toInstant();
+            Instant monthEndI = monthEnd.atZone(ZoneId.systemDefault()).toInstant();
+
             List<Order> monthOrders = paidOrders.stream()
-                    .filter(o -> o.getCreatedAt() != null && 
-                            o.getCreatedAt().isAfter(monthStart) && 
-                            o.getCreatedAt().isBefore(monthEnd))
+                    .filter(o -> o.getCreatedAt() != null &&
+                            o.getCreatedAt().isAfter(monthStartI) &&
+                            o.getCreatedAt().isBefore(monthEndI))
                     .collect(Collectors.toList());
 
-            monthlyMetrics.add(ecommerce.modules.seller.dto.SellerAnalyticsDto.MonthlyMetric.builder()
+            monthlyMetrics.add(ecommerce.modules.analytics.dto.SellerAnalyticsDto.MonthlyMetric.builder()
                     .month(monthNames[monthStart.getMonthValue() - 1])
                     .revenue(monthOrders.stream().map(Order::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add))
                     .orders((long) monthOrders.size())
@@ -1558,7 +1574,7 @@ public class OrderServiceImpl implements OrderService {
                 .filter(item -> item.getSeller().getId().equals(sellerId))
                 .collect(Collectors.toList());
 
-        List<ecommerce.modules.seller.dto.SellerAnalyticsDto.TopProductMetric> topProducts = allItems.stream()
+        List<ecommerce.modules.analytics.dto.SellerAnalyticsDto.TopProductMetric> topProducts = allItems.stream()
                 .collect(Collectors.groupingBy(
                         item -> item.getProduct().getId().toString(),
                         Collectors.collectingAndThen(
@@ -1578,7 +1594,7 @@ public class OrderServiceImpl implements OrderService {
                         )
                 ))
                 .values().stream()
-                .map(data -> ecommerce.modules.seller.dto.SellerAnalyticsDto.TopProductMetric.builder()
+                .map(data -> ecommerce.modules.analytics.dto.SellerAnalyticsDto.TopProductMetric.builder()
                         .productId(UUID.randomUUID().toString())
                         .productName((String) data[0])
                         .salesCount((Long) data[1])
@@ -1591,7 +1607,7 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
 
         // Top customers
-        List<ecommerce.modules.seller.dto.SellerAnalyticsDto.TopCustomerMetric> topCustomers = paidOrders.stream()
+        List<ecommerce.modules.analytics.dto.SellerAnalyticsDto.TopCustomerMetric> topCustomers = paidOrders.stream()
                 .filter(o -> o.getCustomer() != null)
                 .collect(Collectors.groupingBy(o -> o.getCustomer().getId()))
                 .entrySet().stream()
@@ -1600,18 +1616,18 @@ public class OrderServiceImpl implements OrderService {
                     BigDecimal totalSpent = customerOrders.stream()
                             .map(Order::getTotalAmount)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    LocalDateTime lastOrder = customerOrders.stream()
+                    Instant lastOrder = customerOrders.stream()
                             .map(Order::getCreatedAt)
                             .filter(java.util.Objects::nonNull)
-                            .max(LocalDateTime::compareTo)
+                            .max(Instant::compareTo)
                             .orElse(null);
-                    
-                    return ecommerce.modules.seller.dto.SellerAnalyticsDto.TopCustomerMetric.builder()
+
+                    return ecommerce.modules.analytics.dto.SellerAnalyticsDto.TopCustomerMetric.builder()
                             .customerId(entry.getKey().toString())
                             .customerName(customerOrders.get(0).getCustomer().getEmail())
                             .totalOrders((long) customerOrders.size())
                             .totalSpent(totalSpent)
-                            .lastOrder(lastOrder != null ? calculateTimeAgo(lastOrder) : "N/A")
+                            .lastOrder(calculateTimeAgo(lastOrder))
                             .build();
                 })
                 .sorted((a, b) -> b.getTotalSpent().compareTo(a.getTotalSpent()))
@@ -1619,7 +1635,7 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
 
         // Sales by category
-        List<ecommerce.modules.seller.dto.SellerAnalyticsDto.CategorySales> categorySales = allItems.stream()
+        List<ecommerce.modules.analytics.dto.SellerAnalyticsDto.CategorySales> categorySales = allItems.stream()
                 .filter(item -> item.getProduct().getCategory() != null)
                 .collect(Collectors.groupingBy(
                         item -> item.getProduct().getCategory().getName(),
@@ -1637,7 +1653,7 @@ public class OrderServiceImpl implements OrderService {
                 .entrySet().stream()
                 .map(entry -> {
                     Object[] data = (Object[]) entry.getValue();
-                    return ecommerce.modules.seller.dto.SellerAnalyticsDto.CategorySales.builder()
+                    return ecommerce.modules.analytics.dto.SellerAnalyticsDto.CategorySales.builder()
                             .category(entry.getKey())
                             .sales((Long) data[0])
                             .revenue((BigDecimal) data[1])
@@ -1649,7 +1665,7 @@ public class OrderServiceImpl implements OrderService {
 
         // Calculate percentages
         BigDecimal totalCategoryRevenue = categorySales.stream()
-                .map(ecommerce.modules.seller.dto.SellerAnalyticsDto.CategorySales::getRevenue)
+                .map(ecommerce.modules.analytics.dto.SellerAnalyticsDto.CategorySales::getRevenue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         final BigDecimal finalTotalRevenue = totalCategoryRevenue;
@@ -1664,7 +1680,7 @@ public class OrderServiceImpl implements OrderService {
         Double conversionRate = 3.2;
         Double refundRate = 2.1;
 
-        return ecommerce.modules.seller.dto.SellerAnalyticsDto.builder()
+        return ecommerce.modules.analytics.dto.SellerAnalyticsDto.builder()
                 .totalRevenue(totalRevenue)
                 .revenueGrowth(revenueGrowth)
                 .totalOrders(totalOrderCount)
@@ -1701,7 +1717,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public ecommerce.modules.admin.dto.AdminAnalyticsDto getAdminAnalytics(String filterPeriod) {
+    public ecommerce.modules.analytics.dto.AdminAnalyticsDto getAdminAnalytics(String filterPeriod) {
         // Determine date range based on filter
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startDate;
@@ -1740,16 +1756,19 @@ public class OrderServiceImpl implements OrderService {
                 .filter(o -> o.getPaymentStatus() == ecommerce.modules.order.entity.PaymentStatus.PAID)
                 .collect(Collectors.toList());
 
+        Instant startDateI = startDate.atZone(ZoneId.systemDefault()).toInstant();
+        Instant previousStartDateI = previousStartDate.atZone(ZoneId.systemDefault()).toInstant();
+
         // Filter by current period
         List<Order> currentPeriodOrders = paidOrders.stream()
-                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startDate))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(startDateI))
                 .collect(Collectors.toList());
 
         // Filter by previous period
         List<Order> previousPeriodOrders = paidOrders.stream()
-                .filter(o -> o.getCreatedAt() != null && 
-                        o.getCreatedAt().isAfter(previousStartDate) && 
-                        o.getCreatedAt().isBefore(startDate))
+                .filter(o -> o.getCreatedAt() != null &&
+                        o.getCreatedAt().isAfter(previousStartDateI) &&
+                        o.getCreatedAt().isBefore(startDateI))
                 .collect(Collectors.toList());
 
         // Calculate metrics
@@ -1824,18 +1843,20 @@ public class OrderServiceImpl implements OrderService {
         Double avgOrderValueGrowth = calculateGrowthDecimal(previousAvgOrderValue, currentAvgOrderValue);
 
         // Revenue overview (monthly)
-        List<ecommerce.modules.admin.dto.AdminAnalyticsDto.MonthlyRevenue> monthlyRevenue = new java.util.ArrayList<>();
+        List<ecommerce.modules.analytics.dto.AdminAnalyticsDto.MonthlyRevenue> monthlyRevenue = new java.util.ArrayList<>();
         for (int i = monthCount - 1; i >= 0; i--) {
             LocalDateTime monthStart = now.minusMonths(i).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
             LocalDateTime monthEnd = monthStart.plusMonths(1);
-            
+            Instant mStartI = monthStart.atZone(ZoneId.systemDefault()).toInstant();
+            Instant mEndI = monthEnd.atZone(ZoneId.systemDefault()).toInstant();
+
             List<Order> monthOrders = paidOrders.stream()
-                    .filter(o -> o.getCreatedAt() != null && 
-                            o.getCreatedAt().isAfter(monthStart) && 
-                            o.getCreatedAt().isBefore(monthEnd))
+                    .filter(o -> o.getCreatedAt() != null &&
+                            o.getCreatedAt().isAfter(mStartI) &&
+                            o.getCreatedAt().isBefore(mEndI))
                     .collect(Collectors.toList());
 
-            monthlyRevenue.add(ecommerce.modules.admin.dto.AdminAnalyticsDto.MonthlyRevenue.builder()
+            monthlyRevenue.add(ecommerce.modules.analytics.dto.AdminAnalyticsDto.MonthlyRevenue.builder()
                     .month(monthNames[monthStart.getMonthValue() - 1])
                     .revenue(monthOrders.stream().map(Order::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add))
                     .orders((long) monthOrders.size())
@@ -1847,7 +1868,7 @@ public class OrderServiceImpl implements OrderService {
                 .flatMap(o -> o.getOrderItems().stream())
                 .collect(Collectors.toList());
 
-        List<ecommerce.modules.admin.dto.AdminAnalyticsDto.SalesByCategory> salesByCategory = allItems.stream()
+        List<ecommerce.modules.analytics.dto.AdminAnalyticsDto.SalesByCategory> salesByCategory = allItems.stream()
                 .filter(item -> item.getProduct() != null && item.getProduct().getCategory() != null)
                 .collect(Collectors.groupingBy(
                         item -> item.getProduct().getCategory().getName(),
@@ -1865,7 +1886,7 @@ public class OrderServiceImpl implements OrderService {
                 .entrySet().stream()
                 .map(entry -> {
                     Object[] data = (Object[]) entry.getValue();
-                    return ecommerce.modules.admin.dto.AdminAnalyticsDto.SalesByCategory.builder()
+                    return ecommerce.modules.analytics.dto.AdminAnalyticsDto.SalesByCategory.builder()
                             .category(entry.getKey())
                             .sales((Long) data[0])
                             .revenue((BigDecimal) data[1])
@@ -1876,7 +1897,7 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
 
         BigDecimal totalCategoryRevenue = salesByCategory.stream()
-                .map(ecommerce.modules.admin.dto.AdminAnalyticsDto.SalesByCategory::getRevenue)
+                .map(ecommerce.modules.analytics.dto.AdminAnalyticsDto.SalesByCategory::getRevenue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         final BigDecimal finalTotalCatRev = totalCategoryRevenue;
@@ -1889,7 +1910,7 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
 
         // Top sellers (based on order items)
-        List<ecommerce.modules.admin.dto.AdminAnalyticsDto.TopSellerMetric> topSellers = allItems.stream()
+        List<ecommerce.modules.analytics.dto.AdminAnalyticsDto.TopSellerMetric> topSellers = allItems.stream()
                 .filter(item -> item.getSeller() != null)
                 .collect(Collectors.groupingBy(
                         item -> item.getSeller().getId(),
@@ -1914,7 +1935,7 @@ public class OrderServiceImpl implements OrderService {
                 .limit(5)
                 .map(entry -> {
                     Object[] data = (Object[]) entry.getValue();
-                    return ecommerce.modules.admin.dto.AdminAnalyticsDto.TopSellerMetric.builder()
+                    return ecommerce.modules.analytics.dto.AdminAnalyticsDto.TopSellerMetric.builder()
                             .sellerId(entry.getKey().toString())
                             .sellerName((String) data[0])
                             .orders((Long) data[1])
@@ -1931,7 +1952,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // Top products
-        List<ecommerce.modules.admin.dto.AdminAnalyticsDto.TopProductMetric> topProducts = allItems.stream()
+        List<ecommerce.modules.analytics.dto.AdminAnalyticsDto.TopProductMetric> topProducts = allItems.stream()
                 .collect(Collectors.groupingBy(
                         item -> item.getProduct().getId().toString(),
                         Collectors.collectingAndThen(
@@ -1955,7 +1976,7 @@ public class OrderServiceImpl implements OrderService {
                     return salesB.compareTo(salesA);
                 })
                 .limit(5)
-                .map(data -> ecommerce.modules.admin.dto.AdminAnalyticsDto.TopProductMetric.builder()
+                .map(data -> ecommerce.modules.analytics.dto.AdminAnalyticsDto.TopProductMetric.builder()
                         .productName((String) data[0])
                         .salesCount((Long) data[1])
                         .revenue((BigDecimal) data[2])
@@ -1971,16 +1992,18 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // Monthly sales trend
-        List<ecommerce.modules.admin.dto.AdminAnalyticsDto.MonthlySalesTrend> monthlyTrend = new java.util.ArrayList<>();
+        List<ecommerce.modules.analytics.dto.AdminAnalyticsDto.MonthlySalesTrend> monthlyTrend = new java.util.ArrayList<>();
         BigDecimal prevMonthRevenue = BigDecimal.ZERO;
         for (int i = 11; i >= 0; i--) {
             LocalDateTime monthStart = now.minusMonths(i).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
             LocalDateTime monthEnd = monthStart.plusMonths(1);
-            
+            Instant msI = monthStart.atZone(ZoneId.systemDefault()).toInstant();
+            Instant meI = monthEnd.atZone(ZoneId.systemDefault()).toInstant();
+
             List<Order> monthOrders = paidOrders.stream()
-                    .filter(o -> o.getCreatedAt() != null && 
-                            o.getCreatedAt().isAfter(monthStart) && 
-                            o.getCreatedAt().isBefore(monthEnd))
+                    .filter(o -> o.getCreatedAt() != null &&
+                            o.getCreatedAt().isAfter(msI) &&
+                            o.getCreatedAt().isBefore(meI))
                     .collect(Collectors.toList());
 
             BigDecimal monthRevenue = monthOrders.stream().map(Order::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -1992,7 +2015,7 @@ public class OrderServiceImpl implements OrderService {
                     ? calculateGrowthDecimal(prevMonthRevenue, monthRevenue)
                     : 0.0;
 
-            monthlyTrend.add(ecommerce.modules.admin.dto.AdminAnalyticsDto.MonthlySalesTrend.builder()
+            monthlyTrend.add(ecommerce.modules.analytics.dto.AdminAnalyticsDto.MonthlySalesTrend.builder()
                     .month(monthNames[monthStart.getMonthValue() - 1])
                     .revenue(monthRevenue)
                     .orders(monthOrdersCount)
@@ -2013,7 +2036,7 @@ public class OrderServiceImpl implements OrderService {
         // Create effectively final copy for lambda expression
         final BigDecimal finalTotalPaymentAmount = totalPaymentAmount;
 
-        List<ecommerce.modules.admin.dto.AdminAnalyticsDto.PaymentMethodBreakdown> paymentMethodBreakdown = paymentBreakdownData.stream()
+        List<ecommerce.modules.analytics.dto.AdminAnalyticsDto.PaymentMethodBreakdown> paymentMethodBreakdown = paymentBreakdownData.stream()
                 .map(row -> {
                     PaymentMethod method = (PaymentMethod) row[0];
                     Long count = (Long) row[1];
@@ -2021,7 +2044,7 @@ public class OrderServiceImpl implements OrderService {
                     Double share = finalTotalPaymentAmount.compareTo(BigDecimal.ZERO) > 0
                             ? amount.multiply(BigDecimal.valueOf(100)).divide(finalTotalPaymentAmount, 2, java.math.RoundingMode.HALF_UP).doubleValue()
                             : 0.0;
-                    return ecommerce.modules.admin.dto.AdminAnalyticsDto.PaymentMethodBreakdown.builder()
+                    return ecommerce.modules.analytics.dto.AdminAnalyticsDto.PaymentMethodBreakdown.builder()
                             .method(method != null ? method.name() : "UNKNOWN")
                             .displayName(method != null ? method.getDisplayName() : "Unknown")
                             .transactions(count)
@@ -2059,7 +2082,7 @@ public class OrderServiceImpl implements OrderService {
         // Net revenue
         BigDecimal netRevenue = totalCommission.subtract(refundsProcessed);
 
-        return ecommerce.modules.admin.dto.AdminAnalyticsDto.builder()
+        return ecommerce.modules.analytics.dto.AdminAnalyticsDto.builder()
                 .filterPeriod(filterPeriod)
                 .startDate(startDate.toLocalDate().toString())
                 .endDate(endDate.toLocalDate().toString())
@@ -2078,7 +2101,7 @@ public class OrderServiceImpl implements OrderService {
                 .productsSoldGrowth(productsSoldGrowth)
                 .averageOrderValue(avgOrderValue)
                 .avgOrderValueGrowth(avgOrderValueGrowth)
-                .revenueOverview(ecommerce.modules.admin.dto.AdminAnalyticsDto.RevenueOverview.builder()
+                .revenueOverview(ecommerce.modules.analytics.dto.AdminAnalyticsDto.RevenueOverview.builder()
                         .monthly(monthlyRevenue)
                         .total(totalRevenue)
                         .growth(revenueGrowth)
@@ -2088,21 +2111,21 @@ public class OrderServiceImpl implements OrderService {
                 .topProducts(topProducts)
                 .monthlyTrend(monthlyTrend)
                 .paymentMethodBreakdown(paymentMethodBreakdown)
-                .commissionMetrics(ecommerce.modules.admin.dto.AdminAnalyticsDto.CommissionMetrics.builder()
+                .commissionMetrics(ecommerce.modules.analytics.dto.AdminAnalyticsDto.CommissionMetrics.builder()
                         .totalCommission(totalCommission)
                         .platformCommission(platformCommission)
                         .transactionFees(transactionFees)
                         .paymentProcessing(paymentProcessing)
                         .growth(revenueGrowth)
                         .build())
-                .sellerPayoutMetrics(ecommerce.modules.admin.dto.AdminAnalyticsDto.SellerPayoutMetrics.builder()
+                .sellerPayoutMetrics(ecommerce.modules.analytics.dto.AdminAnalyticsDto.SellerPayoutMetrics.builder()
                         .total(totalPayouts)
                         .pending(pendingPayouts)
                         .processing(processingPayouts)
                         .completed(completedPayouts)
                         .growth(0.082)
                         .build())
-                .netRevenueMetrics(ecommerce.modules.admin.dto.AdminAnalyticsDto.NetRevenueMetrics.builder()
+                .netRevenueMetrics(ecommerce.modules.analytics.dto.AdminAnalyticsDto.NetRevenueMetrics.builder()
                         .netRevenue(netRevenue)
                         .grossRevenue(totalRevenue)
                         .refunds(refundsProcessed)

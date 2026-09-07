@@ -9,8 +9,8 @@ public class GraphqlSecurityRules implements SecurityRules {
     @Override
     public void configure(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry registry) {
         registry
-                .requestMatchers("/graphql",
-                                "/graphiql",
-                                "/graphiql/**").permitAll();
+                .requestMatchers("/graphql").permitAll()
+                // GraphiQL IDE restricted to admins — schema introspection should not be public in production
+                .requestMatchers("/graphiql", "/graphiql/**").hasRole("ADMIN");
     }
 }

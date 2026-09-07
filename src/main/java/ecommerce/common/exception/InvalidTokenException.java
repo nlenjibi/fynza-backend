@@ -1,8 +1,8 @@
 package ecommerce.common.exception;
 
-public class InvalidTokenException extends RuntimeException {
-    public InvalidTokenException(String message) {
-        super(message);
-    }
+public class InvalidTokenException extends UnauthorizedException {
 
+    public InvalidTokenException(String message) {
+        super(message, "INVALID_TOKEN");
+    }
 }

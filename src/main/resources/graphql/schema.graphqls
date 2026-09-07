@@ -1,13 +1,6 @@
-# GraphQL Directives
-
-schema {
-    query: Query
-    mutation: Mutation
-}
+# Root types — defined once here. All module schemas use 'extend type Query' / 'extend type Mutation'.
+# The schema {} block is intentionally omitted; graphql-java resolves Query/Mutation by naming convention.
 
 type Query
 
 type Mutation
-
-# The root Query and Mutation types are defined here only. All other schema files should use 'extend type Query' and 'extend type Mutation'.
-# Do not redefine Query or Mutation in other files to avoid redefinition errors.

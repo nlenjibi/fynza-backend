@@ -112,24 +112,6 @@ type LoyaltyRedemption {
 # Inputs
 # ─────────────────────────────────────────────────────────────────────────────
 
-input UserCreateInput {
-    email: String!
-    username: String!
-    password: String!
-    firstName: String!
-    lastName: String!
-    phoneNumber: String
-    role: Role!
-}
-
-input UserUpdateInput {
-    email: String
-    username: String
-    firstName: String
-    lastName: String
-    phoneNumber: String
-}
-
 input UserFilterInput {
     search: String
     role: Role
@@ -139,30 +121,6 @@ input UserFilterInput {
     createdBefore: DateTime
     phoneNumber: String
     name: String
-}
-
-input AddressInput {
-    label: String
-    addressType: AddressType
-    streetAddress: String!
-    city: String!
-    state: String!
-    postalCode: String!
-    country: String!
-    isDefault: Boolean
-}
-
-input CustomerProfileUpdateInput {
-    email: String
-    username: String
-    firstName: String
-    lastName: String
-    phone: String
-}
-
-input LoyaltyRedeemInput {
-    pointsToRedeem: Int!
-    rewardType: String
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -185,19 +143,3 @@ extend type Query {
     loyaltyBalance: LoyaltyRedemption!
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Mutations
-# ─────────────────────────────────────────────────────────────────────────────
-
-extend type Mutation {
-    # ── Customer Profile (CUSTOMER) ──────────────────────────────────────
-    updateCustomerProfile(input: CustomerProfileUpdateInput!): User!
-
-    # ── Customer Addresses (CUSTOMER) ────────────────────────────────────
-    addAddress(input: AddressInput!): Address!
-    updateAddress(id: ID!, input: AddressInput!): Address!
-    deleteAddress(id: ID!): Boolean!
-
-    # ── Loyalty Points (CUSTOMER) ────────────────────────────────────────
-    redeemLoyaltyPoints(input: LoyaltyRedeemInput!): LoyaltyRedemption!
-}

@@ -1,6 +1,5 @@
 package ecommerce.modules.order.repository;
 
-import ecommerce.common.base.BaseRepository;
 import ecommerce.common.enums.PaymentMethod;
 import ecommerce.modules.order.entity.Order;
 import ecommerce.common.enums.OrderStatus;
@@ -8,6 +7,8 @@ import ecommerce.modules.order.entity.PaymentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -19,33 +20,35 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface OrderRepository extends BaseRepository<Order, UUID> {
-    
+public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
+
+    Optional<Order> findByPublicId(UUID publicId);
+
     @EntityGraph(attributePaths = {"customer", "orderItems", "orderItems.product", "shippingAddress", "billingAddress"})
     Page<Order> findByCustomerId(UUID customerId, Pageable pageable);
-    
+
+    @EntityGraph(attributePaths = {"customer", "orderItems", "orderItems.product", "shippingAddress", "billingAddress"})
+    Page<Order> findByCustomer_PublicId(UUID customerPublicId, Pageable pageable);
+
     @EntityGraph(attributePaths = {"customer", "orderItems", "orderItems.product", "shippingAddress", "billingAddress"})
     Optional<Order> findByOrderNumber(String orderNumber);
-    
-    @EntityGraph(attributePaths = {"customer", "orderItems", "orderItems.product", "shippingAddress", "billingAddress"})
-    Optional<Order> findById(UUID id);
-    
+
     @EntityGraph(attributePaths = {"customer", "orderItems", "orderItems.product", "shippingAddress", "billingAddress"})
     Page<Order> findAll(Pageable pageable);
-    
+
     long countByStatus(OrderStatus status);
-    
+
     @EntityGraph(attributePaths = {"customer", "orderItems", "orderItems.product", "shippingAddress", "billingAddress"})
     Page<Order> findByStatus(OrderStatus status, Pageable pageable);
-    
+
     @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM Order o JOIN o.orderItems oi WHERE o.customer.id = :customerId AND oi.product.id = :productId AND o.isActive = true")
-    boolean existsByCustomerIdAndProductId(@Param("customerId") UUID customerId, @Param("productId") UUID productId);
-    
+    boolean existsByCustomerIdAndProductId(@Param("customerId") Long customerId, @Param("productId") Long productId);
+
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.orderItems oi LEFT JOIN FETCH oi.product WHERE o.customer.id IN :customerIds")
     List<Order> findByCustomerIdIn(@Param("customerIds") List<UUID> customerIds);
-    
+
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.orderItems oi LEFT JOIN FETCH oi.product WHERE o.id IN :orderIds")
-    List<Order> findByIdIn(@Param("orderIds") List<UUID> orderIds);
+    List<Order> findByIdIn(@Param("orderIds") List<Long> orderIds);
 
     @Query("SELECT COUNT(o) FROM Order o WHERE o.paymentStatus = :paymentStatus AND o.isActive = true")
     long countByPaymentStatusAndIsActiveTrue(@Param("paymentStatus") PaymentStatus paymentStatus);

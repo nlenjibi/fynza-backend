@@ -1,12 +1,11 @@
 package ecommerce.modules.report.entity;
 
-import ecommerce.common.base.BaseEntity;
 import ecommerce.common.enums.ReportFormat;
 import ecommerce.common.enums.ReportType;
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -19,9 +18,27 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-@SuperBuilder
-@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
-public class Report extends BaseEntity {
+@AllArgsConstructor
+@Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+public class Report {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
+    private UUID publicId;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
     @EqualsAndHashCode.Include
     @Column(name = "report_number", nullable = false, unique = true, length = 50)
@@ -68,6 +85,19 @@ public class Report extends BaseEntity {
 
     @Column(name = "filters", columnDefinition = "TEXT")
     private String filters;
+
+    @PrePersist
+    protected void onCreate() {
+        publicId = UUID.randomUUID();
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
+        if (isActive == null) isActive = true;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
 
     public static String generateReportNumber() {
         return "RPT-" + System.currentTimeMillis();

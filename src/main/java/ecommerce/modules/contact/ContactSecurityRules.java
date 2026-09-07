@@ -12,20 +12,20 @@ public class ContactSecurityRules implements SecurityRules {
     public void configure(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry registry) {
         registry
                 // Public endpoints
-                .requestMatchers(HttpMethod.POST, "/v1/contact").permitAll()
-                .requestMatchers(HttpMethod.GET, "/v1/contact/{id}/status").permitAll()
+                .requestMatchers(HttpMethod.POST, "/v1/contacts").permitAll()
+                .requestMatchers(HttpMethod.GET, "/v1/contacts/{id}/status").permitAll()
                 
                 // Admin-only endpoints
-                .requestMatchers(HttpMethod.GET, "/v1/contact").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/v1/contact/{id}").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/v1/contact/{id}/respond").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/v1/contact/{id}/status").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/v1/contact/{id}/assign").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/v1/contact/{id}/categorize").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/v1/contact/{id}").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/v1/contact/search").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/v1/contact/my-assigned").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/v1/contact/unassigned").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/v1/contact/stats").hasRole("ADMIN");
+                .requestMatchers(HttpMethod.GET, "/v1/contacts").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/v1/contacts/{id}").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/v1/contacts/{id}/respond").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/v1/contacts/{id}/status").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/v1/contacts/{id}/assign").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/v1/contacts/{id}/categorize").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/v1/contacts/{id}").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/v1/contacts/search").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/v1/contacts/my-assigned").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/v1/contacts/unassigned").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/v1/contacts/stats").hasRole("ADMIN");
     }
 }

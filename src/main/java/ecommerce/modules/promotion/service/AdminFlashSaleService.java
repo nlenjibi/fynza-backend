@@ -53,7 +53,7 @@ public class AdminFlashSaleService {
                                          Integer discountPercent, BigDecimal minPurchaseAmount,
                                          BigDecimal maxDiscountAmount, LocalDateTime startDatetime,
                                          LocalDateTime endDatetime) {
-        AdminFlashSale flashSale = adminFlashSaleRepository.findById(id)
+        AdminFlashSale flashSale = adminFlashSaleRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Flash sale not found"));
 
         if (name != null) flashSale.setName(name);
@@ -72,7 +72,7 @@ public class AdminFlashSaleService {
 
     @Transactional
     public void deleteFlashSale(UUID id) {
-        AdminFlashSale flashSale = adminFlashSaleRepository.findById(id)
+        AdminFlashSale flashSale = adminFlashSaleRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Flash sale not found"));
         flashSale.setIsActive(false);
         adminFlashSaleRepository.save(flashSale);
@@ -81,7 +81,7 @@ public class AdminFlashSaleService {
 
     @Transactional(readOnly = true)
     public AdminFlashSale getFlashSale(UUID id) {
-        return adminFlashSaleRepository.findById(id)
+        return adminFlashSaleRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Flash sale not found"));
     }
 

@@ -8,6 +8,8 @@ import ecommerce.common.exception.ResourceNotFoundException;
 import ecommerce.modules.category.entity.Category;
 import ecommerce.modules.category.repository.CategoryRepository;
 import ecommerce.modules.product.dto.*;
+import ecommerce.modules.tag.dto.TagResponse;
+import ecommerce.modules.tag.service.TagService;
 import ecommerce.modules.product.entity.Product;
 import ecommerce.modules.product.entity.ProductVariant;
 import ecommerce.modules.product.repository.ProductRepository;
@@ -28,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +48,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final SellerProfileRepository sellerProfileRepository;
+    private final TagService tagService;
 
     @Override
     @Cacheable(value = "products-filter", key = "T(org.springframework.util.DigestUtils).md5DigestAsHex(('#filter=' + #filter.toString() + '&page=' + #pageable.pageNumber + '&size=' + #pageable.pageSize).getBytes())")
@@ -54,9 +58,9 @@ public class ProductServiceImpl implements ProductService {
         Page<Product> products;
 
         if (filter.getCategoryId() != null) {
-            products = productRepository.findByCategoryId(filter.getCategoryId(), pageable);
+            products = productRepository.findByCategory_PublicId(filter.getCategoryId(), pageable);
         } else if (filter.getSellerId() != null) {
-            products = productRepository.findBySellerId(filter.getSellerId(), pageable);
+            products = productRepository.findBySeller_PublicId(filter.getSellerId(), pageable);
         } else if (filter.getBrand() != null && !filter.getBrand().isBlank()) {
             products = productRepository.findByBrandIgnoreCase(filter.getBrand(), pageable);
         } else if (filter.getBrands() != null && !filter.getBrands().isEmpty()) {
@@ -81,7 +85,7 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse findById(UUID id) {
         log.debug("Finding product by id: {}", id);
 
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
         return mapToResponse(product);
@@ -99,7 +103,7 @@ public class ProductServiceImpl implements ProductService {
 
         Category category = null;
         if (request.getCategoryId() != null) {
-            category = categoryRepository.findById(request.getCategoryId())
+            category = categoryRepository.findByPublicId(request.getCategoryId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Category not found with id: " + request.getCategoryId()));
         }
@@ -152,7 +156,7 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse update(UUID id, UpdateProductRequest request) {
         log.info("Updating product with id: {}", id);
 
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
         if (request.getName() != null) {
@@ -188,7 +192,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         if (request.getCategoryId() != null) {
-            Category category = categoryRepository.findById(request.getCategoryId())
+            Category category = categoryRepository.findByPublicId(request.getCategoryId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Category not found with id: " + request.getCategoryId()));
             product.setCategory(category);
@@ -206,7 +210,7 @@ public class ProductServiceImpl implements ProductService {
     public void delete(UUID id) {
         log.info("Deleting product with id: {}", id);
 
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
         productRepository.delete(product);
@@ -216,7 +220,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public Page<ProductResponse> findBySellerId(UUID sellerId, Pageable pageable) {
         log.info("Finding products for seller: {}", sellerId);
-        Page<Product> products = productRepository.findBySellerId(sellerId, pageable);
+        Page<Product> products = productRepository.findBySeller_PublicId(sellerId, pageable);
         return mapPageToResponse(products);
     }
 
@@ -230,12 +234,12 @@ public class ProductServiceImpl implements ProductService {
             return products.map(this::mapToResponse);
         }
 
-        // Collect all product IDs for batch fetching
+        // Collect all product public IDs for batch fetching
         List<UUID> productIds = products.getContent().stream()
-                .map(Product::getId)
+                .map(Product::getPublicId)
                 .collect(Collectors.toList());
 
-        // Collect unique seller IDs
+        // Collect unique seller IDs (User.id is UUID)
         List<UUID> sellerIds = products.getContent().stream()
                 .map(p -> p.getSeller() != null ? p.getSeller().getId() : null)
                 .filter(id -> id != null)
@@ -243,12 +247,12 @@ public class ProductServiceImpl implements ProductService {
                 .collect(Collectors.toList());
 
         // Batch fetch variants for all products (single query)
-        Map<UUID, List<ProductVariant>> variantsMap = productVariantRepository.findByProductIdIn(productIds)
+        Map<UUID, List<ProductVariant>> variantsMap = productVariantRepository.findByProduct_PublicIdIn(productIds)
                 .stream()
-                .collect(Collectors.groupingBy(v -> v.getProduct().getId()));
+                .collect(Collectors.groupingBy(v -> v.getProduct().getPublicId()));
 
         // Batch fetch seller profiles for all sellers (single query)
-        Map<UUID, SellerProfile> sellerProfileMap = sellerProfileRepository.findByUserIdIn(sellerIds)
+        Map<UUID, SellerProfile> sellerProfileMap = sellerProfileRepository.findByUser_PublicIdIn(sellerIds)
                 .stream()
                 .collect(Collectors.toMap(sp -> sp.getUser().getId(), sp -> sp));
 
@@ -265,10 +269,10 @@ public class ProductServiceImpl implements ProductService {
 
         // Use pre-fetched variants
         List<ProductVariantResponse> variantResponses = new ArrayList<>();
-        if (product.getId() != null && variantsMap.containsKey(product.getId())) {
-            variantResponses = variantsMap.get(product.getId()).stream()
+        if (product.getPublicId() != null && variantsMap.containsKey(product.getPublicId())) {
+            variantResponses = variantsMap.get(product.getPublicId()).stream()
                     .map(variant -> ProductVariantResponse.builder()
-                            .id(variant.getId())
+                            .id(variant.getPublicId())
                             .sku(variant.getSku())
                             .size(variant.getSize())
                             .color(variant.getColor())
@@ -282,7 +286,7 @@ public class ProductServiceImpl implements ProductService {
         CategoryInfo categoryInfo = null;
         if (product.getCategory() != null) {
             categoryInfo = CategoryInfo.builder()
-                    .id(product.getCategory().getId())
+                    .id(product.getCategory().getPublicId())
                     .name(product.getCategory().getName())
                     .slug(product.getCategory().getSlug())
                     .build();
@@ -295,7 +299,7 @@ public class ProductServiceImpl implements ProductService {
 
             if (sellerProfile != null) {
                 sellerInfo = SellerInfo.builder()
-                        .id(sellerProfile.getId())
+                        .id(sellerProfile.getPublicId())
                         .storeName(sellerProfile.getStoreName())
                         .rating(sellerProfile.getRating())
                         .build();
@@ -308,7 +312,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         return ProductResponse.builder()
-                .id(product.getId())
+                .id(product.getPublicId())
                 .name(product.getName())
                 .slug(product.getSlug())
                 .description(product.getDescription())
@@ -331,8 +335,8 @@ public class ProductServiceImpl implements ProductService {
                 .status(product.getStatus() != null ? product.getStatus().name() : null)
                 .isApproved(product.getIsApproved())
                 .inventoryStatus(product.getInventoryStatus() != null ? product.getInventoryStatus().name() : null)
-                .createdAt(product.getCreatedAt())
-                .updatedAt(product.getUpdatedAt())
+                .createdAt(product.getCreatedAt() != null ? product.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
+                .updatedAt(product.getUpdatedAt() != null ? product.getUpdatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 
@@ -345,7 +349,7 @@ public class ProductServiceImpl implements ProductService {
             List<ProductVariant> variants = productVariantRepository.findByProductId(product.getId());
             variantResponses = variants.stream()
                     .map(variant -> ProductVariantResponse.builder()
-                            .id(variant.getId())
+                            .id(variant.getPublicId())
                             .sku(variant.getSku())
                             .size(variant.getSize())
                             .color(variant.getColor())
@@ -358,7 +362,7 @@ public class ProductServiceImpl implements ProductService {
         CategoryInfo categoryInfo = null;
         if (product.getCategory() != null) {
             categoryInfo = CategoryInfo.builder()
-                    .id(product.getCategory().getId())
+                    .id(product.getCategory().getPublicId())
                     .name(product.getCategory().getName())
                     .slug(product.getCategory().getSlug())
                     .build();
@@ -367,12 +371,12 @@ public class ProductServiceImpl implements ProductService {
         SellerInfo sellerInfo = null;
         if (product.getSeller() != null) {
             SellerProfile sellerProfile = sellerProfileRepository
-                    .findByUserId(product.getSeller().getId())
+                    .findByUser_PublicId(product.getSeller().getId())
                     .orElse(null);
 
             if (sellerProfile != null) {
                 sellerInfo = SellerInfo.builder()
-                        .id(sellerProfile.getId())
+                        .id(sellerProfile.getPublicId())
                         .storeName(sellerProfile.getStoreName())
                         .rating(sellerProfile.getRating())
                         .build();
@@ -385,7 +389,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         return ProductResponse.builder()
-                .id(product.getId())
+                .id(product.getPublicId())
                 .name(product.getName())
                 .slug(product.getSlug())
                 .description(product.getDescription())
@@ -408,15 +412,15 @@ public class ProductServiceImpl implements ProductService {
                 .status(product.getStatus() != null ? product.getStatus().name() : null)
                 .isApproved(product.getIsApproved())
                 .inventoryStatus(product.getInventoryStatus() != null ? product.getInventoryStatus().name() : null)
-                .createdAt(product.getCreatedAt())
-                .updatedAt(product.getUpdatedAt())
+                .createdAt(product.getCreatedAt() != null ? product.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
+                .updatedAt(product.getUpdatedAt() != null ? product.getUpdatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 
     @Override
     @Transactional
     public ProductResponse addStock(UUID id, int quantity) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         product.addStock(quantity);
         productRepository.save(product);
@@ -427,7 +431,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse restoreStock(UUID id, int quantity) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         product.releaseReservedStock(quantity);
         productRepository.save(product);
@@ -438,7 +442,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse releaseReservedStock(UUID id, int quantity) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         product.releaseReservedStock(quantity);
         productRepository.save(product);
@@ -449,7 +453,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse reserveStock(UUID id, int quantity) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         product.reserveStock(quantity);
         productRepository.save(product);
@@ -460,7 +464,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse reduceStock(UUID id, int quantity) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         product.reduceStock(quantity);
         productRepository.save(product);
@@ -471,7 +475,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public Boolean incrementViewCount(UUID id) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         product.setViewCount((product.getViewCount() != null ? product.getViewCount() : 0) + 1);
         productRepository.save(product);
@@ -485,7 +489,7 @@ public class ProductServiceImpl implements ProductService {
         if (rating < 0 || rating > 5) {
             throw new IllegalArgumentException("Rating must be between 0 and 5");
         }
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         product.setRating(BigDecimal.valueOf(rating.doubleValue()));
         productRepository.save(product);
@@ -509,11 +513,11 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public SellerProductStatsResponse getSellerProductStats(UUID sellerId) {
-        long total = productRepository.countBySellerId(sellerId);
-        long active = productRepository.countBySellerIdAndStatus(sellerId, ProductStatus.ACTIVE);
-        long draft = productRepository.countBySellerIdAndStatus(sellerId, ProductStatus.DRAFT);
-        long outOfStock = productRepository.countBySellerIdAndInventoryStatus(sellerId, InventoryStatus.OUT_OF_STOCK);
-        long lowStock = productRepository.countBySellerIdAndLowStock(sellerId);
+        long total = productRepository.countBySeller_Id(sellerId);
+        long active = productRepository.countBySeller_IdAndStatus(sellerId, ProductStatus.ACTIVE);
+        long draft = productRepository.countBySeller_IdAndStatus(sellerId, ProductStatus.DRAFT);
+        long outOfStock = productRepository.countBySeller_IdAndInventoryStatus(sellerId, InventoryStatus.OUT_OF_STOCK);
+        long lowStock = productRepository.countBySeller_IdAndLowStock(sellerId);
 
         return SellerProductStatsResponse.builder()
                 .totalProducts(total)
@@ -545,7 +549,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse approveProduct(UUID id) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         
         product.setIsApproved(true);
@@ -559,7 +563,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse rejectProduct(UUID id, String reason) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         
         product.setIsApproved(false);
@@ -574,7 +578,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse updateProductStatus(UUID id, ProductStatus status) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         
         product.setStatus(status);
@@ -588,7 +592,7 @@ public class ProductServiceImpl implements ProductService {
     public boolean canUpdate(String productId, String userId) {
         UUID productUuid = UUID.fromString(productId);
         UUID userUuid = UUID.fromString(userId);
-        Product product = productRepository.findById(productUuid).orElse(null);
+        Product product = productRepository.findByPublicId(productUuid).orElse(null);
         if (product == null) {
             return false;
         }
@@ -601,12 +605,26 @@ public class ProductServiceImpl implements ProductService {
     public boolean canDelete(String productId, String userId) {
         UUID productUuid = UUID.fromString(productId);
         UUID userUuid = UUID.fromString(userId);
-        Product product = productRepository.findById(productUuid).orElse(null);
+        Product product = productRepository.findByPublicId(productUuid).orElse(null);
         if (product == null) {
             return false;
         }
         boolean isOwner = product.getSeller() != null && product.getSeller().getId().equals(userUuid);
         boolean isAdmin = product.getSeller() != null && product.getSeller().getRole() == Role.ADMIN;
         return isOwner || isAdmin;
+    }
+
+    @Override
+    @Transactional
+    public void assignTagsToProduct(UUID productId, List<String> tagNames, UUID sellerId) {
+        Product product = productRepository.findByPublicId(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+        if (!product.getSeller().getPublicId().equals(sellerId)) {
+            throw new ResourceNotFoundException("Product does not belong to this seller");
+        }
+        for (String tagName : tagNames) {
+            TagResponse tag = tagService.getOrCreateTag(tagName);
+            tagService.incrementUsage(tag.getId());
+        }
     }
 }

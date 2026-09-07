@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/admin/messages")
+@RequestMapping("/v1/admin/messages")
 @RequiredArgsConstructor
 @Tag(name = "Admin Messages", description = "Admin message management endpoints")
 public class AdminMessageController {

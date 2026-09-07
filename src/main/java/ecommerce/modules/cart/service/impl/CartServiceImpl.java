@@ -18,6 +18,8 @@ import ecommerce.modules.product.dto.ProductResponse;
 import ecommerce.modules.product.entity.Product;
 import ecommerce.modules.product.entity.ProductImage;
 import ecommerce.modules.product.repository.ProductRepository;
+import ecommerce.modules.user.entity.User;
+import ecommerce.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,7 @@ public class CartServiceImpl implements CartService {
     private final ProductRepository productRepository;
     private final StockReservationRepository stockReservationRepository;
     private final CouponRepository couponRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -54,9 +57,9 @@ public class CartServiceImpl implements CartService {
     @Transactional(readOnly = true)
     public CartResponse getCartById(UUID cartId, UUID userId) {
         log.info("Fetching cart by id: {} for user: {}", cartId, userId);
-        Cart cart = cartRepository.findById(cartId)
+        Cart cart = cartRepository.findByPublicId(cartId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Cart", cartId));
-        if (!cart.getUserId().equals(userId)) {
+        if (!cart.getUser().getId().equals(userId)) {
             throw new IllegalStateException("Cart does not belong to user");
         }
         return mapToCartResponse(cart);
@@ -70,7 +73,7 @@ public class CartServiceImpl implements CartService {
         
         Cart cart = getOrCreateCart(userId);
         
-        var product = productRepository.findById(request.getProductId())
+        var product = productRepository.findByPublicId(request.getProductId())
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Product", request.getProductId()));
         
         int quantity = request.getQuantity() != null ? request.getQuantity() : 1;
@@ -85,7 +88,7 @@ public class CartServiceImpl implements CartService {
         
         Cart cart = getOrCreateCart(userId);
         
-        var product = productRepository.findById(productId)
+        var product = productRepository.findByPublicId(productId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Product", productId));
         
         return addToCart(cart, product, quantity);
@@ -98,7 +101,7 @@ public class CartServiceImpl implements CartService {
             throw new InsufficientStockException(product.getName(), availableStock, quantity);
         }
         
-        CartItem cartItem = cartItemRepository.findByCartIdAndProductId(cart.getId(), product.getId())
+        CartItem cartItem = cartItemRepository.findByCartIdAndProduct_PublicId(cart.getId(), product.getPublicId())
                 .orElse(null);
         
         BigDecimal price = calculateDiscountPrice(product);
@@ -131,12 +134,12 @@ public class CartServiceImpl implements CartService {
     @Override
     @Transactional
     public CartItemResponse updateItemQuantity(UUID userId, UUID cartItemId, int quantity) {
-        log.info("Updating cart item quantity for user: {}, cartItem: {}, quantity: {}", 
+        log.info("Updating cart item quantity for user: {}, cartItem: {}, quantity: {}",
                 userId, cartItemId, quantity);
-        
+
         Cart cart = getOrCreateCart(userId);
-        
-        CartItem cartItem = cartItemRepository.findByCartIdAndId(cart.getId(), cartItemId)
+
+        CartItem cartItem = cartItemRepository.findByCartIdAndPublicId(cart.getId(), cartItemId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Cart item", cartItemId));
         
         return updateCartItem(cartItem, quantity);
@@ -150,7 +153,7 @@ public class CartServiceImpl implements CartService {
         
         Cart cart = getOrCreateCart(userId);
         
-        CartItem cartItem = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId)
+        CartItem cartItem = cartItemRepository.findByCartIdAndProduct_PublicId(cart.getId(), productId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Cart item for product", productId));
         
         return updateCartItem(cartItem, quantity);
@@ -188,10 +191,10 @@ public class CartServiceImpl implements CartService {
     @Transactional
     public void removeItem(UUID userId, UUID cartItemId) {
         log.info("Removing item from cart for user: {}, cartItem: {}", userId, cartItemId);
-        
+
         Cart cart = getOrCreateCart(userId);
-        
-        CartItem cartItem = cartItemRepository.findByCartIdAndId(cart.getId(), cartItemId)
+
+        CartItem cartItem = cartItemRepository.findByCartIdAndPublicId(cart.getId(), cartItemId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Cart item", cartItemId));
         
         removeCartItem(cartItem);
@@ -204,7 +207,7 @@ public class CartServiceImpl implements CartService {
         
         Cart cart = getOrCreateCart(userId);
         
-        CartItem cartItem = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId)
+        CartItem cartItem = cartItemRepository.findByCartIdAndProduct_PublicId(cart.getId(), productId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Cart item for product", productId));
         
         removeCartItem(cartItem);
@@ -270,9 +273,11 @@ public class CartServiceImpl implements CartService {
         if (existingCart != null) {
             return mapToCartResponse(existingCart);
         }
-        
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
         Cart newCart = Cart.builder()
-                .userId(userId)
+                .user(user)
                 .build();
         newCart = cartRepository.save(newCart);
         
@@ -286,22 +291,22 @@ public class CartServiceImpl implements CartService {
         
         Cart userCart = getOrCreateCart(userId);
         
-        Cart guestCart = cartRepository.findById(guestCartId)
+        Cart guestCart = cartRepository.findByPublicId(guestCartId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Guest cart", guestCartId));
-        
-        var guestItems = cartItemRepository.findByCartId(guestCartId);
-        
+
+        var guestItems = cartItemRepository.findByCartId(guestCart.getId());
+
         for (CartItem guestItem : guestItems) {
             var product = guestItem.getProduct();
             int quantity = guestItem.getQuantity();
-            
-            CartItem existingItem = cartItemRepository.findByCartIdAndProductId(userCart.getId(), product.getId())
+
+            CartItem existingItem = cartItemRepository.findByCartIdAndProduct_PublicId(userCart.getId(), product.getPublicId())
                     .orElse(null);
-            
+
             if (existingItem != null) {
                 existingItem.setQuantity(existingItem.getQuantity() + quantity);
                 cartItemRepository.save(existingItem);
-                
+
                 createStockReservation(existingItem, product, quantity);
             } else {
                 CartItem newItem = CartItem.builder()
@@ -311,12 +316,12 @@ public class CartServiceImpl implements CartService {
                         .price(guestItem.getPrice())
                         .build();
                 newItem = cartItemRepository.save(newItem);
-                
+
                 createStockReservation(newItem, product, quantity);
             }
         }
-        
-        cartItemRepository.deleteByCartId(guestCartId);
+
+        cartItemRepository.deleteByCartId(guestCart.getId());
         cartRepository.delete(guestCart);
         
         return mapToCartResponse(userCart);
@@ -325,8 +330,10 @@ public class CartServiceImpl implements CartService {
     private Cart getOrCreateCart(UUID userId) {
         return cartRepository.findByUserIdWithItems(userId)
                 .orElseGet(() -> {
+                    User user = userRepository.findById(userId)
+                            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
                     Cart newCart = Cart.builder()
-                            .userId(userId)
+                            .user(user)
                             .build();
                     return cartRepository.save(newCart);
                 });
@@ -395,8 +402,8 @@ public class CartServiceImpl implements CartService {
         }
         
         return CartResponse.builder()
-                .id(cart.getId())
-                .userId(cart.getUserId())
+                .id(cart.getPublicId())
+                .userId(cart.getUser().getId())
                 .items(itemResponses)
                 .subtotal(subtotal)
                 .tax(tax)
@@ -430,7 +437,7 @@ public class CartServiceImpl implements CartService {
 
     private ProductResponse mapToProductResponse(Product product) {
         return ProductResponse.builder()
-                .id(product.getId())
+                .id(product.getPublicId())
                 .name(product.getName())
                 .price(product.getPrice())
                 .originalPrice(product.getOriginalPrice())
@@ -446,7 +453,7 @@ public class CartServiceImpl implements CartService {
         StockReservation reservation = stockReservationRepository.findByCartItemId(cartItem.getId()).orElse(null);
         
         return CartItemResponse.builder()
-                .id(cartItem.getId())
+                .id(cartItem.getPublicId())
                 .product(mapToProductResponse(cartItem.getProduct()))
                 .quantity(cartItem.getQuantity())
                 .totalPrice(cartItem.getPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity())))

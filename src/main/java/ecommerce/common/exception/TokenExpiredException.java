@@ -1,10 +1,8 @@
 package ecommerce.common.exception;
 
-/**
- * Exception thrown when token has expired
- */
-public class TokenExpiredException extends RuntimeException {
+public class TokenExpiredException extends UnauthorizedException {
+
     public TokenExpiredException(String message) {
-        super(message);
+        super(message, "TOKEN_EXPIRED");
     }
 }

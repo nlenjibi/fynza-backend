@@ -1,0 +1,92 @@
+# =============================================================================
+# Store GraphQL Schema
+# Covers: Seller store profile, payment settings, shipping settings, notifications
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type SellerStore {
+    id: ID!
+    storeName: String!
+    storeDescription: String
+    storeWebsite: String
+    storeLogo: String
+    storeBanner: String
+    email: String
+    phone: String
+    region: String
+    city: String
+    businessAddress: String
+    workingHours: String
+    facebookUrl: String
+    instagramUrl: String
+    twitterUrl: String
+    rating: BigDecimal
+    totalReviews: Int
+    totalProducts: Int
+    totalSales: Int
+    totalRevenue: BigDecimal
+    verificationStatus: String
+    businessRegistration: String
+    bankName: String
+}
+
+type SellerPaymentSettings {
+    id: ID!
+    bankName: String
+    accountHolderName: String
+    accountNumber: String
+    branch: String
+    payoutSchedule: String
+    updatedAt: DateTime
+}
+
+type SellerShippingSettings {
+    id: ID!
+    returnPolicy: String
+    shippingZones: [ShippingZone!]!
+    updatedAt: DateTime
+}
+
+type ShippingZone {
+    id: ID!
+    zoneName: String!
+    zoneDescription: String
+    region: String
+    deliveryMethod: DeliveryMethod!
+    shippingCost: BigDecimal!
+    freeShippingMin: BigDecimal
+    estimatedDays: String
+    isActive: Boolean
+    updatedAt: DateTime
+}
+
+type SellerNotificationSettings {
+    id: ID!
+    newOrders: Boolean
+    orderUpdates: Boolean
+    customerMessages: Boolean
+    stockAlerts: Boolean
+    paymentUpdates: Boolean
+    refundRequests: Boolean
+    promotionalEmails: Boolean
+    updatedAt: DateTime
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Queries
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Query {
+
+    # ── Store (SELLER) ───────────────────────────────────────────────────
+    sellerStore: SellerStore!
+
+    # ── Settings (SELLER) ────────────────────────────────────────────────
+    sellerPaymentSettings: SellerPaymentSettings!
+    sellerShippingSettings: SellerShippingSettings!
+    sellerShippingZones: [ShippingZone!]!
+    sellerNotificationSettings: SellerNotificationSettings!
+}
