@@ -226,7 +226,7 @@ public class CartServiceImpl implements CartService {
     @Override
     @Transactional
     public CartResponse applyCoupon(UUID userId, String couponCode) {
-        log.info("Applying coupon for user: {}, coupon: {}", userId, couponCode);
+        log.info("Applying coupon for user: {}, coupon: {}", userId, couponCode.replace('\n', '_').replace('\r', '_'));
         
         Cart cart = getOrCreateCart(userId);
         

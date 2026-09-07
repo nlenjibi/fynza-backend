@@ -50,7 +50,7 @@ public class SellerCouponService {
                 .status(determineStatus(validFrom, validUntil))
                 .build();
 
-        log.info("Creating coupon: {} for seller: {}", code, sellerId);
+        log.info("Creating coupon: {} for seller: {}", code.replace('\n', '_').replace('\r', '_'), sellerId);
         return sellerCouponRepository.save(coupon);
     }
 

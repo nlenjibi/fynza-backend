@@ -150,7 +150,7 @@ public class AuthServiceImpl implements AuthService {
         String ip = extractIp(req);
 
         if (loginAttemptService.isLocked(request.getEmail())) {
-            log.warn("Blocked login attempt for locked account: {}", request.getEmail());
+            log.warn("Blocked login attempt for locked account: {}", request.getEmail().replace('\n', '_').replace('\r', '_'));
             securityEventLogger.logAccountLockout(request.getEmail(), ip, loginAttemptService.getAttempts(request.getEmail()));
             throw new BadRequestException("Account is locked due to too many failed attempts. Please try again in 15 minutes.");
         }
@@ -350,7 +350,7 @@ public class AuthServiceImpl implements AuthService {
                 user.getId(), user.getEmail(), user.getFirstName() + " " + user.getLastName(),
                 user.getRole(), false, token));
 
-        log.info("Verification email resent for: {}", email);
+        log.info("Verification email resent for: {}", email.replace('\n', '_').replace('\r', '_'));
     }
 
     @Override
@@ -371,7 +371,7 @@ public class AuthServiceImpl implements AuthService {
                     user.getId(), user.getEmail(), user.getFirstName() + " " + user.getLastName(),
                     token, (int) tokenProperties.getPasswordResetMinutes()));
 
-            log.info("Password reset requested for user: {}", email);
+            log.info("Password reset requested for user: {}", email.replace('\n', '_').replace('\r', '_'));
         });
     }
 
@@ -551,7 +551,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         linkedIdentityRepository.deleteByUserIdAndProvider(userId, provider);
-        log.info("Unlinked provider='{}' for user={}", provider, userId);
+        log.info("Unlinked provider='{}' for user={}", provider.replace('\n', '_').replace('\r', '_'), userId);
     }
 
     @Override
