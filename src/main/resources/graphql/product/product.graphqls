@@ -207,6 +207,12 @@ input ProductUpdateInput {
     images: [String!]
 }
 
+input SellerProductFilterInput {
+    status: String
+    categoryId: ID
+    search: String
+}
+
 input SearchInput {
     q: String
     categoryId: ID
@@ -243,6 +249,9 @@ extend type Query {
     search(input: SearchInput): SearchResponse!
     searchSuggestions(query: String!, limit: Int = 10): [String!]!
     trendingSearches(limit: Int = 10): [String!]!
+
+    # ── Seller Product Queries (SELLER) ─────────────────────────────────
+    sellerProducts(pagination: PageInput, filter: SellerProductFilterInput): ProductDto!
 
     # ── Admin Product Queries (ADMIN) ────────────────────────────────────
     productsBySeller(sellerId: ID!, pagination: PageInput): ProductDto

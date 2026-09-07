@@ -82,6 +82,19 @@ type ReviewPage {
     pageInfo: PageInfo!
 }
 
+type SellerReviewStats {
+    totalReviews: Long!
+    pendingReviews: Long!
+    approvedReviews: Long!
+    rejectedReviews: Long!
+    averageRating: Float
+    fiveStarReviews: Long!
+    fourStarReviews: Long!
+    threeStarReviews: Long!
+    twoStarReviews: Long!
+    oneStarReviews: Long!
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Inputs
 # ─────────────────────────────────────────────────────────────────────────────
@@ -125,6 +138,10 @@ extend type Query {
     # ── Admin Review Queries (ADMIN) ─────────────────────────────────────
     adminReviews(pagination: PageInput, filter: ReviewFilterInput): ReviewPage!
     adminReviewStats: ReviewStats!
+
+    # ── Seller Review Queries (SELLER) ───────────────────────────────────
+    sellerReviews(pagination: PageInput): ReviewPage!
+    sellerReviewStats: SellerReviewStats!
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

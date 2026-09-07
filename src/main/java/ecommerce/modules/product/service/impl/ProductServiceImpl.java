@@ -8,6 +8,8 @@ import ecommerce.common.exception.ResourceNotFoundException;
 import ecommerce.modules.category.entity.Category;
 import ecommerce.modules.category.repository.CategoryRepository;
 import ecommerce.modules.product.dto.*;
+import ecommerce.modules.tag.dto.TagResponse;
+import ecommerce.modules.tag.service.TagService;
 import ecommerce.modules.product.entity.Product;
 import ecommerce.modules.product.entity.ProductVariant;
 import ecommerce.modules.product.repository.ProductRepository;
@@ -46,6 +48,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final SellerProfileRepository sellerProfileRepository;
+    private final TagService tagService;
 
     @Override
     @Cacheable(value = "products-filter", key = "T(org.springframework.util.DigestUtils).md5DigestAsHex(('#filter=' + #filter.toString() + '&page=' + #pageable.pageNumber + '&size=' + #pageable.pageSize).getBytes())")
@@ -609,5 +612,19 @@ public class ProductServiceImpl implements ProductService {
         boolean isOwner = product.getSeller() != null && product.getSeller().getId().equals(userUuid);
         boolean isAdmin = product.getSeller() != null && product.getSeller().getRole() == Role.ADMIN;
         return isOwner || isAdmin;
+    }
+
+    @Override
+    @Transactional
+    public void assignTagsToProduct(UUID productId, List<String> tagNames, UUID sellerId) {
+        Product product = productRepository.findByPublicId(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+        if (!product.getSeller().getPublicId().equals(sellerId)) {
+            throw new ResourceNotFoundException("Product does not belong to this seller");
+        }
+        for (String tagName : tagNames) {
+            TagResponse tag = tagService.getOrCreateTag(tagName);
+            tagService.incrementUsage(tag.getId());
+        }
     }
 }

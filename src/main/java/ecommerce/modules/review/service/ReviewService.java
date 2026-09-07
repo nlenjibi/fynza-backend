@@ -31,6 +31,8 @@ public interface ReviewService {
 
     Page<ReviewResponse> getUserReviews(UUID userId, Pageable pageable);
 
+    Page<ReviewResponse> getSellerReviews(UUID sellerId, Pageable pageable);
+
     // ==================== Statistics & Analytics ====================
 
     ReviewSummaryResponse getProductRatingStats(UUID productId);

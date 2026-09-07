@@ -580,4 +580,23 @@ public class ReviewServiceImpl implements ReviewService {
         review.setSellerRepliedAt(LocalDateTime.now());
         return toReviewResponse(reviewRepository.save(review));
     }
+
+    @Override
+    public Page<ReviewResponse> getSellerReviews(UUID sellerId, Pageable pageable) {
+        List<UUID> productIds = productRepository.findBySeller_PublicId(sellerId, Pageable.unpaged()).getContent()
+                .stream().map(Product::getPublicId).collect(java.util.stream.Collectors.toList());
+        if (productIds.isEmpty()) return Page.empty(pageable);
+        return reviewRepository.findAll().stream()
+                .filter(r -> productIds.contains(r.getProduct().getPublicId()))
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toList(),
+                        list -> {
+                            int start = (int) pageable.getOffset();
+                            int end = Math.min(start + pageable.getPageSize(), list.size());
+                            List<ReviewResponse> content = start < list.size()
+                                    ? list.subList(start, end).stream().map(this::toReviewResponse).collect(java.util.stream.Collectors.toList())
+                                    : java.util.Collections.emptyList();
+                            return new org.springframework.data.domain.PageImpl<>(content, pageable, list.size());
+                        }));
+    }
 }

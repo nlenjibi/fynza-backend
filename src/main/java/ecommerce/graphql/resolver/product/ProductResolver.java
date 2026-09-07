@@ -3,9 +3,11 @@ package ecommerce.graphql.resolver.product;
 import ecommerce.common.response.PaginatedResponse;
 import ecommerce.common.security.UserPrincipal;
 import ecommerce.graphql.dto.ProductDto;
+import ecommerce.common.enums.ProductStatus;
 import ecommerce.graphql.input.PageInput;
 import ecommerce.graphql.input.ProductFilterInput;
 import ecommerce.graphql.input.SearchInput;
+import ecommerce.graphql.input.SellerProductFilterInput;
 import ecommerce.graphql.input.SortDirection;
 import ecommerce.modules.product.dto.*;
 import ecommerce.modules.product.service.ProductService;
@@ -115,7 +117,30 @@ public class ProductResolver {
     }
 
     // =========================================================================
-    // ADMIN/SELLER PRODUCT QUERIES
+    // SELLER PRODUCT QUERIES
+    // =========================================================================
+
+    @QueryMapping
+    @PreAuthorize("hasRole('SELLER')")
+    public ProductDto sellerProducts(@Argument PageInput pagination,
+                                     @Argument SellerProductFilterInput filter,
+                                     @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerProducts(seller={})", principal.getId());
+        Pageable pageable = toPageable(pagination);
+        ProductStatus status = null;
+        UUID categoryId = null;
+        String search = null;
+        if (filter != null) {
+            if (filter.getStatus() != null) status = ProductStatus.valueOf(filter.getStatus().toUpperCase());
+            categoryId = filter.getCategoryId();
+            search = filter.getSearch();
+        }
+        Page<ProductResponse> page = productService.findBySellerId(principal.getId(), status, categoryId, search, pageable);
+        return ProductDto.builder().content(page.getContent()).pageInfo(PaginatedResponse.from(page)).build();
+    }
+
+    // =========================================================================
+    // ADMIN PRODUCT QUERIES
     // =========================================================================
 
     @QueryMapping

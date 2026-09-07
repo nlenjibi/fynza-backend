@@ -133,6 +133,25 @@ public class ReviewResolver {
     }
 
     // =========================================================================
+    // SELLER QUERIES
+    // =========================================================================
+
+    @QueryMapping
+    @PreAuthorize("hasRole('SELLER')")
+    public ReviewPage sellerReviews(@Argument PageInput pagination,
+                                    @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerReviews(seller={})", principal.getId());
+        return toPage(reviewService.getSellerReviews(principal.getId(), toPageable(pagination)));
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasRole('SELLER')")
+    public ReviewStatsResponse sellerReviewStats(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerReviewStats(seller={})", principal.getId());
+        return reviewService.getSellerReviewStats(principal.getId());
+    }
+
+    // =========================================================================
     // UX STATE MUTATIONS
     // =========================================================================
 

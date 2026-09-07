@@ -35,7 +35,7 @@ import java.util.UUID;
  * @version 2.1
  */
 @RestController
-@RequestMapping("/api/v1/orders")
+@RequestMapping("/v1/orders")
 @RequiredArgsConstructor
 @Slf4j
 public class OrderTrackingController {

@@ -8,6 +8,10 @@ import ecommerce.modules.analytics.dto.ContentAnalyticsDto;
 import ecommerce.modules.analytics.service.AdminService;
 import ecommerce.modules.analytics.service.AnalyticsService;
 import ecommerce.modules.product.service.ProductService;
+import ecommerce.modules.analytics.dto.SellerAnalyticsDto;
+import ecommerce.modules.analytics.dto.SellerAnalyticsResponse;
+import ecommerce.modules.analytics.dto.SellerDashboardResponse;
+import ecommerce.modules.analytics.service.SellerAnalyticsService;
 import ecommerce.modules.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +35,7 @@ public class AnalyticsResolver {
     private final AdminService adminService;
     private final UserService userService;
     private final ProductService productService;
+    private final SellerAnalyticsService sellerAnalyticsService;
 
     // =========================================================================
     // ADMIN ANALYTICS
@@ -210,6 +215,32 @@ public class AnalyticsResolver {
     public List<AnalyticsService.CategoryPreference> customerCategoryPreferences(@AuthenticationPrincipal UserPrincipal principal) {
         log.info("GQL customerCategoryPreferences(user={})", principal.getId());
         return analyticsService.getCustomerCategoryPreferences(principal.getId());
+    }
+
+    // =========================================================================
+    // SELLER DASHBOARD & ANALYTICS
+    // =========================================================================
+
+    @QueryMapping
+    @PreAuthorize("hasRole('SELLER')")
+    public SellerDashboardResponse sellerDashboard(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerDashboard(seller={})", principal.getId());
+        return sellerAnalyticsService.getDashboard(principal.getId());
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasRole('SELLER')")
+    public SellerAnalyticsDto sellerAnalytics(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerAnalytics(seller={})", principal.getId());
+        return sellerAnalyticsService.getSellerAnalytics(principal.getId());
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasRole('SELLER')")
+    public SellerAnalyticsResponse sellerSalesAnalytics(@Argument int days,
+                                                        @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerSalesAnalytics(seller={}, days={})", principal.getId(), days);
+        return sellerAnalyticsService.getSalesAnalytics(principal.getId(), days);
     }
 
     // =========================================================================

@@ -33,5 +33,8 @@ extend type Query {
     featuredTags: [Tag!]!
     popularTags(limit: Int = 10): [Tag!]!
     tag(id: ID!): Tag
+
+    # ── Seller Tag Queries (SELLER) ──────────────────────────────────────
+    sellerTags: [Tag!]!
 }
 

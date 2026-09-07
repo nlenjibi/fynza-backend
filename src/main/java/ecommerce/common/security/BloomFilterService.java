@@ -2,7 +2,6 @@ package ecommerce.common.security;
 
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
-import com.google.common.hash.Hashing;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -60,9 +59,8 @@ public class BloomFilterService {
      * @param token The token (or hashed token) to add
      */
     public void add(String token) {
-        String tokenKey = hashToken(token);
-        tokenBloomFilter.put(tokenKey);
-        log.trace("Added token to Bloom Filter: {}...", tokenKey.substring(0, 8));
+        tokenBloomFilter.put(token);
+        log.trace("Added token to Bloom Filter: {}...", token.substring(0, 8));
     }
 
     /**
@@ -76,8 +74,7 @@ public class BloomFilterService {
      * @return false if definitely not blacklisted, true if potentially blacklisted
      */
     public boolean mightContain(String token) {
-        String tokenKey = hashToken(token);
-        return tokenBloomFilter.mightContain(tokenKey);
+        return tokenBloomFilter.mightContain(token);
     }
 
     /**
@@ -90,31 +87,15 @@ public class BloomFilterService {
      * @param blacklistedTokens Iterable of currently blacklisted token keys
      */
     public void syncWithBlacklist(Iterable<String> blacklistedTokens) {
-        // Create a new Bloom Filter to avoid concurrent modification
         BloomFilter<String> newFilter = BloomFilter.create(
                 Funnels.stringFunnel(StandardCharsets.UTF_8),
                 expectedInsertions,
                 fpp
         );
         for (String token : blacklistedTokens) {
-            newFilter.put(hashToken(token));
+            newFilter.put(token);
         }
-
-        // Atomic replacement
         this.tokenBloomFilter = newFilter;
         log.info("Bloom Filter synchronized with blacklist");
-    }
-
-    /**
-     * Hash a token for Bloom Filter storage.
-     * Uses SHA-256 to avoid storing actual tokens.
-     * 
-     * @param token The token to hash
-     * @return The hashed token
-     */
-    private String hashToken(String token) {
-        return Hashing.sha256()
-                .hashString(token, StandardCharsets.UTF_8)
-                .toString();
     }
 }

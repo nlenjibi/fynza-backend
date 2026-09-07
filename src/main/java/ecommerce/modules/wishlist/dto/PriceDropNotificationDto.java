@@ -2,6 +2,7 @@ package ecommerce.modules.wishlist.dto;
 
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import ecommerce.common.validation.PriceComparable;
 import ecommerce.common.validation.ValidPriceRange;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,7 +18,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @ValidPriceRange
-public class PriceDropNotificationDto {
+public class PriceDropNotificationDto implements PriceComparable {
 
     private Long wishlistItemId;
     private UUID productId;

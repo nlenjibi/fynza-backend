@@ -11,12 +11,14 @@ public class PaymentSecurityRules implements SecurityRules {
     @Override
     public void configure(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry registry) {
         registry
-                // Paystack payment endpoints - public access for payment processing
-                .requestMatchers(HttpMethod.POST, "/v1/payments/paystack/initialize").permitAll()
+                // Initialize and refund require an authenticated customer
+                .requestMatchers(HttpMethod.POST, "/v1/payments/paystack/initialize").hasRole("CUSTOMER")
+                .requestMatchers(HttpMethod.POST, "/v1/payments/paystack/refund/{reference}").hasRole("CUSTOMER")
+
+                // Verify is public so redirect callbacks from Paystack work without a session
                 .requestMatchers(HttpMethod.GET, "/v1/payments/paystack/verify/{reference}").permitAll()
-                .requestMatchers(HttpMethod.POST, "/v1/payments/paystack/refund/{reference}").permitAll()
-                
-                // Paystack webhook endpoint - public access for external payment gateway
+
+                // Webhook endpoint is public — Paystack calls it without a JWT; signature verified in handler
                 .requestMatchers(HttpMethod.POST, "/v1/webhooks/paystack").permitAll();
     }
 }

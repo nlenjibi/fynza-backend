@@ -1,6 +1,5 @@
 package ecommerce.graphql.resolver.tag;
 
-import ecommerce.modules.tag.dto.CreateTagRequest;
 import ecommerce.modules.tag.dto.TagResponse;
 import ecommerce.modules.tag.service.TagService;
 import lombok.RequiredArgsConstructor;
@@ -13,16 +12,10 @@ import org.springframework.stereotype.Controller;
 import java.util.List;
 import java.util.UUID;
 
-@Controller
-@RequiredArgsConstructor
-@Slf4j
+@Controller @RequiredArgsConstructor @Slf4j
 public class TagResolver {
 
     private final TagService tagService;
-
-    // =========================================================================
-    // QUERIES
-    // =========================================================================
 
     @QueryMapping
     public List<TagResponse> allTags() {
@@ -54,4 +47,10 @@ public class TagResolver {
         return tagService.getTag(id);
     }
 
+    @QueryMapping
+    @PreAuthorize("hasRole('SELLER')")
+    public List<TagResponse> sellerTags() {
+        log.info("GQL sellerTags");
+        return tagService.getActiveTags();
+    }
 }

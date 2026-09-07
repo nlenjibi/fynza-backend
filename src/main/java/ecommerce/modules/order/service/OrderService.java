@@ -294,7 +294,7 @@ public interface OrderService {
      * @param sellerId The seller's UUID
      * @return Complete analytics including metrics, charts, and top items
      */
-    ecommerce.modules.seller.dto.SellerAnalyticsDto getSellerAnalytics(UUID sellerId);
+    ecommerce.modules.analytics.dto.SellerAnalyticsDto getSellerAnalytics(UUID sellerId);
 
     /**
      * Retrieves comprehensive analytics for admin dashboard.
