@@ -78,7 +78,7 @@ class WishlistServiceImplTest {
                 .build();
 
         testWishlistItem = WishlistItem.builder()
-                .id(wishlistItemId)
+                .publicId(wishlistItemId)
                 .user(testUser)
                 .priority(WishlistPriority.HIGH)
                 .notes("Test note")
@@ -121,9 +121,9 @@ class WishlistServiceImplTest {
         @Test
         @DisplayName("Should add item to wishlist successfully")
         void addToWishlist_WhenValidRequest_AddsItem() {
-            when(wishlistItemRepository.existsByUserIdAndProductId(userId, productId)).thenReturn(false);
+            when(wishlistItemRepository.existsByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(false);
             when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
-            when(productRepository.findById(productId)).thenReturn(Optional.of(mock(ecommerce.modules.product.entity.Product.class)));
+            when(productRepository.findByPublicId(productId)).thenReturn(Optional.of(mock(ecommerce.modules.product.entity.Product.class)));
             when(wishlistItemRepository.save(any(WishlistItem.class))).thenReturn(testWishlistItem);
             when(wishlistMapper.toDto(any(WishlistItem.class))).thenReturn(testWishlistItemDto);
 
@@ -137,8 +137,8 @@ class WishlistServiceImplTest {
         @Test
         @DisplayName("Should return existing item when product already in wishlist")
         void addToWishlist_WhenProductExists_ReturnsExisting() {
-            when(wishlistItemRepository.existsByUserIdAndProductId(userId, productId)).thenReturn(true);
-            when(wishlistItemRepository.findByUserIdAndProductId(userId, productId)).thenReturn(Optional.of(testWishlistItem));
+            when(wishlistItemRepository.existsByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(true);
+            when(wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(Optional.of(testWishlistItem));
             when(wishlistMapper.toDto(any(WishlistItem.class))).thenReturn(testWishlistItemDto);
 
             WishlistItemDto result = wishlistService.addToWishlist(userId, testAddRequest);
@@ -150,7 +150,7 @@ class WishlistServiceImplTest {
         @Test
         @DisplayName("Should throw exception when user not found")
         void addToWishlist_WhenUserNotFound_ThrowsException() {
-            when(wishlistItemRepository.existsByUserIdAndProductId(userId, productId)).thenReturn(false);
+            when(wishlistItemRepository.existsByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(false);
             when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class,
@@ -160,9 +160,9 @@ class WishlistServiceImplTest {
         @Test
         @DisplayName("Should throw exception when product not found")
         void addToWishlist_WhenProductNotFound_ThrowsException() {
-            when(wishlistItemRepository.existsByUserIdAndProductId(userId, productId)).thenReturn(false);
+            when(wishlistItemRepository.existsByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(false);
             when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
-            when(productRepository.findById(productId)).thenReturn(Optional.empty());
+            when(productRepository.findByPublicId(productId)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class,
                     () -> wishlistService.addToWishlist(userId, testAddRequest));
@@ -177,7 +177,7 @@ class WishlistServiceImplTest {
         @DisplayName("Should return user wishlist")
         void getUserWishlist_ReturnsWishlist() {
             List<WishlistItem> items = Arrays.asList(testWishlistItem);
-            when(wishlistItemRepository.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(items);
+            when(wishlistItemRepository.findByUser_PublicIdOrderByCreatedAtDesc(userId)).thenReturn(items);
             when(wishlistMapper.toDto(any(WishlistItem.class))).thenReturn(testWishlistItemDto);
 
             List<WishlistItemDto> result = wishlistService.getUserWishlist(userId);
@@ -189,7 +189,7 @@ class WishlistServiceImplTest {
         @Test
         @DisplayName("Should return empty list when wishlist is empty")
         void getUserWishlist_WhenEmpty_ReturnsEmptyList() {
-            when(wishlistItemRepository.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of());
+            when(wishlistItemRepository.findByUser_PublicIdOrderByCreatedAtDesc(userId)).thenReturn(List.of());
 
             List<WishlistItemDto> result = wishlistService.getUserWishlist(userId);
 
@@ -205,7 +205,7 @@ class WishlistServiceImplTest {
         @Test
         @DisplayName("Should remove item from wishlist")
         void removeFromWishlist_WhenItemExists_RemovesItem() {
-            when(wishlistItemRepository.findByUserIdAndProductId(userId, productId)).thenReturn(Optional.of(testWishlistItem));
+            when(wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(Optional.of(testWishlistItem));
             doNothing().when(wishlistItemRepository).delete(testWishlistItem);
 
             wishlistService.removeFromWishlist(userId, productId);
@@ -216,7 +216,7 @@ class WishlistServiceImplTest {
         @Test
         @DisplayName("Should throw exception when item not found")
         void removeFromWishlist_WhenItemNotFound_ThrowsException() {
-            when(wishlistItemRepository.findByUserIdAndProductId(userId, productId)).thenReturn(Optional.empty());
+            when(wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class,
                     () -> wishlistService.removeFromWishlist(userId, productId));
@@ -238,7 +238,7 @@ class WishlistServiceImplTest {
                     .notifyOnStock(true)
                     .build();
 
-            when(wishlistItemRepository.findByUserIdAndProductId(userId, productId)).thenReturn(Optional.of(testWishlistItem));
+            when(wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(Optional.of(testWishlistItem));
             when(wishlistItemRepository.save(any(WishlistItem.class))).thenReturn(testWishlistItem);
             when(wishlistMapper.toDto(any(WishlistItem.class))).thenReturn(testWishlistItemDto);
 
@@ -255,7 +255,7 @@ class WishlistServiceImplTest {
                     .priority(WishlistPriority.LOW)
                     .build();
 
-            when(wishlistItemRepository.findByUserIdAndProductId(userId, productId)).thenReturn(Optional.empty());
+            when(wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class,
                     () -> wishlistService.updateWishlistItem(userId, productId, updateRequest));
@@ -269,7 +269,7 @@ class WishlistServiceImplTest {
         @Test
         @DisplayName("Should move item to cart")
         void moveToCart_WhenItemExists_MovesToCart() {
-            when(wishlistItemRepository.findByUserIdAndProductId(userId, productId)).thenReturn(Optional.of(testWishlistItem));
+            when(wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(Optional.of(testWishlistItem));
             doNothing().when(cartService).addItem(eq(userId), any(AddToCartRequest.class));
             doNothing().when(wishlistItemRepository).delete(testWishlistItem);
 
@@ -292,7 +292,7 @@ class WishlistServiceImplTest {
                     .build();
 
             Object[] totals = new Object[]{BigDecimal.valueOf(499.95), BigDecimal.valueOf(20.00)};
-            when(wishlistItemRepository.countByUserId(userId)).thenReturn(5L);
+            when(wishlistItemRepository.countByUser_PublicId(userId)).thenReturn(5L);
             when(wishlistItemRepository.findTotalValueAndSavings(userId)).thenReturn(totals);
 
             WishlistSummaryDto result = wishlistService.getWishlistSummary(userId);
@@ -311,11 +311,11 @@ class WishlistServiceImplTest {
         @Test
         @DisplayName("Should clear all wishlist items for user")
         void clearWishlist_ClearsAllItems() {
-            when(wishlistItemRepository.deleteByUserId(userId)).thenReturn(1);
+            when(wishlistItemRepository.deleteByUser_PublicId(userId)).thenReturn(1);
 
             wishlistService.clearWishlist(userId);
 
-            verify(wishlistItemRepository, times(1)).deleteByUserId(userId);
+            verify(wishlistItemRepository, times(1)).deleteByUser_PublicId(userId);
         }
     }
 }

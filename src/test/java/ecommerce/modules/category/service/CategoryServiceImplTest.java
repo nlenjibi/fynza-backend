@@ -48,7 +48,7 @@ class CategoryServiceImplTest {
         categoryId = UUID.randomUUID();
         
         testCategory = Category.builder()
-                .id(categoryId)
+                .publicId(categoryId)
                 .name("Electronics")
                 .slug("electronics")
                 .description("Electronic devices and accessories")
@@ -108,7 +108,7 @@ class CategoryServiceImplTest {
         @Test
         @DisplayName("Should return category when found")
         void findById_WhenCategoryExists_ReturnsCategory() {
-            when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(testCategory));
+            when(categoryRepository.findByPublicId(categoryId)).thenReturn(Optional.of(testCategory));
             when(categoryMapper.toSimpleResponse(any(Category.class))).thenReturn(testCategoryResponse);
 
             CategoryResponse result = categoryService.findById(categoryId);
@@ -121,7 +121,7 @@ class CategoryServiceImplTest {
         @Test
         @DisplayName("Should throw ResourceNotFoundException when category not found")
         void findById_WhenCategoryNotFound_ThrowsException() {
-            when(categoryRepository.findById(categoryId)).thenReturn(Optional.empty());
+            when(categoryRepository.findByPublicId(categoryId)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, 
                     () -> categoryService.findById(categoryId));
@@ -176,7 +176,7 @@ class CategoryServiceImplTest {
                     .name("Updated Electronics")
                     .build();
 
-            when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(testCategory));
+            when(categoryRepository.findByPublicId(categoryId)).thenReturn(Optional.of(testCategory));
             when(categoryRepository.existsBySlug("updated-electronics")).thenReturn(false);
             when(categoryRepository.save(any(Category.class))).thenReturn(testCategory);
             when(categoryMapper.toSimpleResponse(any(Category.class))).thenReturn(testCategoryResponse);
@@ -190,7 +190,7 @@ class CategoryServiceImplTest {
         @Test
         @DisplayName("Should throw ResourceNotFoundException when updating non-existent category")
         void update_WhenCategoryNotFound_ThrowsException() {
-            when(categoryRepository.findById(categoryId)).thenReturn(Optional.empty());
+            when(categoryRepository.findByPublicId(categoryId)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class,
                     () -> categoryService.update(categoryId, testCreateRequest));
@@ -204,7 +204,7 @@ class CategoryServiceImplTest {
         @Test
         @DisplayName("Should delete category successfully")
         void delete_WhenCategoryExists_DeletesCategory() {
-            when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(testCategory));
+            when(categoryRepository.findByPublicId(categoryId)).thenReturn(Optional.of(testCategory));
             doNothing().when(categoryRepository).delete(testCategory);
 
             categoryService.delete(categoryId);
@@ -215,7 +215,7 @@ class CategoryServiceImplTest {
         @Test
         @DisplayName("Should throw ResourceNotFoundException when deleting non-existent category")
         void delete_WhenCategoryNotFound_ThrowsException() {
-            when(categoryRepository.findById(categoryId)).thenReturn(Optional.empty());
+            when(categoryRepository.findByPublicId(categoryId)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class,
                     () -> categoryService.delete(categoryId));
@@ -230,7 +230,7 @@ class CategoryServiceImplTest {
         @DisplayName("Should return category tree")
         void findTree_ReturnsCategoryTree() {
             Category parentCategory = Category.builder()
-                    .id(categoryId)
+                    .publicId(categoryId)
                     .name("Parent")
                     .slug("parent")
                     .isActive(true)
@@ -273,7 +273,7 @@ class CategoryServiceImplTest {
         void updateStatus_ShouldUpdateStatus() {
             testCategory.setIsActive(false);
             
-            when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(testCategory));
+            when(categoryRepository.findByPublicId(categoryId)).thenReturn(Optional.of(testCategory));
             when(categoryRepository.save(any(Category.class))).thenReturn(testCategory);
             when(categoryMapper.toSimpleResponse(any(Category.class))).thenReturn(testCategoryResponse);
 
