@@ -95,7 +95,7 @@ public class ProductServiceImpl implements ProductService {
     @CachePut(value = "products", key = "#result.id")
     @CacheEvict(value = {"products-filter", "products-page"}, allEntries = true)
     public ProductResponse create(CreateProductRequest request, UUID sellerId) {
-        log.info("Creating new product: {} for seller: {}", request.getName(), sellerId);
+        log.info("Creating new product: {} for seller: {}", request.getName().replace('\n', '_').replace('\r', '_'), sellerId);
 
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller not found with id: " + sellerId));

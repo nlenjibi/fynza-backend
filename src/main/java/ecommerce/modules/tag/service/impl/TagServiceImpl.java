@@ -41,7 +41,7 @@ public class TagServiceImpl implements TagService {
                 .build();
 
         Tag savedTag = tagRepository.save(tag);
-        log.info("Created new tag: {}", savedTag.getName());
+        log.info("Created new tag: {}", savedTag.getName().replace('\n', '_').replace('\r', '_'));
         return mapToResponse(savedTag);
     }
 
@@ -99,7 +99,7 @@ public class TagServiceImpl implements TagService {
         }
 
         Tag updatedTag = tagRepository.save(tag);
-        log.info("Updated tag: {}", updatedTag.getName());
+        log.info("Updated tag: {}", updatedTag.getName().replace('\n', '_').replace('\r', '_'));
         return mapToResponse(updatedTag);
     }
 

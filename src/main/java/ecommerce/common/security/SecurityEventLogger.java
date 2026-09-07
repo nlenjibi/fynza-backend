@@ -18,7 +18,7 @@ public class SecurityEventLogger {
                     email.replace('\n', '_').replace('\r', '_'), ip.replace('\n', '_').replace('\r', '_'), method.replace('\n', '_').replace('\r', '_'), truncateUserAgent(userAgent));
         } else {
             log.warn("LOGIN_FAILURE: email={}, ip={}, method={}, reason={}, userAgent={}",
-                    email.replace('\n', '_').replace('\r', '_'), ip.replace('\n', '_').replace('\r', '_'), method.replace('\n', '_').replace('\r', '_'), failureReason.replace('\n', '_').replace('\r', '_'), truncateUserAgent(userAgent));
+                    email.replace('\n', '_').replace('\r', '_'), ip.replace('\n', '_').replace('\r', '_'), method.replace('\n', '_').replace('\r', '_'), failureReason != null ? failureReason.replace('\n', '_').replace('\r', '_') : "unknown", truncateUserAgent(userAgent));
         }
     }
 
