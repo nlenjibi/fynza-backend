@@ -20,7 +20,7 @@ public class AuditActorResolver {
 
     public UUID resolveActorPublicId() {
         UserPrincipal p = principal();
-        return p != null ? p.getPublicId() : null;
+        return p != null ? p.getId() : null;
     }
 
     public String resolveActorEmail() {
