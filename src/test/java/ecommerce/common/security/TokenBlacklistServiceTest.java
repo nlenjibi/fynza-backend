@@ -89,35 +89,34 @@ class TokenBlacklistServiceTest {
     class TokenVersionTests {
 
         @Test
-        @DisplayName("Should invalidate user tokens by version")
-        void invalidateUserTokens_InvalidatesAllTokens() {
+        @DisplayName("Should make pre-invalidation tokens invalid")
+        void invalidateUserTokens_MakesOldTokensInvalid() {
             UUID userId = UUID.randomUUID();
+            long issuedBefore = System.currentTimeMillis() - 1000;
 
             tokenBlacklistService.invalidateUserTokens(userId);
 
-            Long currentVersion = tokenBlacklistService.getUserTokenVersion(userId);
-            assertNotNull(currentVersion);
+            assertFalse(tokenBlacklistService.isUserTokenVersionValid(userId, issuedBefore));
         }
 
         @Test
-        @DisplayName("Should get token version for user")
-        void getUserTokenVersion_ReturnsCurrentVersion() {
+        @DisplayName("Should keep post-invalidation tokens valid")
+        void invalidateUserTokens_KeepsNewTokensValid() throws InterruptedException {
             UUID userId = UUID.randomUUID();
             tokenBlacklistService.invalidateUserTokens(userId);
+            Thread.sleep(1);
+            long issuedAfter = System.currentTimeMillis();
 
-            Long retrievedVersion = tokenBlacklistService.getUserTokenVersion(userId);
-
-            assertNotNull(retrievedVersion);
+            assertTrue(tokenBlacklistService.isUserTokenVersionValid(userId, issuedAfter));
         }
 
         @Test
-        @DisplayName("Should return null for non-existent user version")
-        void getUserTokenVersion_NonExistentUser_ReturnsNull() {
+        @DisplayName("Should return true when no invalidation exists for user")
+        void noInvalidation_AnyTokenIsValid() {
             UUID userId = UUID.randomUUID();
 
-            Long version = tokenBlacklistService.getUserTokenVersion(userId);
-
-            assertNull(version);
+            assertTrue(tokenBlacklistService.isUserTokenVersionValid(userId, 0L));
+            assertTrue(tokenBlacklistService.isUserTokenVersionValid(userId, System.currentTimeMillis()));
         }
     }
 
@@ -154,49 +153,47 @@ class TokenBlacklistServiceTest {
     class TokenVersionValidationTests {
 
         @Test
-        @DisplayName("Should validate token version")
-        void isUserTokenVersionValid_ValidVersion_ReturnsTrue() {
+        @DisplayName("Token issued after invalidation should be valid")
+        void isUserTokenVersionValid_TokenAfterInvalidation_ReturnsTrue() throws InterruptedException {
             UUID userId = UUID.randomUUID();
             tokenBlacklistService.invalidateUserTokens(userId);
-            Long currentVersion = tokenBlacklistService.getUserTokenVersion(userId);
+            Thread.sleep(1);
+            long issuedAt = System.currentTimeMillis();
 
-            boolean isValid = tokenBlacklistService.isUserTokenVersionValid(userId, currentVersion);
-
-            assertTrue(isValid);
+            assertTrue(tokenBlacklistService.isUserTokenVersionValid(userId, issuedAt));
         }
 
         @Test
-        @DisplayName("Should invalidate old token version")
-        void isUserTokenVersionValid_OldVersion_ReturnsFalse() {
+        @DisplayName("Token issued before invalidation should be invalid")
+        void isUserTokenVersionValid_TokenBeforeInvalidation_ReturnsFalse() {
             UUID userId = UUID.randomUUID();
-            tokenBlacklistService.invalidateUserTokens(userId);
-            Long oldVersion = tokenBlacklistService.getUserTokenVersion(userId);
-            
+            long issuedAt = System.currentTimeMillis() - 5000;
+
             tokenBlacklistService.invalidateUserTokens(userId);
 
-            boolean isValid = tokenBlacklistService.isUserTokenVersionValid(userId, oldVersion);
-
-            assertFalse(isValid);
+            assertFalse(tokenBlacklistService.isUserTokenVersionValid(userId, issuedAt));
         }
 
         @Test
-        @DisplayName("Should return true for null version on new user")
-        void isUserTokenVersionValid_NullVersion_NewUser_ReturnsTrue() {
+        @DisplayName("Token issued before re-invalidation should be invalid")
+        void isUserTokenVersionValid_TokenBeforeReInvalidation_ReturnsFalse() throws InterruptedException {
             UUID userId = UUID.randomUUID();
+            tokenBlacklistService.invalidateUserTokens(userId);
+            Thread.sleep(1);
+            long issuedBetween = System.currentTimeMillis();
+            Thread.sleep(1);
+            tokenBlacklistService.invalidateUserTokens(userId);
 
-            boolean isValid = tokenBlacklistService.isUserTokenVersionValid(userId, null);
-
-            assertTrue(isValid);
+            assertFalse(tokenBlacklistService.isUserTokenVersionValid(userId, issuedBetween));
         }
 
         @Test
-        @DisplayName("Should return false for non-existent user with version")
-        void isUserTokenVersionValid_NonExistentUser_WithVersion_ReturnsTrue() {
+        @DisplayName("Should return true for any token when no invalidation exists")
+        void isUserTokenVersionValid_NoInvalidationStored_ReturnsTrue() {
             UUID userId = UUID.randomUUID();
 
-            boolean isValid = tokenBlacklistService.isUserTokenVersionValid(userId, 12345L);
-
-            assertTrue(isValid);
+            assertTrue(tokenBlacklistService.isUserTokenVersionValid(userId, 12345L));
+            assertTrue(tokenBlacklistService.isUserTokenVersionValid(userId, 0L));
         }
     }
 }
