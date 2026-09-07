@@ -66,14 +66,11 @@ public class TokenValidationService {
         }
 
         // ── 1. Signature / expiry (CPU, no I/O) ───────────────────────────────
-        // Must happen before cache lookup: an expired token must never be served from cache.
         if (!jwtTokenProvider.validateToken(jwt)) {
             return ValidationResult.invalid();
         }
 
         // ── 2. Blacklist check — unconditional, before any cache read ─────────
-        // Prevents a revoked token that is still resident in the validation cache
-        // from bypassing revocation.
         if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
             tokenValidationCache.invalidate(jwt);
             log.warn("Blacklisted token attempted");
@@ -82,7 +79,6 @@ public class TokenValidationService {
         }
 
         // ── 3. Token-version check — unconditional, before any cache read ─────
-        // Extract claims once here; reused for cache population on a miss.
         UUID userId = jwtTokenProvider.getUserIdFromToken(jwt);
         long issuedAt = jwtTokenProvider.getIssuedAtMillis(jwt);
         if (!tokenBlacklistService.isUserTokenVersionValid(userId, issuedAt)) {
@@ -92,27 +88,32 @@ public class TokenValidationService {
                             "Session has been invalidated. Please login again."));
         }
 
-        // ── Cache lookup — safe: all security checks are complete above ────────
+        // ── 4. Cache lookup — account lock is re-verified on every hit ────────
         CachedAuthentication cached = tokenValidationCache.getIfPresent(jwt);
         if (cached != null) {
+            UserPrincipal cachedPrincipal = (UserPrincipal) cached.authentication().getPrincipal();
+            if (cachedPrincipal.isAccountLocked()) {
+                tokenValidationCache.invalidate(jwt);
+                log.warn("Locked account attempted (cache hit): {}", userId);
+                return ValidationResult.reject(
+                        new LockedException("Account is locked. Please contact support."));
+            }
             log.debug("Token cache hit for user {}", cached.username());
             return ValidationResult.valid(new UsernamePasswordAuthenticationToken(
-                    cached.authentication().getPrincipal(),
-                    null,
-                    cached.authentication().getAuthorities()));
+                    cachedPrincipal, null, cachedPrincipal.getAuthorities()));
         }
 
-        // ── 4. Load UserPrincipal – single DB call, result is cached ──────────
+        // ── 5. Cache miss: load principal (Spring @Cacheable, single DB call) ─
         UserPrincipal principal = loadPrincipal(userId);
 
-        // ── 5. Account-lock (from cached principal, no extra I/O) ─────────────
+        // ── 6. Account-lock check ─────────────────────────────────────────────
         if (principal.isAccountLocked()) {
             log.warn("Locked account attempted: {}", userId);
             return ValidationResult.reject(
                     new LockedException("Account is locked. Please contact support."));
         }
 
-        // ── All checks passed – build the Authentication object ───────────────
+        // ── All checks passed – build and cache the Authentication object ─────
         Authentication auth = new UsernamePasswordAuthenticationToken(
                 principal, null, principal.getAuthorities());
 
