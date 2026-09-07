@@ -118,7 +118,7 @@ public class AdminPromotionService {
                 .createdAt(Instant.now())
                 .build();
         activityRepository.save(activity);
-        log.debug("Admin promotion activity logged: {} for promotion: {}", type, name);
+        log.debug("Admin promotion activity logged: {} for promotion: {}", type, name != null ? name.replace('\n', '_').replace('\r', '_') : null);
     }
 
     private PromotionStatus determineStatus(LocalDateTime startDate, LocalDateTime endDate) {

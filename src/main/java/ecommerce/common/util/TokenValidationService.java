@@ -71,17 +71,28 @@ public class TokenValidationService {
             return ValidationResult.invalid();
         }
 
-        // ── 2. Blacklist check — executed unconditionally before any cache read ──
-        // Keeping this before the cache lookup prevents a revoked token that is still
-        // resident in the validation cache from bypassing the blacklist check.
+        // ── 2. Blacklist check — unconditional, before any cache read ─────────
+        // Prevents a revoked token that is still resident in the validation cache
+        // from bypassing revocation.
         if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
-            tokenValidationCache.invalidate(jwt); // evict stale cache entry if present
+            tokenValidationCache.invalidate(jwt);
             log.warn("Blacklisted token attempted");
             return ValidationResult.reject(
                     new BadCredentialsException("Token has been revoked. Please login again."));
         }
 
-        // ── Cache lookup (fastest path — all security checks already passed above) ──
+        // ── 3. Token-version check — unconditional, before any cache read ─────
+        // Extract claims once here; reused for cache population on a miss.
+        UUID userId = jwtTokenProvider.getUserIdFromToken(jwt);
+        long issuedAt = jwtTokenProvider.getIssuedAtMillis(jwt);
+        if (!tokenBlacklistService.isUserTokenVersionValid(userId, issuedAt)) {
+            log.warn("Token version invalid for user: {}", userId);
+            return ValidationResult.reject(
+                    new InsufficientAuthenticationException(
+                            "Session has been invalidated. Please login again."));
+        }
+
+        // ── Cache lookup — safe: all security checks are complete above ────────
         CachedAuthentication cached = tokenValidationCache.getIfPresent(jwt);
         if (cached != null) {
             log.debug("Token cache hit for user {}", cached.username());
@@ -89,17 +100,6 @@ public class TokenValidationService {
                     cached.authentication().getPrincipal(),
                     null,
                     cached.authentication().getAuthorities()));
-        }
-
-        UUID userId = jwtTokenProvider.getUserIdFromToken(jwt);
-
-        // ── 3. Token-version check — always executed (no null short-circuit) ──
-        long issuedAt = jwtTokenProvider.getIssuedAtMillis(jwt);
-        if (!tokenBlacklistService.isUserTokenVersionValid(userId, issuedAt)) {
-            log.warn("Token version invalid for user: {}", userId);
-            return ValidationResult.reject(
-                    new InsufficientAuthenticationException(
-                            "Session has been invalidated. Please login again."));
         }
 
         // ── 4. Load UserPrincipal – single DB call, result is cached ──────────
@@ -115,11 +115,10 @@ public class TokenValidationService {
         // ── All checks passed – build the Authentication object ───────────────
         Authentication auth = new UsernamePasswordAuthenticationToken(
                 principal, null, principal.getAuthorities());
-        
-        // Cache the successful validation result
+
         String username = principal.getUsername();
         tokenValidationCache.put(jwt, CachedAuthentication.create(auth, userId, username));
-        
+
         log.debug("JWT validated and cached for user {}", userId);
         return ValidationResult.valid(auth);
     }

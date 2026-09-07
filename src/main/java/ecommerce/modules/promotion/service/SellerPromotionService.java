@@ -108,7 +108,7 @@ public class SellerPromotionService {
                 .createdAt(Instant.now())
                 .build();
         activityRepository.save(activity);
-        log.debug("Seller promotion activity logged: {} for promotion: {}", type, name);
+        log.debug("Seller promotion activity logged: {} for promotion: {}", type, name != null ? name.replace('\n', '_').replace('\r', '_') : null);
     }
 
     private SellerPromotion.PromotionStatus determineStatus(LocalDateTime startDate, LocalDateTime endDate) {

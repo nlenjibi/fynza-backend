@@ -163,31 +163,31 @@ public class Product {
     }
 
     public void addStock(int quantity) {
-        this.stock = (this.stock != null ? this.stock : 0) + quantity;
-        this.availableQuantity = (this.availableQuantity != null ? this.availableQuantity : 0) + quantity;
+        this.stock = Math.addExact(this.stock != null ? this.stock : 0, quantity);
+        this.availableQuantity = Math.addExact(this.availableQuantity != null ? this.availableQuantity : 0, quantity);
     }
 
     public void releaseReservedStock(int quantity) {
         if (availableQuantity != null) {
-            this.availableQuantity += quantity;
+            this.availableQuantity = Math.addExact(this.availableQuantity, quantity);
         }
         if (stock != null) {
-            this.stock += quantity;
+            this.stock = Math.addExact(this.stock, quantity);
         }
     }
 
     public void reserveStock(int quantity) {
         if (availableQuantity != null) {
-            this.availableQuantity -= quantity;
+            this.availableQuantity = Math.subtractExact(this.availableQuantity, quantity);
         }
         if (stock != null) {
-            this.stock -= quantity;
+            this.stock = Math.subtractExact(this.stock, quantity);
         }
     }
 
     public void reduceStock(int quantity) {
-        this.stock = (this.stock != null ? this.stock : 0) - quantity;
-        this.availableQuantity = (this.availableQuantity != null ? this.availableQuantity : 0) - quantity;
+        this.stock = Math.subtractExact(this.stock != null ? this.stock : 0, quantity);
+        this.availableQuantity = Math.subtractExact(this.availableQuantity != null ? this.availableQuantity : 0, quantity);
     }
 
     public String getImageUrl() {

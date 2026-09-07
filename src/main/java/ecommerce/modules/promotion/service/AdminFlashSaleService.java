@@ -43,7 +43,7 @@ public class AdminFlashSaleService {
                 .createdBy(createdBy)
                 .build();
 
-        log.info("Creating flash sale: {}", name);
+        log.info("Creating flash sale: {}", name != null ? name.replace('\n', '_').replace('\r', '_') : null);
         return adminFlashSaleRepository.save(flashSale);
     }
 
