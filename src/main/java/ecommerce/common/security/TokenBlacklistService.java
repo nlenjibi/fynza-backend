@@ -130,6 +130,31 @@ public class TokenBlacklistService {
         }
     }
 
+    /**
+     * No-op — Redis expires blacklisted tokens automatically via TTL.
+     * Kept for scheduler compatibility.
+     */
+    public void clearExpiredTokens() {
+        log.debug("clearExpiredTokens() called — Redis handles TTL expiry automatically");
+    }
+
+    /**
+     * Returns basic stats about the blacklist.
+     * Hit/miss rates are not tracked at the Redis level; size is estimated from key count.
+     */
+    public TokenBlacklistStats getStats() {
+        long size = 0;
+        try {
+            var keys = redisTemplate.keys(CacheKey.of("token-blacklist", "*"));
+            size = keys != null ? keys.size() : 0;
+        } catch (Exception e) {
+            log.warn("Unable to estimate blacklist size from Redis: {}", e.getMessage());
+        }
+        return new TokenBlacklistStats(size, 0.0, 0.0);
+    }
+
+    public record TokenBlacklistStats(long currentSize, double hitRate, double missRate) {}
+
     private String hashToken(String token) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
