@@ -61,7 +61,7 @@ public class TokenBlacklistService {
         redisTemplate.opsForValue().set(key, Boolean.TRUE, ttl);
         bloomFilterService.add(hash);
 
-        log.debug("Token blacklisted — key={}, ttl={}", key.substring(0, Math.min(20, key.length())), ttl);
+        log.debug("Token blacklisted, ttl={}", ttl);
     }
 
     /**
@@ -83,7 +83,7 @@ public class TokenBlacklistService {
         try {
             Boolean blacklisted = (Boolean) redisTemplate.opsForValue().get(key);
             if (Boolean.TRUE.equals(blacklisted)) {
-                log.debug("Blacklisted token detected: {}", key.substring(0, Math.min(20, key.length())));
+                log.debug("Blacklisted token detected");
                 return true;
             }
             return false;
