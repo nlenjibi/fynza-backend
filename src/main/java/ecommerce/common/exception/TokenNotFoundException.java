@@ -1,10 +1,8 @@
 package ecommerce.common.exception;
 
-/**
- * Exception thrown when token is not found
- */
-public class TokenNotFoundException extends RuntimeException {
+public class TokenNotFoundException extends ResourceNotFoundException {
+
     public TokenNotFoundException(String message) {
-        super(message);
+        super(message, "TOKEN_NOT_FOUND");
     }
 }

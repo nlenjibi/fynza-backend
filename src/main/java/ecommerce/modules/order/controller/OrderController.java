@@ -41,7 +41,7 @@ import java.util.UUID;
  * @version 2.1
  */
 @RestController
-@RequestMapping("api/v1/customers/orders")
+@RequestMapping("/v1/customers/orders")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Customer Orders", description = "Customer order management endpoints")

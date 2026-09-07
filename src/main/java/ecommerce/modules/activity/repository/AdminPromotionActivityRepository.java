@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.UUID;
 
 @Repository
-public interface AdminPromotionActivityRepository extends JpaRepository<AdminPromotionActivity, UUID> {
+public interface AdminPromotionActivityRepository extends JpaRepository<AdminPromotionActivity, Long> {
 
     Page<AdminPromotionActivity> findByAdminIdOrderByCreatedAtDesc(UUID adminId, Pageable pageable);
 

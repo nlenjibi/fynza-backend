@@ -15,8 +15,6 @@ import java.lang.management.MemoryUsage;
 import java.lang.management.ThreadMXBean;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Metrics Service
@@ -39,9 +37,7 @@ public class MetricsService {
     private final MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
     private final ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
 
-    private final Map<String, AtomicLong> customMetrics = new ConcurrentHashMap<>();
-
-    @Scheduled(fixedRate = 60000) // Every minute
+    @Scheduled(fixedRate = 60000)
     public void collectMetrics() {
         log.debug("Collecting performance metrics...");
         
@@ -61,7 +57,7 @@ public class MetricsService {
         if (tokenValidationCache != null) {
             CacheStats stats = tokenValidationCache.stats();
             log.info("Token Cache: hitRate={}%, hits={}, misses={}, size={}",
-                String.format("%.2f", stats.hitRate() * 100),
+                stats.hitRate() * 100,
                 stats.hitCount(),
                 stats.missCount(),
                 tokenValidationCache.estimatedSize());
@@ -120,12 +116,6 @@ public class MetricsService {
         allMetrics.put("system", getSystemMetrics());
         allMetrics.put("cache", getCacheMetrics());
         allMetrics.put("rateLimit", getRateLimitMetrics());
-        
-        // Custom metrics
-        Map<String, Long> custom = new HashMap<>();
-        customMetrics.forEach((key, value) -> custom.put(key, value.get()));
-        allMetrics.put("custom", custom);
-        
         return allMetrics;
     }
 

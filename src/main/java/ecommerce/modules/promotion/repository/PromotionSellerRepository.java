@@ -1,8 +1,8 @@
 package ecommerce.modules.promotion.repository;
 
-import ecommerce.common.base.BaseRepository;
 import ecommerce.modules.promotion.entity.Promotion;
 import ecommerce.modules.promotion.entity.PromotionSeller;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface PromotionSellerRepository extends BaseRepository<PromotionSeller, UUID> {
+public interface PromotionSellerRepository extends JpaRepository<PromotionSeller, Long> {
 
     List<PromotionSeller> findBySellerId(UUID sellerId);
 

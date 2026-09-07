@@ -1,6 +1,5 @@
 package ecommerce.modules.category.dto;
 
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

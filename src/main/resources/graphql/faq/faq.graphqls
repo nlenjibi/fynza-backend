@@ -69,20 +69,6 @@ type FAQPage {
 # Inputs
 # ─────────────────────────────────────────────────────────────────────────────
 
-input FAQCreateInput {
-    question: String!
-    answer: String!
-    category: FAQCategory!
-    displayOrder: Int
-}
-
-input FAQUpdateInput {
-    question: String
-    answer: String
-    category: FAQCategory
-    displayOrder: Int
-}
-
 input FAQFilterInput {
     category: FAQCategory
     isActive: Boolean
@@ -107,16 +93,3 @@ extend type Query {
     faqStats: FAQStats!
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Mutations
-# ─────────────────────────────────────────────────────────────────────────────
-
-extend type Mutation {
-
-    # ── Admin Mutations (ADMIN) ──────────────────────────────────────────
-    createFAQ(input: FAQCreateInput!): FAQ!
-    updateFAQ(id: ID!, input: FAQUpdateInput!): FAQ!
-    deleteFAQ(id: ID!): Boolean!
-    toggleFAQActive(id: ID!): FAQ!
-    reorderFAQs(faqIds: [ID!]!): Boolean!
-}
