@@ -52,7 +52,8 @@
       "Bash(xargs -I{} unzip -p {} \"org/springframework/graphql/execution/GraphQlSourceBuilderCustomizer.java\")",
       "Bash(unzip *)",
       "Read(//c/tmp/**)",
-      "Bash(cat /tmp/org/springframework/graphql/execution/GraphQlSourceBuilderCustomizer.java)"
+      "Bash(cat /tmp/org/springframework/graphql/execution/GraphQlSourceBuilderCustomizer.java)",
+      "Bash(./mvnw -B help:effective-pom --no-transfer-progress)"
     ]
   }
 }
