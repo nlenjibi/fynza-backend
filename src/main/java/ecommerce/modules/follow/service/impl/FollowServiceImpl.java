@@ -8,7 +8,6 @@ import ecommerce.modules.follow.dto.FollowerResponse;
 import ecommerce.modules.follow.entity.StoreFollow;
 import ecommerce.modules.follow.repository.StoreFollowRepository;
 import ecommerce.modules.follow.service.FollowService;
-import ecommerce.modules.order.entity.Order;
 import ecommerce.modules.order.repository.OrderRepository;
 import ecommerce.modules.user.entity.SellerProfile;
 import ecommerce.modules.user.entity.User;
@@ -23,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service

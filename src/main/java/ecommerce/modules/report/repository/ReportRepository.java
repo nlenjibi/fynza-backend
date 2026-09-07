@@ -1,6 +1,5 @@
 package ecommerce.modules.report.repository;
 
-import ecommerce.common.enums.ReportFormat;
 import ecommerce.common.enums.ReportType;
 import ecommerce.modules.report.entity.Report;
 import org.springframework.data.domain.Page;

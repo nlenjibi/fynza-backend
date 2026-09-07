@@ -1,6 +1,5 @@
 package ecommerce.modules.user.entity;
 
-import ecommerce.common.enums.PaymentMethod;
 import ecommerce.common.enums.Role;
 import ecommerce.common.enums.UserStatus;
 import jakarta.persistence.*;

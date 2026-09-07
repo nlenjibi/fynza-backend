@@ -3,7 +3,6 @@ package ecommerce.modules.cart.async;
 import ecommerce.common.config.AsyncProperties;
 import ecommerce.modules.cart.dto.ReservationResponse;
 import ecommerce.modules.cart.entity.CartItem;
-import ecommerce.modules.cart.entity.ReservationStatus;
 import ecommerce.modules.cart.entity.StockReservation;
 import ecommerce.modules.cart.repository.CartItemRepository;
 import ecommerce.modules.cart.repository.StockReservationRepository;
