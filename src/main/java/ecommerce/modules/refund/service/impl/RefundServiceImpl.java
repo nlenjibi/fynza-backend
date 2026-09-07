@@ -208,7 +208,7 @@ public class RefundServiceImpl implements RefundService {
         refund.setCompletedAt(LocalDateTime.now());
 
         Refund saved = refundRepository.save(refund);
-        log.info("Refund completed: {} with transaction: {}", saved.getRefundNumber(), transactionId);
+        log.info("Refund completed: {} with transaction: {}", saved.getRefundNumber(), transactionId != null ? transactionId.replace('\n', '_').replace('\r', '_') : null);
 
         return mapToResponse(saved);
     }

@@ -85,7 +85,7 @@ public class PaystackPaymentService {
                 log.info("Payment initialized successfully. Reference: {}", reference.replace('\n', '_').replace('\r', '_'));
                 return response;
             } else {
-                log.error("Paystack initialization failed: {}", response != null ? response.getMessage() : "Unknown error");
+                log.error("Paystack initialization failed: {}", response != null && response.getMessage() != null ? response.getMessage().replace('\n', '_').replace('\r', '_') : "Unknown error");
                 throw new BadRequestException("Failed to initialize payment: " + (response != null ? response.getMessage() : "Unknown error"));
             }
         } catch (HttpClientErrorException e) {
@@ -122,10 +122,10 @@ public class PaystackPaymentService {
             ).getBody();
 
             if (response != null && response.isStatus()) {
-                log.info("Payment verified successfully. Status: {}", response.getData() != null ? response.getData().getStatus() : "unknown");
+                log.info("Payment verified successfully. Status: {}", response.getData() != null && response.getData().getStatus() != null ? response.getData().getStatus().replace('\n', '_').replace('\r', '_') : "unknown");
                 return response;
             } else {
-                log.error("Paystack verification failed: {}", response != null ? response.getMessage() : "Unknown error");
+                log.error("Paystack verification failed: {}", response != null && response.getMessage() != null ? response.getMessage().replace('\n', '_').replace('\r', '_') : "Unknown error");
                 throw new BadRequestException("Failed to verify payment: " + (response != null ? response.getMessage() : "Unknown error"));
             }
         } catch (HttpClientErrorException e) {
@@ -171,7 +171,7 @@ public class PaystackPaymentService {
                     String.class
             ).getBody();
 
-            log.info("Refund processed successfully: {}", response);
+            log.info("Refund processed successfully: {}", response != null ? response.replace('\n', '_').replace('\r', '_') : null);
             return "Refund processed successfully";
         } catch (Exception e) {
             log.error("Error processing refund: {}", e.getMessage(), e);
