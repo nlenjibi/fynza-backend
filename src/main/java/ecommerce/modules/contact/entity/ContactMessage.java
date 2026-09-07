@@ -1,12 +1,12 @@
 package ecommerce.modules.contact.entity;
 
-import ecommerce.common.base.BaseEntity;
 import ecommerce.common.enums.ContactCategory;
 import ecommerce.common.enums.ContactPriority;
 import ecommerce.common.enums.ContactStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
+
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -21,8 +21,25 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@SuperBuilder
-public class ContactMessage extends BaseEntity {
+@Builder
+public class ContactMessage {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
+    private UUID publicId;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;
@@ -66,4 +83,16 @@ public class ContactMessage extends BaseEntity {
     @Column(name = "responded_by")
     private String respondedBy;
 
+    @PrePersist
+    protected void onCreate() {
+        publicId = UUID.randomUUID();
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
+        if (isActive == null) isActive = true;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
 }

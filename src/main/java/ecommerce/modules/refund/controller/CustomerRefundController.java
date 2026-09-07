@@ -1,7 +1,6 @@
 package ecommerce.modules.refund.controller;
 
 import ecommerce.common.response.ApiResponse;
-import ecommerce.common.response.PaginatedResponse;
 import ecommerce.modules.refund.dto.RefundRequest;
 import ecommerce.modules.refund.dto.RefundResponse;
 import ecommerce.modules.refund.dto.RefundStatsResponse;

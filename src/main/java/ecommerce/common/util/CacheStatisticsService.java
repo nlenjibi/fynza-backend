@@ -43,7 +43,7 @@ public class CacheStatisticsService {
     }
 
     public void clearCache(String cacheName) {
-        log.info("Clearing cache: {}", cacheName);
+        log.info("Clearing cache: {}", cacheName.replace('\n', '_').replace('\r', '_'));
         Cache cache = cacheManager.getCache(cacheName);
         if (cache != null) {
             cache.clear();

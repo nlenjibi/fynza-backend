@@ -219,6 +219,125 @@ type PerformanceMetrics {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Seller Dashboard & Analytics Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type SellerDashboard {
+    totalProducts: Long!
+    activeProducts: Long!
+    totalOrders: Long!
+    ordersThisMonth: Long!
+    pendingOrders: Long!
+    completedOrders: Long!
+    totalRevenue: BigDecimal!
+    monthlyRevenue: BigDecimal!
+    revenueGrowth: Float
+    averageRating: Float
+    totalCustomers: Long!
+    storeVisits: Long!
+    visitGrowth: Float
+    recentOrders: [SellerRecentOrder!]!
+    topProducts: [SellerTopProduct!]!
+}
+
+type SellerRecentOrder {
+    orderId: String!
+    orderNumber: String!
+    customerName: String
+    productName: String
+    amount: BigDecimal!
+    status: String!
+    timeAgo: String
+}
+
+type SellerTopProduct {
+    productName: String!
+    salesCount: Long!
+    revenue: BigDecimal!
+    growth: Float
+}
+
+type SellerAnalytics {
+    totalRevenue: BigDecimal!
+    revenueGrowth: Float
+    totalOrders: Long!
+    ordersGrowth: Float
+    totalCustomers: Long!
+    customersGrowth: Float
+    averageOrderValue: BigDecimal!
+    avgOrderValueGrowth: Float
+    conversionRate: Float
+    conversionRateGrowth: Float
+    refundRate: Float
+    refundRateGrowth: Float
+    dailyOrders: [SellerDailyMetric!]!
+    monthlyRevenue: [SellerMonthlyMetric!]!
+    salesByCategory: [SellerCategorySales!]!
+    topProducts: [SellerTopProductMetric!]!
+    topCustomers: [SellerTopCustomerMetric!]!
+}
+
+type SellerDailyMetric {
+    day: String!
+    orders: Long!
+    revenue: BigDecimal!
+    customers: Long!
+}
+
+type SellerMonthlyMetric {
+    month: String!
+    revenue: BigDecimal!
+    orders: Long!
+}
+
+type SellerCategorySales {
+    category: String!
+    sales: Long!
+    revenue: BigDecimal!
+    percentage: Float
+}
+
+type SellerTopProductMetric {
+    productId: String!
+    productName: String!
+    salesCount: Long!
+    revenue: BigDecimal!
+    growth: Float
+    rating: Float
+}
+
+type SellerTopCustomerMetric {
+    customerId: String!
+    customerName: String!
+    totalOrders: Long!
+    totalSpent: BigDecimal!
+    lastOrder: String
+}
+
+type SellerSalesAnalytics {
+    totalSales: BigDecimal!
+    averageOrderValue: BigDecimal!
+    totalOrders: Long!
+    totalProductsSold: Long!
+    conversionRate: Float
+    dailySales: [SellerDailySales!]!
+    topProducts: [SellerSalesProduct!]!
+}
+
+type SellerDailySales {
+    date: String!
+    sales: BigDecimal!
+    orders: Long!
+}
+
+type SellerSalesProduct {
+    productId: String!
+    productName: String!
+    quantitySold: Long!
+    revenue: BigDecimal!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Queries
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -255,4 +374,9 @@ extend type Query {
     # ── Customer Analytics (AUTHENTICATED) ───────────────────────────────
     customerTotalSpending: BigDecimal!
     customerCategoryPreferences: [CategoryPreference!]!
+
+    # ── Seller Dashboard & Analytics (SELLER) ────────────────────────────
+    sellerDashboard: SellerDashboard!
+    sellerAnalytics: SellerAnalytics!
+    sellerSalesAnalytics(days: Int = 30): SellerSalesAnalytics!
 }

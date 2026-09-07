@@ -30,7 +30,7 @@ public class PaymentProcessingService {
 
         long timeout = asyncProperties.getTimeouts().getPayment();
 
-        PaymentTransaction transaction = paymentRepository.findById(transactionId).orElse(null);
+        PaymentTransaction transaction = paymentRepository.findByPublicId(transactionId).orElse(null);
         if (transaction == null) {
             return CompletableFuture.completedFuture(
                     PaymentResult.failed(transactionId, "Transaction not found"));
@@ -62,7 +62,7 @@ public class PaymentProcessingService {
 
     private CompletableFuture<String> callPaymentGateway(String token) {
         return CompletableFuture.supplyAsync(() -> {
-            log.debug("Calling payment gateway with token: {}", token);
+            log.debug("Calling payment gateway with generated token");
             try {
                 Thread.sleep(200);
             } catch (InterruptedException e) {
@@ -102,7 +102,7 @@ public class PaymentProcessingService {
         transaction.setFailureReason(ex.getMessage());
         paymentRepository.save(transaction);
 
-        return PaymentResult.failed(transaction.getId(), "Payment failed: " + ex.getMessage());
+        return PaymentResult.failed(transaction.getPublicId(), "Payment failed: " + ex.getMessage());
     }
 
     public CompletableFuture<PaymentResult> processWithGatewayFallback(UUID transactionId) {

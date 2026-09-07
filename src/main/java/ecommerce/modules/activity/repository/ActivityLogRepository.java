@@ -19,7 +19,7 @@ import java.util.UUID;
  * - Audit logs (technical CRUD operations)
  */
 @Repository
-public interface ActivityLogRepository extends JpaRepository<ActivityLog, UUID> {
+public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> {
 
     // =================================================================
     // GENERAL ACTIVITY QUERIES

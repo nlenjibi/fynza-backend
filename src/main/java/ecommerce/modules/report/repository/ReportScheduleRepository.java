@@ -15,7 +15,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface ReportScheduleRepository extends JpaRepository<ReportSchedule, UUID> {
+public interface ReportScheduleRepository extends JpaRepository<ReportSchedule, Long> {
+
+    Optional<ReportSchedule> findByPublicId(UUID publicId);
 
     List<ReportSchedule> findByCreatedBy(UUID createdBy);
 

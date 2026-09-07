@@ -29,7 +29,7 @@ public class ContactService {
 
     @Transactional
     public ContactMessageResponse createMessage(ContactMessageRequest request) {
-        log.info("Creating new contact message from: {}", request.getEmail());
+        log.info("Creating new contact message from: {}", request.getEmail().replace('\n', '_').replace('\r', '_'));
 
         ContactMessage message = ContactMessage.builder()
                 .name(request.getName())
@@ -64,7 +64,7 @@ public class ContactService {
     public ContactMessageResponse getMessageById(UUID id) {
         log.debug("Fetching contact message with ID: {}", id);
 
-        ContactMessage message = contactMessageRepository.findById(id)
+        ContactMessage message = contactMessageRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Contact message not found with ID: " + id));
 
         return ContactMessageResponse.from(message);
@@ -74,7 +74,7 @@ public class ContactService {
     public ContactMessageResponse respondToMessage(UUID id, ContactResponseRequest request) {
         log.info("Admin responding to contact message ID: {}", id);
 
-        ContactMessage message = contactMessageRepository.findById(id)
+        ContactMessage message = contactMessageRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Contact message not found with ID: " + id));
 
         message.setAdminResponse(request.getAdminResponse());
@@ -83,7 +83,7 @@ public class ContactService {
         message.setStatus(ContactStatus.RESPONDED);
 
         ContactMessage updatedMessage = contactMessageRepository.save(message);
-        log.info("Contact message {} responded by admin {}", id, request.getAdminId());
+        log.info("Contact message {} responded by admin {}", id, request.getAdminId().replace('\n', '_').replace('\r', '_'));
 
         return ContactMessageResponse.from(updatedMessage);
     }
@@ -92,7 +92,7 @@ public class ContactService {
     public ContactMessageResponse updateMessageStatus(UUID id, ContactStatus status) {
         log.info("Updating contact message {} status to: {}", id, status);
 
-        ContactMessage message = contactMessageRepository.findById(id)
+        ContactMessage message = contactMessageRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Contact message not found with ID: " + id));
 
         message.setStatus(status);
@@ -105,7 +105,7 @@ public class ContactService {
     public ContactMessageResponse assignMessage(UUID id, UUID assignedToId) {
         log.info("Assigning contact message {} to user: {}", id, assignedToId);
 
-        ContactMessage message = contactMessageRepository.findById(id)
+        ContactMessage message = contactMessageRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Contact message not found with ID: " + id));
 
         message.setAssignedTo(assignedToId);
@@ -125,7 +125,7 @@ public class ContactService {
     public ContactMessageResponse categorizeMessage(UUID id, ContactCategory category, ContactPriority priority) {
         log.info("Categorizing contact message {} - category: {}, priority: {}", id, category, priority);
 
-        ContactMessage message = contactMessageRepository.findById(id)
+        ContactMessage message = contactMessageRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Contact message not found with ID: " + id));
 
         if (category != null) {
@@ -145,7 +145,7 @@ public class ContactService {
     public void deleteMessage(UUID id) {
         log.info("Deleting contact message with ID: {}", id);
 
-        ContactMessage message = contactMessageRepository.findById(id)
+        ContactMessage message = contactMessageRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Contact message not found with ID: " + id));
 
         message.setIsActive(false);
@@ -155,7 +155,7 @@ public class ContactService {
 
     @Transactional(readOnly = true)
     public Page<ContactMessageResponse> searchMessages(String searchTerm, Pageable pageable) {
-        log.debug("Searching contact messages with term: {}", searchTerm);
+        log.debug("Searching contact messages with term: {}", searchTerm.replace('\n', '_').replace('\r', '_'));
 
         return contactMessageRepository.searchMessages(searchTerm, pageable)
                 .map(ContactMessageResponse::from);
