@@ -80,7 +80,7 @@ public class CheckoutController {
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @AuthenticationPrincipal UserPrincipal principal) {
         
-        log.info("POST /v1/checkout - cartId={}, user={}, idempotencyKey={}", cartId, principal.getId(), idempotencyKey);
+        log.info("POST /v1/checkout - cartId={}, user={}, idempotencyKey={}", cartId, principal.getId(), idempotencyKey != null ? idempotencyKey.replace('\n', '_').replace('\r', '_') : null);
         
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
             if (!idempotencyService.validatePayload(idempotencyKey, request)) {

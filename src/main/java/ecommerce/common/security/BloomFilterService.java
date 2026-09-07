@@ -60,7 +60,7 @@ public class BloomFilterService {
      */
     public void add(String token) {
         tokenBloomFilter.put(token);
-        log.trace("Added token to Bloom Filter: {}...", token.substring(0, 8));
+        log.trace("Added token hash to Bloom Filter");
     }
 
     /**

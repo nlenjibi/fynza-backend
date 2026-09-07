@@ -113,6 +113,11 @@ public class JwtTokenProvider {
         return claims.getExpiration();
     }
 
+    public long getIssuedAtMillis(String token) {
+        Claims claims = getClaims(token);
+        return claims.getIssuedAt().getTime();
+    }
+
     public long getTokenRemainingTime(String token) {
         try {
             Date expiration = getExpirationDateFromToken(token);

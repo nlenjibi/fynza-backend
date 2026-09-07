@@ -83,7 +83,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 response.setContentType("application/json");
                 response.getWriter().write(
                         "{\"error\":\"Too many requests\",\"retryAfterSeconds\":" + tier.getWindowSeconds() + "}");
-                log.warn("Rate limit exceeded: tier={}, ip={}, count={}", tierName, ip, count);
+                log.warn("Rate limit exceeded: tier={}, ip={}, count={}", tierName, ip.replace('\n', '_').replace('\r', '_'), count);
                 return;
             }
         } catch (Exception e) {

@@ -15,6 +15,10 @@ public class QueryPerformanceAspect {
     private final Map<String, QueryStats> queryStats = new ConcurrentHashMap<>();
     private static final long SLOW_QUERY_THRESHOLD_MS = 500;
 
+    public void record(String queryName, long durationMs) {
+        queryStats.computeIfAbsent(queryName, k -> new QueryStats()).record(durationMs);
+    }
+
     public Report generateReport() {
         long totalQueries = queryStats.values().stream().mapToLong(QueryStats::getCount).sum();
         long totalSlowQueries = queryStats.values().stream().mapToLong(QueryStats::getSlowCount).sum();

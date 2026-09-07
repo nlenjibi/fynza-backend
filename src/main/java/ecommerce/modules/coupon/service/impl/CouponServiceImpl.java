@@ -103,7 +103,7 @@ public class CouponServiceImpl implements CouponService {
     @Override
     @Transactional
     public CouponResponse create(CouponRequest request) {
-        log.info("Creating new coupon: {}", request.getCode());
+        log.info("Creating new coupon: {}", request.getCode().replace('\n', '_').replace('\r', '_'));
 
         if (couponRepository.findByCode(request.getCode()).isPresent()) {
             throw new IllegalArgumentException("Coupon code already exists: " + request.getCode());
@@ -149,7 +149,7 @@ public class CouponServiceImpl implements CouponService {
 
     @Override
     public Coupon validate(String code, BigDecimal orderAmount) {
-        log.debug("Validating coupon code: {}", code);
+        log.debug("Validating coupon code: {}", code.replace('\n', '_').replace('\r', '_'));
 
         Coupon coupon = couponRepository.findByCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon not found with code: " + code));
@@ -172,7 +172,7 @@ public class CouponServiceImpl implements CouponService {
             throw new IllegalStateException("Order amount does not meet minimum requirement: " + coupon.getMinOrderAmount());
         }
 
-        log.debug("Coupon validation successful for code: {}", code);
+        log.debug("Coupon validation successful for code: {}", code.replace('\n', '_').replace('\r', '_'));
         return coupon;
     }
 
