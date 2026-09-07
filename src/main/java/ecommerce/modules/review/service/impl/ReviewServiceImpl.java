@@ -387,11 +387,11 @@ public class ReviewServiceImpl implements ReviewService {
         if (seller == null) {
             return ReviewStatsResponse.builder().totalReviews(0).averageRating(0.0).build();
         }
-        Long sellerLongId = seller.getId();
+        UUID sellerUuid = seller.getId();
 
-        Object[] stats = reviewRepository.getSellerReviewStats(sellerLongId);
-        long pending = reviewRepository.countPendingSellerReviews(sellerLongId);
-        List<Object[]> distribution = reviewRepository.getSellerRatingDistribution(sellerLongId);
+        Object[] stats = reviewRepository.getSellerReviewStats(sellerUuid);
+        long pending = reviewRepository.countPendingSellerReviews(sellerUuid);
+        List<Object[]> distribution = reviewRepository.getSellerRatingDistribution(sellerUuid);
 
         long total = 0;
         double avgRating = 0.0;
