@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/search/analytics")
+@RequestMapping("/v1/search/analytics")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 @Tag(name = "Search Analytics", description = "Search query analytics — Admin only")

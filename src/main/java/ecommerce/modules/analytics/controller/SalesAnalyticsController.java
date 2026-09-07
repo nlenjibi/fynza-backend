@@ -28,7 +28,7 @@ import java.time.LocalDate;
  * current calendar month when omitted.
  */
 @RestController
-@RequestMapping("/api/v1/admin/analytics/sales")
+@RequestMapping("/v1/admin/analytics/sales")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 @Tag(name = "Sales Analytics", description = "Sales KPI cards and revenue trend — Admin only")
