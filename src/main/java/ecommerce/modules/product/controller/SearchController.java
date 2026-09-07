@@ -20,7 +20,7 @@ import java.util.UUID;
 
 @Slf4j
 @RestController
-@RequestMapping("api/v1/search")
+@RequestMapping("/v1/search")
 @RequiredArgsConstructor
 @Validated
 @Tag(name = "Search", description = "APIs for product search with filtering, sorting, and pagination")

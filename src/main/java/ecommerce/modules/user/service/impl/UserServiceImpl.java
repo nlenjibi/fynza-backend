@@ -8,10 +8,15 @@ import ecommerce.modules.user.dto.*;
 import ecommerce.modules.user.entity.Address;
 import ecommerce.modules.user.entity.SellerProfile;
 import ecommerce.modules.user.entity.User;
+import ecommerce.modules.order.entity.Order;
+import ecommerce.modules.order.repository.OrderRepository;
+import ecommerce.modules.user.entity.CustomerProfile;
 import ecommerce.modules.user.repository.AddressRepository;
+import ecommerce.modules.user.repository.CustomerProfileRepository;
 import ecommerce.modules.user.repository.SellerProfileRepository;
 import ecommerce.modules.user.repository.UserRepository;
 import ecommerce.modules.user.service.UserService;
+import ecommerce.modules.wishlist.repository.WishlistItemRepository;
 import ecommerce.common.util.TokenValidationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,9 +31,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +52,9 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final AddressRepository addressRepository;
     private final SellerProfileRepository sellerProfileRepository;
+    private final CustomerProfileRepository customerProfileRepository;
+    private final WishlistItemRepository wishlistItemRepository;
+    private final OrderRepository orderRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenValidationService tokenValidationService;
     private final SecurityService securityService;
@@ -548,6 +559,96 @@ public class UserServiceImpl implements UserService {
         sellerProfileRepository.save(profile);
         log.info("Seller {} reactivated", sellerId);
         return toUserDto(profile.getUser());
+    }
+
+    // ── Customer Dashboard & Loyalty ─────────────────────────────────────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public CustomerDashboardResponse getCustomerDashboard(UUID userId) {
+        CustomerProfile profile = customerProfileRepository.findByUserId(userId).orElse(null);
+        long wishlistItems = wishlistItemRepository.countByUser_PublicId(userId);
+        List<Order> recentOrderEntities = orderRepository.findByCustomer_PublicId(userId,
+                org.springframework.data.domain.PageRequest.of(0, 10)).getContent();
+        long totalOrders = orderRepository.findByCustomer_PublicId(userId,
+                org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE)).getTotalElements();
+        long savedAddresses = addressRepository.findByUser_PublicId(userId).size();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d, yyyy");
+        List<CustomerDashboardResponse.RecentOrderDto> recentOrders = recentOrderEntities.stream()
+                .sorted((a, b) -> {
+                    if (a.getCreatedAt() == null && b.getCreatedAt() == null) return 0;
+                    if (a.getCreatedAt() == null) return 1;
+                    if (b.getCreatedAt() == null) return -1;
+                    return b.getCreatedAt().compareTo(a.getCreatedAt());
+                })
+                .limit(5)
+                .map(order -> CustomerDashboardResponse.RecentOrderDto.builder()
+                        .orderId(order.getId().toString())
+                        .orderNumber(order.getOrderNumber())
+                        .orderDate(order.getCreatedAt() != null
+                                ? formatter.format(order.getCreatedAt().atZone(ZoneId.systemDefault()))
+                                : "N/A")
+                        .status(order.getStatus().name())
+                        .totalAmount(order.getTotalAmount())
+                        .build())
+                .collect(Collectors.toList());
+
+        return CustomerDashboardResponse.builder()
+                .totalOrders(totalOrders)
+                .wishlistItems(wishlistItems)
+                .savedAddresses(savedAddresses)
+                .loyaltyPoints(profile != null ? profile.getLoyaltyPoints() : 0)
+                .totalSpent(profile != null ? profile.getTotalSpent() : BigDecimal.ZERO)
+                .membershipStatus(profile != null ? profile.getMembershipStatus().name() : "NONE")
+                .recentOrders(recentOrders)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LoyaltyRedemptionResponse getLoyaltyBalance(UUID userId) {
+        CustomerProfile profile = customerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer profile not found for user: " + userId));
+        int points = profile.getLoyaltyPoints() != null ? profile.getLoyaltyPoints() : 0;
+        BigDecimal availableDiscount = BigDecimal.valueOf(points).multiply(BigDecimal.valueOf(0.10));
+        return LoyaltyRedemptionResponse.builder()
+                .previousPoints(0)
+                .redeemedPoints(0)
+                .remainingPoints(points)
+                .discountAmount(availableDiscount)
+                .rewardType("AVAILABLE")
+                .message(points + " points available - " + availableDiscount + " worth of discounts")
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public LoyaltyRedemptionResponse redeemLoyaltyPoints(UUID userId, int pointsToRedeem, String rewardType) {
+        CustomerProfile profile = customerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer profile not found for user: " + userId));
+        int currentPoints = profile.getLoyaltyPoints() != null ? profile.getLoyaltyPoints() : 0;
+
+        if (currentPoints < 100 || pointsToRedeem < 100 || pointsToRedeem > currentPoints) {
+            throw new IllegalArgumentException("Insufficient loyalty points for redemption");
+        }
+
+        BigDecimal discountAmount = BigDecimal.valueOf(pointsToRedeem).multiply(BigDecimal.valueOf(0.10));
+        profile.setLoyaltyPoints(currentPoints - pointsToRedeem);
+        customerProfileRepository.save(profile);
+
+        String type = rewardType != null ? rewardType : "DISCOUNT";
+        String couponCode = "LOYALTY-" + pointsToRedeem + "-" + userId.toString().substring(0, 8).toUpperCase();
+
+        return LoyaltyRedemptionResponse.builder()
+                .previousPoints(currentPoints)
+                .redeemedPoints(pointsToRedeem)
+                .remainingPoints(currentPoints - pointsToRedeem)
+                .discountAmount(discountAmount)
+                .rewardType(type)
+                .couponCode(couponCode)
+                .message("Successfully redeemed " + pointsToRedeem + " points for " + discountAmount + " discount!")
+                .build();
     }
 
     private String escapeCsv(String value) {

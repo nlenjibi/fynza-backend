@@ -30,7 +30,29 @@
       "Bash(gh pr create --base dev --head brunch --title 'feat\\(auth\\): configurable token lifetimes + GraphQL config optimisations' --body ' *)",
       "Bash(gh api *)",
       "Bash(sed -n 275,300p /c/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend/src/main/java/ecommerce/common/exception/GlobalExceptionHandler.java)",
-      "Bash(sed -n 30,120p /c/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend/src/main/java/ecommerce/common/util/MetricsService.java)"
+      "Bash(sed -n 30,120p /c/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend/src/main/java/ecommerce/common/util/MetricsService.java)",
+      "Bash(awk -F: '{print $3}')",
+      "Bash(grep -v \"^--$\")",
+      "Bash(./mvnw -B dependency:tree --no-transfer-progress -q)",
+      "Bash(sed -i 's|@RequestMapping\\(\"/api/v1/admin/messages\"\\)|@RequestMapping\\(\"/v1/admin/messages\"\\)|g' \"C:/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend/src/main/java/ecommerce/modules/message/controller/AdminMessageController.java\")",
+      "Bash(sed -i 's|@RequestMapping\\(\"/api/v1/sellers/messages\"\\)|@RequestMapping\\(\"/v1/sellers/messages\"\\)|g' \"C:/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend/src/main/java/ecommerce/modules/message/controller/SellerMessageController.java\")",
+      "Bash(sed -i 's|@RequestMapping\\(\"/api/v1/customer/messages\"\\)|@RequestMapping\\(\"/v1/customer/messages\"\\)|g' \"C:/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend/src/main/java/ecommerce/modules/message/controller/CustomerMessageController.java\")",
+      "Bash(sed -i 's|@RequestMapping\\(\"/api/v1/admin/analytics/sales\"\\)|@RequestMapping\\(\"/v1/admin/analytics/sales\"\\)|g' \"C:/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend/src/main/java/ecommerce/modules/analytics/controller/SalesAnalyticsController.java\")",
+      "Bash(sed -i 's|@RequestMapping\\(\"/api/v1/search/analytics\"\\)|@RequestMapping\\(\"/v1/search/analytics\"\\)|g' \"C:/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend/src/main/java/ecommerce/modules/search/controller/SearchAnalyticsController.java\")",
+      "Bash(jar tf *)",
+      "Bash(sed -i 's|@RequestMapping\\(\"api/v1/users/addresses\"\\)|@RequestMapping\\(\"/v1/users/addresses\"\\)|g' \"C:/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend/src/main/java/ecommerce/modules/user/controller/AddressController.java\")",
+      "Bash(sed -i 's|@RequestMapping\\(\"/api/v1/admin/audit-logs\"\\)|@RequestMapping\\(\"/v1/admin/audit-logs\"\\)|g' \"C:/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend/src/main/java/ecommerce/modules/audit/controller/AuditLogController.java\")",
+      "Bash(sed -i 's|@RequestMapping\\(\"api/v1/search\"\\)|@RequestMapping\\(\"/v1/search\"\\)|g' \"C:/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend/src/main/java/ecommerce/modules/product/controller/SearchController.java\")",
+      "Bash(sed -i 's|@RequestMapping\\(\"/api/v1/monitoring\"\\)|@RequestMapping\\(\"/v1/monitoring\"\\)|g' \"C:/Users/TimothyNlenjibi/Desktop/projects/djangoNew/fynza-backend/src/main/java/ecommerce/common/monitoring/PerformanceController.java\")",
+      "Bash(xargs -I{} jar tf {})",
+      "Bash(grep -v \"class$\\\\|reactive\\\\|rsocket\\\\|sse\\\\|websocket\\\\|cors\\\\|Properties\\\\|security\\\\|data\")",
+      "Bash(jar xf *)",
+      "Bash(unzip -p ~/.m2/repository/org/springframework/boot/spring-boot-autoconfigure/3.5.9/spring-boot-autoconfigure-3.5.9-sources.jar org/springframework/boot/autoconfigure/graphql/GraphQlAutoConfiguration.java)",
+      "Bash(unzip -p ~/.m2/repository/org/springframework/graphql/spring-graphql/2.0.4/spring-graphql-2.0.4.jar org/springframework/graphql/execution/GraphQlSourceBuilderCustomizer.class)",
+      "Bash(xargs -I{} unzip -p {} \"org/springframework/graphql/execution/GraphQlSourceBuilderCustomizer.java\")",
+      "Bash(unzip *)",
+      "Read(//c/tmp/**)",
+      "Bash(cat /tmp/org/springframework/graphql/execution/GraphQlSourceBuilderCustomizer.java)"
     ]
   }
 }

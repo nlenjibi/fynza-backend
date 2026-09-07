@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/admin/audit-logs")
+@RequestMapping("/v1/admin/audit-logs")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 @Tag(name = "Audit Logs", description = "Audit log query, detail, and CSV export — Admin only")
