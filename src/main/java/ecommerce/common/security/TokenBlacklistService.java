@@ -71,6 +71,7 @@ public class TokenBlacklistService {
      * blocking the request to prevent use of revoked tokens during an outage.
      */
     public boolean isTokenBlacklisted(String token) {
+        if (token == null || token.isBlank()) return false;
         String hash = hashToken(token);
 
         // Bloom Filter fast-path: definite NO avoids Redis entirely
