@@ -4,7 +4,6 @@ import ecommerce.modules.delivery.dto.DeliveryFeeRequest;
 import ecommerce.modules.delivery.dto.DeliveryFeeResponse;
 import ecommerce.modules.delivery.dto.DeliveryRegionRequest;
 import ecommerce.modules.delivery.dto.DeliveryRegionResponse;
-import ecommerce.modules.delivery.entity.DeliveryFee;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
