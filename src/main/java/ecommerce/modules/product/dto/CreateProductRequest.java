@@ -1,5 +1,6 @@
 package ecommerce.modules.product.dto;
 
+import ecommerce.common.validation.ValidPriceRange;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -11,6 +12,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ValidPriceRange
 public class CreateProductRequest {
     private String name;
     private String description;

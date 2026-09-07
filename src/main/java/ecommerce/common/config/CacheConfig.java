@@ -1,6 +1,7 @@
 package ecommerce.common.config;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.Cache;
@@ -13,7 +14,6 @@ import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.lang.NonNull;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -36,7 +36,10 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Configuration
 @EnableCaching
+@RequiredArgsConstructor
 public class CacheConfig implements CachingConfigurer {
+
+    private final ResilientCacheErrorHandler cacheErrorHandler;
 
     // ====== Cache Tier Definitions ======
     public static final String SHORT_LIVED = "short-lived";
@@ -229,24 +232,7 @@ public class CacheConfig implements CachingConfigurer {
 
     @Override
     public CacheErrorHandler errorHandler() {
-        return new CacheErrorHandler() {
-            @Override
-            public void handleCacheGetError(@NonNull RuntimeException exception, @NonNull Cache cache, @NonNull Object key) {
-                log.error("Cache GET error in cache '{}' for key '{}': {}", cache.getName(), key, exception.getMessage());
-            }
-            @Override
-            public void handleCachePutError(@NonNull RuntimeException exception, @NonNull Cache cache, @NonNull Object key, Object value) {
-                log.error("Cache PUT error in cache '{}' for key '{}': {}", cache.getName(), key, exception.getMessage());
-            }
-            @Override
-            public void handleCacheEvictError(@NonNull RuntimeException exception, @NonNull Cache cache, @NonNull Object key) {
-                log.error("Cache EVICT error in cache '{}' for key '{}': {}", cache.getName(), key, exception.getMessage());
-            }
-            @Override
-            public void handleCacheClearError(@NonNull RuntimeException exception, @NonNull Cache cache) {
-                log.error("Cache CLEAR error in cache '{}': {}", cache.getName(), exception.getMessage());
-            }
-        };
+        return cacheErrorHandler;
     }
 
 

@@ -1,15 +1,15 @@
 package ecommerce.modules.payment.entity;
 
-import ecommerce.common.base.BaseEntity;
 import ecommerce.common.enums.PaymentMethod;
 import ecommerce.common.enums.PaymentStatus;
 import ecommerce.modules.order.entity.Order;
 import ecommerce.modules.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "payment_transactions", indexes = {
@@ -22,9 +22,26 @@ import java.math.BigDecimal;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@SuperBuilder
-@EqualsAndHashCode(callSuper = true)
-public class PaymentTransaction extends BaseEntity {
+@Builder
+@EqualsAndHashCode
+public class PaymentTransaction {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
+    private UUID publicId;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
@@ -64,4 +81,17 @@ public class PaymentTransaction extends BaseEntity {
 
     @Column(name = "idempotency_key", length = 100)
     private String idempotencyKey;
+
+    @PrePersist
+    protected void onCreate() {
+        publicId = UUID.randomUUID();
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
+        if (isActive == null) isActive = true;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
 }

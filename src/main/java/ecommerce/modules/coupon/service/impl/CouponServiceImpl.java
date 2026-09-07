@@ -1,10 +1,11 @@
 package ecommerce.modules.coupon.service.impl;
 
+import ecommerce.common.enums.CouponStatus;
+import ecommerce.common.enums.DiscountType;
 import ecommerce.common.exception.ResourceNotFoundException;
 import ecommerce.modules.coupon.dto.CouponRequest;
 import ecommerce.modules.coupon.dto.CouponResponse;
 import ecommerce.modules.coupon.entity.Coupon;
-import ecommerce.modules.coupon.mapper.CouponMapper;
 import ecommerce.modules.coupon.repository.CouponRepository;
 import ecommerce.modules.coupon.service.CouponService;
 import lombok.RequiredArgsConstructor;
@@ -24,46 +25,95 @@ import java.util.UUID;
 public class CouponServiceImpl implements CouponService {
 
     private final CouponRepository couponRepository;
-    private final CouponMapper couponMapper;
+
+    private CouponResponse toCouponResponse(Coupon coupon) {
+        return CouponResponse.builder()
+                .id(coupon.getPublicId())
+                .code(coupon.getCode())
+                .description(coupon.getDescription())
+                .discountType(coupon.getDiscountType() != null ? coupon.getDiscountType().name() : null)
+                .discountValue(coupon.getDiscountValue())
+                .minOrderAmount(coupon.getMinOrderAmount())
+                .maxUses(coupon.getMaxUses())
+                .usageCount(coupon.getUsageCount())
+                .validFrom(coupon.getValidFrom())
+                .validUntil(coupon.getValidUntil())
+                .status(coupon.getStatus() != null ? coupon.getStatus().name() : null)
+                .build();
+    }
+
+    private Coupon toCoupon(CouponRequest request) {
+        DiscountType discountType = null;
+        if (request.getDiscountType() != null) {
+            try {
+                discountType = DiscountType.valueOf(request.getDiscountType().toUpperCase());
+            } catch (IllegalArgumentException ignored) {}
+        }
+        return Coupon.builder()
+                .code(request.getCode())
+                .description(request.getDescription())
+                .discountType(discountType)
+                .discountValue(request.getDiscountValue())
+                .minOrderAmount(request.getMinOrderAmount())
+                .maxUses(request.getMaxUses())
+                .validFrom(request.getValidFrom())
+                .validUntil(request.getValidUntil())
+                .build();
+    }
+
+    private void updateCouponFields(Coupon coupon, CouponRequest request) {
+        if (request.getCode() != null) coupon.setCode(request.getCode());
+        if (request.getDescription() != null) coupon.setDescription(request.getDescription());
+        if (request.getDiscountType() != null) {
+            try {
+                coupon.setDiscountType(DiscountType.valueOf(request.getDiscountType().toUpperCase()));
+            } catch (IllegalArgumentException ignored) {}
+        }
+        if (request.getDiscountValue() != null) coupon.setDiscountValue(request.getDiscountValue());
+        if (request.getMinOrderAmount() != null) coupon.setMinOrderAmount(request.getMinOrderAmount());
+        if (request.getMaxUses() != null) coupon.setMaxUses(request.getMaxUses());
+        if (request.getValidFrom() != null) coupon.setValidFrom(request.getValidFrom());
+        if (request.getValidUntil() != null) coupon.setValidUntil(request.getValidUntil());
+    }
 
     @Override
     public List<CouponResponse> findAll() {
         log.debug("Fetching all coupons");
         return couponRepository.findAll().stream()
-                .map(couponMapper::toResponse)
+                .map(this::toCouponResponse)
                 .toList();
     }
 
     @Override
     public CouponResponse findById(UUID id) {
         log.debug("Fetching coupon by ID: {}", id);
-        Coupon coupon = couponRepository.findById(id)
+        Coupon coupon = couponRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon not found with ID: " + id));
-        return couponMapper.toResponse(coupon);
+        return toCouponResponse(coupon);
     }
 
     @Override
     public CouponResponse findByCode(String code) {
-        log.debug("Fetching coupon by code: {}", code);
+        log.debug("Fetching coupon by code: {}", code.replace('\n', '_').replace('\r', '_'));
         Coupon coupon = couponRepository.findByCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon not found with code: " + code));
-        return couponMapper.toResponse(coupon);
+        return toCouponResponse(coupon);
     }
 
     @Override
     @Transactional
     public CouponResponse create(CouponRequest request) {
-        log.info("Creating new coupon: {}", request.getCode());
+        log.info("Creating new coupon: {}", request.getCode().replace('\n', '_').replace('\r', '_'));
 
         if (couponRepository.findByCode(request.getCode()).isPresent()) {
             throw new IllegalArgumentException("Coupon code already exists: " + request.getCode());
         }
 
-        Coupon coupon = couponMapper.toEntity(request);
+        Coupon coupon = toCoupon(request);
         Coupon savedCoupon = couponRepository.save(coupon);
-        log.info("Coupon created successfully with ID: {}", savedCoupon.getId());
+        log.info("Coupon created successfully with ID: {}", savedCoupon.getPublicId());
 
-        return couponMapper.toResponse(savedCoupon);
+        return toCouponResponse(savedCoupon);
     }
 
     @Override
@@ -79,12 +129,12 @@ public class CouponServiceImpl implements CouponService {
             }
         }
 
-        couponMapper.updateEntityFromRequest(request, coupon);
+        updateCouponFields(coupon, request);
 
         Coupon updatedCoupon = couponRepository.save(coupon);
-        log.info("Coupon updated successfully: {}", updatedCoupon.getId());
+        log.info("Coupon updated successfully: {}", updatedCoupon.getPublicId());
 
-        return couponMapper.toResponse(updatedCoupon);
+        return toCouponResponse(updatedCoupon);
     }
 
     @Override
@@ -99,14 +149,14 @@ public class CouponServiceImpl implements CouponService {
 
     @Override
     public Coupon validate(String code, BigDecimal orderAmount) {
-        log.debug("Validating coupon code: {}", code);
+        log.debug("Validating coupon code: {}", code.replace('\n', '_').replace('\r', '_'));
 
         Coupon coupon = couponRepository.findByCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon not found with code: " + code));
 
         LocalDateTime now = LocalDateTime.now();
 
-        if (coupon.getStatus() != ecommerce.common.enums.CouponStatus.ACTIVE) {
+        if (coupon.getStatus() != CouponStatus.ACTIVE) {
             throw new IllegalStateException("Coupon is not active");
         }
 
@@ -122,12 +172,12 @@ public class CouponServiceImpl implements CouponService {
             throw new IllegalStateException("Order amount does not meet minimum requirement: " + coupon.getMinOrderAmount());
         }
 
-        log.debug("Coupon validation successful for code: {}", code);
+        log.debug("Coupon validation successful for code: {}", code.replace('\n', '_').replace('\r', '_'));
         return coupon;
     }
 
     private Coupon findCouponById(UUID id) {
-        return couponRepository.findById(id)
+        return couponRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon not found with ID: " + id));
     }
 }

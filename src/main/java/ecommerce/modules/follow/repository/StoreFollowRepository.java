@@ -1,9 +1,9 @@
 package ecommerce.modules.follow.repository;
 
-import ecommerce.common.base.BaseRepository;
 import ecommerce.modules.follow.entity.StoreFollow;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface StoreFollowRepository extends BaseRepository<StoreFollow, UUID> {
+public interface StoreFollowRepository extends JpaRepository<StoreFollow, Long> {
 
     Page<StoreFollow> findBySellerId(UUID sellerId, Pageable pageable);
 

@@ -1,13 +1,12 @@
 package ecommerce.modules.user.repository;
 
-import com.querydsl.core.types.Predicate;
-import ecommerce.common.base.BaseRepository;
-import ecommerce.common.enums.PaymentMethod;
 import ecommerce.common.enums.Role;
 import ecommerce.common.enums.UserStatus;
 import ecommerce.modules.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,9 +16,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface UserRepository extends BaseRepository<User, UUID> {
+public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificationExecutor<User> {
 
     Optional<User> findByEmail(String email);
+
+    @Query("SELECT u FROM User u WHERE u.id = :publicId")
+    Optional<User> findByPublicId(@Param("publicId") UUID publicId);
 
     boolean existsByEmail(String email);
 
@@ -44,8 +46,6 @@ public interface UserRepository extends BaseRepository<User, UUID> {
     @Modifying
     @Query("UPDATE User u SET u.isActive = false, u.updatedAt = CURRENT_TIMESTAMP WHERE u.id = :userId")
     int deactivateUser(@Param("userId") UUID userId);
-
-    Page<User> findAll(Predicate predicate, Pageable pageable);
 
     @Query("SELECT u FROM User u WHERE u.role = 'CUSTOMER' " +
            "AND (:query IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) " +
