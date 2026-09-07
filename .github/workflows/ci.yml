@@ -68,6 +68,9 @@ jobs:
 
   # ════════════════════════════════════════════════════════════════════════════
   # 3  Dependency Audit — OWASP + Dependabot signals
+  #     Requires secret NVD_API_KEY. Add it in Settings → Secrets → Actions.
+  #     Without the key the NVD download takes 30+ min, so the step is skipped
+  #     when the secret is absent rather than timing out every run.
   # ════════════════════════════════════════════════════════════════════════════
   dependency-audit:
     name: Dependency Audit (OWASP)
@@ -75,6 +78,8 @@ jobs:
     permissions:
       contents:        read
       security-events: write
+    env:
+      NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -85,23 +90,25 @@ jobs:
           cache: maven
 
       - name: OWASP Dependency-Check
+        if: env.NVD_API_KEY != ''
         run: |
           ./mvnw -B org.owasp:dependency-check-maven:check \
             -DfailBuildOnCVSS=9 \
+            -DnvdApiKey="${NVD_API_KEY}" \
             -Dformats=SARIF,HTML \
             --no-transfer-progress
         continue-on-error: true
 
       - name: Upload SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: env.NVD_API_KEY != ''
         with:
           sarif_file: target/dependency-check-report.sarif
         continue-on-error: true
 
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
-        if: always()
+        if: env.NVD_API_KEY != ''
         with:
           name:           owasp-dependency-report
           path:           target/dependency-check-report.html
