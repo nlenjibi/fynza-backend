@@ -2,6 +2,7 @@ package ecommerce.modules.product.entity;
 
 import ecommerce.common.enums.InventoryStatus;
 import ecommerce.common.enums.ProductStatus;
+import ecommerce.common.validation.ValidPriceRange;
 import ecommerce.modules.category.entity.Category;
 import ecommerce.modules.user.entity.User;
 import jakarta.persistence.*;
@@ -19,6 +20,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ValidPriceRange
 @Table(name = "products", indexes = {
     @Index(name = "idx_product_seller_id", columnList = "seller_id"),
     @Index(name = "idx_product_category_id", columnList = "category_id"),

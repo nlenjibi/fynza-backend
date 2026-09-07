@@ -2,8 +2,6 @@ package ecommerce.common.security;
 
 import ecommerce.common.enums.Role;
 import ecommerce.modules.user.entity.User;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -30,7 +28,6 @@ public class UserPrincipal implements UserDetails {
     private final Long lastPasswordChangeEpoch;
 
     @Getter
-    @Enumerated(value = EnumType.STRING)
     private final Role role;
 
     private final Collection<? extends GrantedAuthority> authorities;
@@ -56,8 +53,6 @@ public class UserPrincipal implements UserDetails {
     public static UserPrincipal create(User user) {
         return new UserPrincipal(user);
     }
-
-    public UUID getPublicId() { return id; }
 
     public boolean isAccountLocked() {
         return Boolean.TRUE.equals(isLocked);

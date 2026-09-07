@@ -43,7 +43,6 @@ public class TokenBlacklistService {
         this.tokenBlacklist = Caffeine.newBuilder()
                 .maximumSize(maxSize)
                 .expireAfterWrite(expireAfterWriteHours, TimeUnit.HOURS)
-                .softValues()  // Allow GC to reclaim memory under pressure
                 .recordStats()
                 .build();
 
@@ -91,13 +90,11 @@ public class TokenBlacklistService {
         
         // Bloom Filter said MAYBE - verify with Caffeine cache
         // This is required to avoid false positives
-        Boolean isBlacklisted = tokenBlacklist.getIfPresent(tokenKey);
-
-        if (isBlacklisted != null && isBlacklisted) {
-            log.debug("Blacklisted token detected (verified): {}", tokenKey.substring(0, 8) + "...");
-            return true;
+        boolean isBlacklisted = tokenBlacklist.getIfPresent(tokenKey) != null;
+        if (isBlacklisted) {
+            log.debug("Blacklisted token detected (verified): {}...", tokenKey.substring(0, 8));
         }
-        return false;
+        return isBlacklisted;
     }
 
     /**

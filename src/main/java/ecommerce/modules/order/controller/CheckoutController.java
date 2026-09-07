@@ -40,7 +40,7 @@ import java.util.UUID;
  * @version 2.1
  */
 @RestController
-@RequestMapping("api/v1")
+@RequestMapping("/v1")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Checkout", description = "Checkout and payment processing endpoints")
@@ -80,7 +80,7 @@ public class CheckoutController {
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @AuthenticationPrincipal UserPrincipal principal) {
         
-        log.info("POST /api/v1/checkout - cartId={}, user={}, idempotencyKey={}", cartId, principal.getId(), idempotencyKey);
+        log.info("POST /v1/checkout - cartId={}, user={}, idempotencyKey={}", cartId, principal.getId(), idempotencyKey);
         
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
             if (!idempotencyService.validatePayload(idempotencyKey, request)) {
@@ -90,7 +90,7 @@ public class CheckoutController {
                                 .build());
             }
             
-            Optional<String> cached = idempotencyService.check(idempotencyKey, request);
+            Optional<String> cached = idempotencyService.check(idempotencyKey);
             if (cached.isPresent()) {
                 try {
                     OrderResponse cachedOrder = objectMapper.readValue(cached.get(), OrderResponse.class);
@@ -136,7 +136,7 @@ public class CheckoutController {
             @RequestBody PaymentProcessRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
         
-        log.info("POST /api/v1/payments/process - orderId={}, user={}", request.getOrderId(), principal.getId());
+        log.info("POST /v1/payments/process - orderId={}, user={}", request.getOrderId(), principal.getId());
         
         // Update order status to CONFIRMED (which also sets payment status to PAID)
         OrderResponse order = orderService.updateOrderStatus(request.getOrderId(), 

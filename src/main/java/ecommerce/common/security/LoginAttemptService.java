@@ -27,7 +27,6 @@ public class LoginAttemptService {
         this.attemptsCache = Caffeine.newBuilder()
                 .expireAfterWrite(LOCKOUT_DURATION_MINUTES, TimeUnit.MINUTES)
                 .maximumSize(10000)
-                .softValues()  // Allow GC to reclaim memory under pressure
                 .recordStats()
                 .build();
     }

@@ -8,7 +8,6 @@ import ecommerce.graphql.input.*;
 import ecommerce.modules.order.dto.*;
 import ecommerce.modules.order.service.OrderService;
 import ecommerce.modules.order.service.OrderService.OrderSearchCriteria;
-import ecommerce.modules.seller.service.SellerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -30,7 +29,6 @@ import java.util.UUID;
 public class OrderResolver {
 
     private final OrderService orderService;
-    private final SellerService sellerService;
 
     // =========================================================================
     // CUSTOMER QUERIES

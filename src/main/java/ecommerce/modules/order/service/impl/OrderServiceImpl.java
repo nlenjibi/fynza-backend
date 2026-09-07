@@ -1443,7 +1443,7 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     @Transactional(readOnly = true)
-    public ecommerce.modules.seller.dto.SellerAnalyticsDto getSellerAnalytics(UUID sellerId) {
+    public ecommerce.modules.analytics.dto.SellerAnalyticsDto getSellerAnalytics(UUID sellerId) {
         List<Order> allOrders = orderRepository.findBySellerId(sellerId);
         List<Order> paidOrders = allOrders.stream()
                 .filter(o -> o.getPaymentStatus() == ecommerce.modules.order.entity.PaymentStatus.PAID)
@@ -1523,7 +1523,7 @@ public class OrderServiceImpl implements OrderService {
         Double avgOrderValueGrowth = calculateGrowthDecimal(previousAvgOrderValue, currentAvgOrderValue);
 
         // Daily orders (last 7 days)
-        List<ecommerce.modules.seller.dto.SellerAnalyticsDto.DailyMetric> dailyMetrics = new java.util.ArrayList<>();
+        List<ecommerce.modules.analytics.dto.SellerAnalyticsDto.DailyMetric> dailyMetrics = new java.util.ArrayList<>();
         String[] dayNames = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
         for (int i = 6; i >= 0; i--) {
             LocalDateTime dayStart = now.minusDays(i).withHour(0).withMinute(0).withSecond(0);
@@ -1538,7 +1538,7 @@ public class OrderServiceImpl implements OrderService {
                             o.getCreatedAt().isBefore(dayEndI2))
                     .collect(Collectors.toList());
 
-            dailyMetrics.add(ecommerce.modules.seller.dto.SellerAnalyticsDto.DailyMetric.builder()
+            dailyMetrics.add(ecommerce.modules.analytics.dto.SellerAnalyticsDto.DailyMetric.builder()
                     .day(dayNames[dayIndex])
                     .orders((long) dayOrders.size())
                     .revenue(dayOrders.stream().map(Order::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add))
@@ -1547,7 +1547,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // Monthly revenue (last 6 months)
-        List<ecommerce.modules.seller.dto.SellerAnalyticsDto.MonthlyMetric> monthlyMetrics = new java.util.ArrayList<>();
+        List<ecommerce.modules.analytics.dto.SellerAnalyticsDto.MonthlyMetric> monthlyMetrics = new java.util.ArrayList<>();
         String[] monthNames = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
         for (int i = 5; i >= 0; i--) {
             LocalDateTime monthStart = now.minusMonths(i).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
@@ -1561,7 +1561,7 @@ public class OrderServiceImpl implements OrderService {
                             o.getCreatedAt().isBefore(monthEndI))
                     .collect(Collectors.toList());
 
-            monthlyMetrics.add(ecommerce.modules.seller.dto.SellerAnalyticsDto.MonthlyMetric.builder()
+            monthlyMetrics.add(ecommerce.modules.analytics.dto.SellerAnalyticsDto.MonthlyMetric.builder()
                     .month(monthNames[monthStart.getMonthValue() - 1])
                     .revenue(monthOrders.stream().map(Order::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add))
                     .orders((long) monthOrders.size())
@@ -1574,7 +1574,7 @@ public class OrderServiceImpl implements OrderService {
                 .filter(item -> item.getSeller().getId().equals(sellerId))
                 .collect(Collectors.toList());
 
-        List<ecommerce.modules.seller.dto.SellerAnalyticsDto.TopProductMetric> topProducts = allItems.stream()
+        List<ecommerce.modules.analytics.dto.SellerAnalyticsDto.TopProductMetric> topProducts = allItems.stream()
                 .collect(Collectors.groupingBy(
                         item -> item.getProduct().getId().toString(),
                         Collectors.collectingAndThen(
@@ -1594,7 +1594,7 @@ public class OrderServiceImpl implements OrderService {
                         )
                 ))
                 .values().stream()
-                .map(data -> ecommerce.modules.seller.dto.SellerAnalyticsDto.TopProductMetric.builder()
+                .map(data -> ecommerce.modules.analytics.dto.SellerAnalyticsDto.TopProductMetric.builder()
                         .productId(UUID.randomUUID().toString())
                         .productName((String) data[0])
                         .salesCount((Long) data[1])
@@ -1607,7 +1607,7 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
 
         // Top customers
-        List<ecommerce.modules.seller.dto.SellerAnalyticsDto.TopCustomerMetric> topCustomers = paidOrders.stream()
+        List<ecommerce.modules.analytics.dto.SellerAnalyticsDto.TopCustomerMetric> topCustomers = paidOrders.stream()
                 .filter(o -> o.getCustomer() != null)
                 .collect(Collectors.groupingBy(o -> o.getCustomer().getId()))
                 .entrySet().stream()
@@ -1622,7 +1622,7 @@ public class OrderServiceImpl implements OrderService {
                             .max(Instant::compareTo)
                             .orElse(null);
 
-                    return ecommerce.modules.seller.dto.SellerAnalyticsDto.TopCustomerMetric.builder()
+                    return ecommerce.modules.analytics.dto.SellerAnalyticsDto.TopCustomerMetric.builder()
                             .customerId(entry.getKey().toString())
                             .customerName(customerOrders.get(0).getCustomer().getEmail())
                             .totalOrders((long) customerOrders.size())
@@ -1635,7 +1635,7 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
 
         // Sales by category
-        List<ecommerce.modules.seller.dto.SellerAnalyticsDto.CategorySales> categorySales = allItems.stream()
+        List<ecommerce.modules.analytics.dto.SellerAnalyticsDto.CategorySales> categorySales = allItems.stream()
                 .filter(item -> item.getProduct().getCategory() != null)
                 .collect(Collectors.groupingBy(
                         item -> item.getProduct().getCategory().getName(),
@@ -1653,7 +1653,7 @@ public class OrderServiceImpl implements OrderService {
                 .entrySet().stream()
                 .map(entry -> {
                     Object[] data = (Object[]) entry.getValue();
-                    return ecommerce.modules.seller.dto.SellerAnalyticsDto.CategorySales.builder()
+                    return ecommerce.modules.analytics.dto.SellerAnalyticsDto.CategorySales.builder()
                             .category(entry.getKey())
                             .sales((Long) data[0])
                             .revenue((BigDecimal) data[1])
@@ -1665,7 +1665,7 @@ public class OrderServiceImpl implements OrderService {
 
         // Calculate percentages
         BigDecimal totalCategoryRevenue = categorySales.stream()
-                .map(ecommerce.modules.seller.dto.SellerAnalyticsDto.CategorySales::getRevenue)
+                .map(ecommerce.modules.analytics.dto.SellerAnalyticsDto.CategorySales::getRevenue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         final BigDecimal finalTotalRevenue = totalCategoryRevenue;
@@ -1680,7 +1680,7 @@ public class OrderServiceImpl implements OrderService {
         Double conversionRate = 3.2;
         Double refundRate = 2.1;
 
-        return ecommerce.modules.seller.dto.SellerAnalyticsDto.builder()
+        return ecommerce.modules.analytics.dto.SellerAnalyticsDto.builder()
                 .totalRevenue(totalRevenue)
                 .revenueGrowth(revenueGrowth)
                 .totalOrders(totalOrderCount)
