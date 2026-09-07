@@ -6,7 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 @Data
@@ -29,8 +31,12 @@ public class SubscriberResponse {
                 .status(subscriber.getStatus())
                 .subscribedAt(subscriber.getSubscribedAt())
                 .unsubscribedAt(subscriber.getUnsubscribedAt())
-                .createdAt(subscriber.getCreatedAt())
-                .updatedAt(subscriber.getUpdatedAt())
+                .createdAt(toLocalDateTime(subscriber.getCreatedAt()))
+                .updatedAt(toLocalDateTime(subscriber.getUpdatedAt()))
                 .build();
+    }
+
+    private static LocalDateTime toLocalDateTime(Instant instant) {
+        return instant != null ? instant.atZone(ZoneId.systemDefault()).toLocalDateTime() : null;
     }
 }

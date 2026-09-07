@@ -35,5 +35,7 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
     @Query("UPDATE Tag t SET t.usageCount = t.usageCount - 1 WHERE t.id = :tagId AND t.usageCount > 0")
     void decrementUsageCount(@Param("tagId") Long tagId);
 
+    List<Tag> findByPublicIdIn(List<UUID> publicIds);
+
     boolean existsByName(String name);
 }

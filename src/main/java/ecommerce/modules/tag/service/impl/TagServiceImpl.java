@@ -106,23 +106,24 @@ public class TagServiceImpl implements TagService {
     @Override
     @Transactional
     public void deleteTag(UUID tagId) {
-        if (!tagRepository.existsById(tagId)) {
-            throw new ResourceNotFoundException("Tag not found with id: " + tagId);
-        }
-        tagRepository.deleteById(tagId);
+        Tag tag = tagRepository.findByPublicId(tagId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tag not found with id: " + tagId));
+        tagRepository.deleteById(tag.getId());
         log.info("Deleted tag with id: {}", tagId);
     }
 
     @Override
     @Transactional
     public void incrementUsage(UUID tagId) {
-        tagRepository.incrementUsageCount(tagId);
+        tagRepository.findByPublicId(tagId)
+                .ifPresent(t -> tagRepository.incrementUsageCount(t.getId()));
     }
 
     @Override
     @Transactional
     public void decrementUsage(UUID tagId) {
-        tagRepository.decrementUsageCount(tagId);
+        tagRepository.findByPublicId(tagId)
+                .ifPresent(t -> tagRepository.decrementUsageCount(t.getId()));
     }
 
     @Override
@@ -140,7 +141,7 @@ public class TagServiceImpl implements TagService {
 
     private TagResponse mapToResponse(Tag tag) {
         return TagResponse.builder()
-                .id(tag.getId())
+                .id(tag.getPublicId())
                 .name(tag.getName())
                 .description(tag.getDescription())
                 .color(tag.getColor())

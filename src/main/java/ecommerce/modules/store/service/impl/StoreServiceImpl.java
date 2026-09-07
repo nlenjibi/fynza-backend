@@ -276,7 +276,7 @@ public class StoreServiceImpl implements StoreService {
 
     private SellerNotificationSettingsResponse mapToNotificationResponse(SellerNotificationSettings s) {
         return SellerNotificationSettingsResponse.builder()
-                .id(s.getId())
+                .id(s.getSeller().getPublicId())
                 .newOrders(s.getNewOrders()).orderUpdates(s.getOrderUpdates())
                 .customerMessages(s.getCustomerMessages()).stockAlerts(s.getStockAlerts())
                 .paymentUpdates(s.getPaymentUpdates()).refundRequests(s.getRefundRequests())
