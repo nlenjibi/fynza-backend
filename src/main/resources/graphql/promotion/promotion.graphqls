@@ -60,30 +60,6 @@ type SellerPromotionPage {
 # Inputs
 # ─────────────────────────────────────────────────────────────────────────────
 
-input AdminPromotionCreateInput {
-    name: String!
-    promotionType: String!
-    code: String
-    discountValue: BigDecimal!
-    minPurchase: BigDecimal
-    maxDiscount: BigDecimal
-    startDate: DateTime!
-    endDate: DateTime!
-    usageLimit: Int
-    categoryId: ID
-    isGlobal: Boolean = false
-}
-
-input SellerPromotionCreateInput {
-    name: String!
-    promotionType: String!
-    discountValue: BigDecimal!
-    minPurchase: BigDecimal
-    startDate: DateTime!
-    endDate: DateTime!
-    usageLimit: Int
-}
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Queries
 # ─────────────────────────────────────────────────────────────────────────────
@@ -105,17 +81,3 @@ type AdminPromotionStats {
     totalRevenue: BigDecimal!
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Mutations
-# ─────────────────────────────────────────────────────────────────────────────
-
-extend type Mutation {
-
-    # ── Admin Mutations (ADMIN) ──────────────────────────────────────────
-    createAdminPromotion(input: AdminPromotionCreateInput!): AdminPromotion!
-    deleteAdminPromotion(id: ID!): Boolean!
-
-    # ── Seller Mutations (SELLER) ────────────────────────────────────────
-    createSellerPromotion(input: SellerPromotionCreateInput!): SellerPromotion!
-    deleteSellerPromotion(id: ID!): Boolean!
-}

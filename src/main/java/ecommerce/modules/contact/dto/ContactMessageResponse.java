@@ -35,7 +35,7 @@ public class ContactMessageResponse {
 
     public static ContactMessageResponse from(ContactMessage message) {
         return ContactMessageResponse.builder()
-                .id(message.getId())
+                .id(message.getPublicId())
                 .name(message.getName())
                 .email(message.getEmail())
                 .phone(message.getPhone())
@@ -48,8 +48,8 @@ public class ContactMessageResponse {
                 .adminResponse(message.getAdminResponse())
                 .respondedAt(message.getRespondedAt())
                 .respondedBy(message.getRespondedBy())
-                .createdAt(message.getCreatedAt())
-                .updatedAt(message.getUpdatedAt())
+                .createdAt(message.getCreatedAt() != null ? message.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
+                .updatedAt(message.getUpdatedAt() != null ? message.getUpdatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 }

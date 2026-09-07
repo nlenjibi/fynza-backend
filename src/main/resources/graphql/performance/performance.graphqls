@@ -143,19 +143,3 @@ extend type Query {
     exportPerformanceMetrics(format: String = "json"): String!
 }
 
-extend type Mutation {
-    # Security: ADMIN only
-    warmupCache: Boolean!
-    
-    # Security: ADMIN only
-    clearAllCaches: Boolean!
-    
-    # Security: ADMIN only
-    clearSpecificCache(cacheName: String!): Boolean!
-    
-    # Security: ADMIN only
-    cleanupSecurityData: Boolean!
-    
-    # Security: ADMIN only
-    refreshMetrics: Boolean!
-}

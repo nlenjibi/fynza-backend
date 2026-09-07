@@ -1,7 +1,6 @@
 package ecommerce.modules.user.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import ecommerce.common.enums.PaymentMethod;
 import ecommerce.common.enums.Role;
 import ecommerce.common.enums.UserStatus;
 import lombok.*;

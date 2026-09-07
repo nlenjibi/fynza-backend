@@ -23,7 +23,7 @@ public class IdempotencyService {
     private static final Duration DEFAULT_TTL = Duration.ofHours(24);
     private static final String KEY_PREFIX = "idempotency:";
 
-    public Optional<String> check(String idempotencyKey, Object requestPayload) {
+    public Optional<String> check(String idempotencyKey) {
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             return Optional.empty();
         }
@@ -44,15 +44,15 @@ public class IdempotencyService {
         }
 
         String key = KEY_PREFIX + idempotencyKey;
-        
+
         try {
             String payloadHash = computePayloadHash(requestPayload);
             String responseJson = objectMapper.writeValueAsString(response);
-            
+
             String combined = payloadHash + "|" + responseJson;
-            
+
             redisTemplate.opsForValue().set(key, combined, DEFAULT_TTL);
-            
+
             return responseJson;
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to process idempotency record", e);
@@ -77,7 +77,7 @@ public class IdempotencyService {
         return storedHash.equals(incomingHash);
     }
 
-    public String computePayloadHash(Object payload) {
+    private String computePayloadHash(Object payload) {
         if (payload == null) {
             return "null";
         }

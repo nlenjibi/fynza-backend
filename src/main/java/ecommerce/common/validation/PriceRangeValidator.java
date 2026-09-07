@@ -4,14 +4,7 @@ import ecommerce.modules.product.entity.Product;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
-import java.math.BigDecimal;
-
 public class PriceRangeValidator implements ConstraintValidator<ValidPriceRange, Product> {
-
-    @Override
-    public void initialize(ValidPriceRange annotation) {
-        ConstraintValidator.super.initialize(annotation);
-    }
 
     @Override
     public boolean isValid(Product value, ConstraintValidatorContext context) {
@@ -25,8 +18,7 @@ public class PriceRangeValidator implements ConstraintValidator<ValidPriceRange,
         if (!isValid) {
             context.disableDefaultConstraintViolation();
             context.buildConstraintViolationWithTemplate(
-                    "Current price (" + value.getPrice() +
-                            ") must be less than or equal to original price (" + value.getOriginalPrice() + ")")
+                    "Current price (" + value.getPrice() + ") must be ≤ original price (" + value.getOriginalPrice() + ")")
                     .addConstraintViolation();
         }
 

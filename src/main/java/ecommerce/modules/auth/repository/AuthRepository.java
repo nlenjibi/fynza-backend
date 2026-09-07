@@ -1,7 +1,7 @@
 package ecommerce.modules.auth.repository;
 
-import ecommerce.common.base.BaseRepository;
 import ecommerce.modules.auth.entity.Auth;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,21 +12,32 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface AuthRepository extends BaseRepository<Auth, UUID> {
+public interface AuthRepository extends JpaRepository<Auth, UUID> {
 
-        Optional<Auth> findByRefreshToken(String refreshToken);
+    Optional<Auth> findByRefreshToken(String refreshToken);
 
-        @Query("SELECT a FROM Auth a WHERE a.user.id = :userId AND a.isActive = true ORDER BY a.lastActivityAt DESC LIMIT 1")
-        Optional<Auth> findTopByUserIdAndIsActiveTrueOrderByLastActivityAtDesc(@Param("userId") UUID userId);
+    Optional<Auth> findByRefreshTokenAndIsActiveTrue(String refreshToken);
 
-        @Modifying
-        @Query("UPDATE Auth a SET a.isActive = false, a.loggedOutAt = :logoutTime " +
-                        "WHERE a.user.id = :userId AND a.isActive = true")
-        int invalidateAllUserSessions(@Param("userId") UUID userId,
-                        @Param("logoutTime") LocalDateTime logoutTime);
+    java.util.List<Auth> findAllByUser_IdAndIsActiveTrueOrderByLastActivityAtDesc(UUID userId);
 
-        @Modifying
-        @Query("UPDATE Auth a SET a.isActive = false " +
-                        "WHERE a.isActive = true AND a.expiresAt <= :now")
-        int invalidateExpiredSessions(@Param("now") LocalDateTime now);
+    @Query("SELECT a FROM Auth a WHERE a.user.id = :userId AND a.isActive = true ORDER BY a.lastActivityAt DESC LIMIT 1")
+    Optional<Auth> findTopByUserIdAndIsActiveTrueOrderByLastActivityAtDesc(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query("UPDATE Auth a SET a.isActive = false, a.loggedOutAt = :logoutTime " +
+            "WHERE a.user.id = :userId AND a.isActive = true")
+    int invalidateAllUserSessions(@Param("userId") UUID userId,
+            @Param("logoutTime") LocalDateTime logoutTime);
+
+    @Modifying
+    @Query("UPDATE Auth a SET a.isActive = false, a.loggedOutAt = :logoutTime " +
+            "WHERE a.user.id = :userId AND a.isActive = true AND a.refreshToken <> :keepToken")
+    int invalidateOtherUserSessions(@Param("userId") UUID userId,
+            @Param("keepToken") String keepToken,
+            @Param("logoutTime") LocalDateTime logoutTime);
+
+    @Modifying
+    @Query("UPDATE Auth a SET a.isActive = false " +
+            "WHERE a.isActive = true AND a.expiresAt <= :now")
+    int invalidateExpiredSessions(@Param("now") LocalDateTime now);
 }

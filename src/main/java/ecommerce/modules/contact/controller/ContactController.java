@@ -25,11 +25,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 @RestController
-@RequestMapping("/v1/contact")
+@RequestMapping("/v1/contacts")
 @RequiredArgsConstructor
 @Tag(name = "Contact Management", description = "APIs for managing contact messages")
 public class ContactController {
