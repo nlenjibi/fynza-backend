@@ -49,7 +49,7 @@ public class FAQServiceImpl implements FAQService {
     @Override
     @Cacheable(value = "faqs", key = "'search_' + #query.hashCode() + '_' + #pageable.pageNumber")
     public Page<FAQResponse> searchFAQs(String query, Pageable pageable) {
-        log.debug("Searching FAQs with query: {}", query);
+        log.debug("Searching FAQs with query: {}", query.replace('\n', '_').replace('\r', '_'));
         return faqRepository.findByIsActiveTrueAndQuestionContainingIgnoreCaseOrAnswerContainingIgnoreCase(
                 true, query, query, pageable).map(this::toResponse);
     }
@@ -66,7 +66,7 @@ public class FAQServiceImpl implements FAQService {
     @Transactional
     @CacheEvict(value = "faqs", allEntries = true)
     public FAQResponse createFAQ(CreateFAQRequest request) {
-        log.info("Creating new FAQ with question: {}", request.getQuestion());
+        log.info("Creating new FAQ with question: {}", request.getQuestion().replace('\n', '_').replace('\r', '_'));
         
         FAQ faq = FAQ.builder()
                 .question(request.getQuestion())

@@ -82,17 +82,16 @@ public class TokenValidationService {
 
         // ── 2. Blacklist check (Caffeine + Bloom Filter in-memory) ───────────
         if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
-            log.warn("Blacklisted token attempted: {}", jwt.substring(0, Math.min(20, jwt.length())));
+            log.warn("Blacklisted token attempted");
             return ValidationResult.reject(
                     new BadCredentialsException("Token has been revoked. Please login again."));
         }
 
         UUID userId = jwtTokenProvider.getUserIdFromToken(jwt);
 
-        // ── 3. Token-version check (Caffeine in-memory) ───────────────────────
-        Long userTokenVersion = tokenBlacklistService.getUserTokenVersion(userId);
-        if (userTokenVersion != null
-                && !tokenBlacklistService.isUserTokenVersionValid(userId, userTokenVersion)) {
+        // ── 3. Token-version check — always executed (no null short-circuit) ──
+        long issuedAt = jwtTokenProvider.getIssuedAtMillis(jwt);
+        if (!tokenBlacklistService.isUserTokenVersionValid(userId, issuedAt)) {
             log.warn("Token version invalid for user: {}", userId);
             return ValidationResult.reject(
                     new InsufficientAuthenticationException(

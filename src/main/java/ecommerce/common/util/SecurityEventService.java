@@ -33,7 +33,7 @@ public class SecurityEventService {
         
         this.failedLoginAttempts = Caffeine.newBuilder()
                 .maximumSize(10000)
-                .expireAfterWrite(lockoutDurationMinutes * 2, TimeUnit.MINUTES)
+                .expireAfterWrite((long) lockoutDurationMinutes * 2, TimeUnit.MINUTES)
                 .recordStats()
                 .build();
         

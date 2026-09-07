@@ -156,7 +156,7 @@ public class PerformanceController {
             return ResponseEntity.ok(ApiResponse.<String>builder()
                     .message("Cache '" + cacheName + "' cleared successfully").build());
         } catch (Exception e) {
-            log.error("Error clearing cache {}: {}", cacheName, e.getMessage(), e);
+            log.error("Error clearing cache {}: {}", cacheName.replace('\n', '_').replace('\r', '_'), e.getMessage(), e);
             return ResponseEntity.internalServerError().body(ApiResponse.<String>builder()
                     .message("Failed to clear cache: " + e.getMessage()).build());
         }

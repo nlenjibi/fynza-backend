@@ -69,7 +69,7 @@ public class TokenBlacklistService {
         bloomFilterService.add(tokenKey);
 
         long remainingTime = Math.max(expirationTime - System.currentTimeMillis(), 0);
-        log.debug("Token blacklisted. Key: {}, remaining time: {}ms", tokenKey.substring(0, 8) + "...", remainingTime);
+        log.debug("Token blacklisted, remaining time: {}ms", remainingTime);
     }
 
     /**
@@ -92,7 +92,7 @@ public class TokenBlacklistService {
         // This is required to avoid false positives
         boolean isBlacklisted = tokenBlacklist.getIfPresent(tokenKey) != null;
         if (isBlacklisted) {
-            log.debug("Blacklisted token detected (verified): {}...", tokenKey.substring(0, 8));
+            log.debug("Blacklisted token detected (verified by cache)");
         }
         return isBlacklisted;
     }
@@ -111,31 +111,17 @@ public class TokenBlacklistService {
 
 
     /**
-     * Check if a user's token version is valid.
-     * Uses UUID for user identification.
-     * @param userId The user's unique identifier (UUID)
-     * @param tokenVersion The token version from the JWT
-     * @return true if valid, false if invalidated
+     * Check if a token (identified by its issuedAt timestamp) is still valid
+     * for the given user. Returns false if {@link #invalidateUserTokens} was
+     * called AFTER the token was issued.
+     *
+     * @param userId         the user's unique identifier
+     * @param tokenIssuedAt  the token's {@code iat} claim value in milliseconds
+     * @return true if the token pre-dates any stored invalidation, false otherwise
      */
-    public boolean isUserTokenVersionValid(UUID userId, Long tokenVersion) {
-        String userKey = "user_" + userId.toString();
-        Long currentVersion = userTokenVersion.getIfPresent(userKey);
-        if (currentVersion == null) {
-            return true;
-        }
-        return tokenVersion == null || tokenVersion >= currentVersion;
-    }
-
-
-    /**
-     * Get the current token version for a user.
-     * Uses UUID for user identification.
-     * @param userId The user's unique identifier (UUID)
-     * @return The current token version, or null if none exists
-     */
-    public Long getUserTokenVersion(UUID userId) {
-        String userKey = "user_" + userId.toString();
-        return userTokenVersion.getIfPresent(userKey);
+    public boolean isUserTokenVersionValid(UUID userId, long tokenIssuedAt) {
+        Long invalidationTimestamp = userTokenVersion.getIfPresent("user_" + userId);
+        return invalidationTimestamp == null || tokenIssuedAt >= invalidationTimestamp;
     }
 
     /**
