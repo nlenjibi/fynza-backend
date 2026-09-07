@@ -75,7 +75,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        log.info("Registering new user with email: {}", request.getEmail());
+        log.info("Registering new user with email: {}", request.getEmail().replace('\n', '_').replace('\r', '_'));
 
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateResourceException("Email already registered");
@@ -144,7 +144,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        log.info("Login attempt for email: {}", request.getEmail());
+        log.info("Login attempt for email: {}", request.getEmail().replace('\n', '_').replace('\r', '_'));
 
         HttpServletRequest req = currentRequest();
         String ip = extractIp(req);

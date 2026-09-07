@@ -38,7 +38,7 @@ public class SecurityEventLogger {
 
     @Async("securityEventExecutor")
     public void logAccountLockout(String email, String ip, int failedAttempts) {
-        log.warn("ACCOUNT_LOCKED: email={}, ip={}, failedAttempts={}", email, ip, failedAttempts);
+        log.warn("ACCOUNT_LOCKED: email={}, ip={}, failedAttempts={}", email.replace('\n', '_').replace('\r', '_'), ip.replace('\n', '_').replace('\r', '_'), failedAttempts);
     }
 
     @Async("securityEventExecutor")

@@ -36,7 +36,7 @@ public class DeliveryServiceImpl implements DeliveryService {
     @Override
     @Transactional
     public DeliveryRegionResponse createRegion(DeliveryRegionRequest request) {
-        log.info("Creating new delivery region: {}", request.getName());
+        log.info("Creating new delivery region: {}", request.getName().replace('\n', '_').replace('\r', '_'));
 
         if (regionRepository.existsByCode(request.getCode())) {
             throw new BadRequestException("Region code already exists: " + request.getCode());
@@ -125,7 +125,7 @@ public class DeliveryServiceImpl implements DeliveryService {
     @Override
     @Transactional
     public DeliveryFeeResponse createDeliveryFee(DeliveryFeeRequest request) {
-        log.info("Creating delivery fee for town: {}", request.getTownName());
+        log.info("Creating delivery fee for town: {}", request.getTownName().replace('\n', '_').replace('\r', '_'));
 
         DeliveryRegion region = null;
         if (request.getRegionId() != null) {
