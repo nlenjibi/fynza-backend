@@ -78,7 +78,7 @@ public class SearchController {
                 .build();
 
         log.info("Search request: q={}, categoryId={}, brandId={}, minPrice={}, maxPrice={}, sortBy={}, page={}, limit={}",
-                q, categoryId, brandId, minPrice, maxPrice, sortBy, page, limit);
+                q == null ? null : q.replace('\n', '_').replace('\r', '_'), categoryId, brandId, minPrice, maxPrice, sortBy.replace('\n', '_').replace('\r', '_'), page, limit);
 
         SearchResponse response = searchService.search(request);
         return ResponseEntity.ok(ApiResponse.success("Search results retrieved successfully", response));

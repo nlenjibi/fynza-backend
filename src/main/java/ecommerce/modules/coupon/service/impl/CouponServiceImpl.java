@@ -94,7 +94,7 @@ public class CouponServiceImpl implements CouponService {
 
     @Override
     public CouponResponse findByCode(String code) {
-        log.debug("Fetching coupon by code: {}", code);
+        log.debug("Fetching coupon by code: {}", code.replace('\n', '_').replace('\r', '_'));
         Coupon coupon = couponRepository.findByCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon not found with code: " + code));
         return toCouponResponse(coupon);

@@ -126,7 +126,7 @@ public class PerformanceController {
             }
             return ResponseEntity.ok(ApiResponse.<Map<String, Object>>builder().data(stats).build());
         } catch (Exception e) {
-            log.error("Error retrieving cache stats for {}: {}", cacheName, e.getMessage(), e);
+            log.error("Error retrieving cache stats for {}: {}", cacheName.replace('\n', '_').replace('\r', '_'), e.getMessage(), e);
             return ResponseEntity.internalServerError().body(ApiResponse.<Map<String, Object>>builder()
                     .message("Failed to retrieve cache stats: " + e.getMessage()).build());
         }
@@ -388,7 +388,7 @@ public class PerformanceController {
             return ResponseEntity.ok(ApiResponse.<String>builder()
                     .data(message).message("Metric refreshed successfully").build());
         } catch (Exception e) {
-            log.error("Error refreshing metric {}: {}", metricType, e.getMessage(), e);
+            log.error("Error refreshing metric {}: {}", metricType.replace('\n', '_').replace('\r', '_'), e.getMessage(), e);
             return ResponseEntity.internalServerError().body(ApiResponse.<String>builder()
                     .message("Failed to refresh metric: " + e.getMessage()).build());
         }

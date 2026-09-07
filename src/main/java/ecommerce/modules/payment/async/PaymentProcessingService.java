@@ -62,7 +62,7 @@ public class PaymentProcessingService {
 
     private CompletableFuture<String> callPaymentGateway(String token) {
         return CompletableFuture.supplyAsync(() -> {
-            log.debug("Calling payment gateway with token: {}", token);
+            log.debug("Calling payment gateway with generated token");
             try {
                 Thread.sleep(200);
             } catch (InterruptedException e) {

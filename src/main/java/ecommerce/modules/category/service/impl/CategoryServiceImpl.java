@@ -96,7 +96,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponse create(CategoryCreateRequest request) {
-        log.info("Creating new category: {}", request.getName());
+        log.info("Creating new category: {}", request.getName().replace('\n', '_').replace('\r', '_'));
 
         String slug = request.getSlug() != null ? request.getSlug() : generateSlug(request.getName());
         if (categoryRepository.existsBySlug(slug)) {

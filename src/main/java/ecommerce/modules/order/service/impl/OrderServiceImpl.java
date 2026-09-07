@@ -1585,7 +1585,7 @@ public class OrderServiceImpl implements OrderService {
                                             .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                                             .reduce(BigDecimal.ZERO, BigDecimal::add);
                                     String name = items.get(0).getProduct().getName();
-                                    Double rating = items.get(0).getProduct().getRating() != null 
+                                    double rating = items.get(0).getProduct().getRating() != null
                                             ? items.get(0).getProduct().getRating().doubleValue() : 0.0;
                                     long prevQuantity = (long)(quantity * 0.9);
                                     double growth = prevQuantity > 0 ? (double)(quantity - prevQuantity) / prevQuantity * 100 : 0;
@@ -1784,9 +1784,9 @@ public class OrderServiceImpl implements OrderService {
                 .map(Order::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        Long totalOrders = (long) paidOrders.size();
-        Long currentPeriodOrderCount = (long) currentPeriodOrders.size();
-        Long previousPeriodOrderCount = (long) previousPeriodOrders.size();
+        long totalOrders = (long) paidOrders.size();
+        long currentPeriodOrderCount = (long) currentPeriodOrders.size();
+        long previousPeriodOrderCount = (long) previousPeriodOrders.size();
 
         Long totalCustomers = (long) paidOrders.stream()
                 .map(o -> o.getCustomer() != null ? o.getCustomer().getId() : null)
@@ -1794,13 +1794,13 @@ public class OrderServiceImpl implements OrderService {
                 .distinct()
                 .count();
 
-        Long currentPeriodCustomers = (long) currentPeriodOrders.stream()
+        long currentPeriodCustomers = (long) currentPeriodOrders.stream()
                 .map(o -> o.getCustomer() != null ? o.getCustomer().getId() : null)
                 .filter(java.util.Objects::nonNull)
                 .distinct()
                 .count();
 
-        Long previousPeriodCustomers = (long) previousPeriodOrders.stream()
+        long previousPeriodCustomers = (long) previousPeriodOrders.stream()
                 .map(o -> o.getCustomer() != null ? o.getCustomer().getId() : null)
                 .filter(java.util.Objects::nonNull)
                 .distinct()
@@ -1963,7 +1963,7 @@ public class OrderServiceImpl implements OrderService {
                                             .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                                             .reduce(BigDecimal.ZERO, BigDecimal::add);
                                     String name = items.get(0).getProduct().getName();
-                                    Double rating = items.get(0).getProduct().getRating() != null 
+                                    double rating = items.get(0).getProduct().getRating() != null
                                             ? items.get(0).getProduct().getRating().doubleValue() : 0.0;
                                     return new Object[]{name, sales, revenue, rating};
                                 }
