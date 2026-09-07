@@ -1,5 +1,6 @@
 package ecommerce.common.config;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
@@ -9,160 +10,177 @@ import ecommerce.common.cache.CacheProperties;
 import ecommerce.common.cache.RedisCircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Redis-backed cache configuration, active on non-test profiles.
+ *
+ * <h3>Serialization security (OWASP A08)</h3>
+ * Uses {@link BasicPolymorphicTypeValidator} with an explicit package allowlist
+ * instead of the unsafe {@code LaissezFaireSubTypeValidator}, which would permit
+ * deserialization of arbitrary classes — a known RCE vector (CVE-2017-7525 family).
+ */
+@Slf4j
 @Configuration
 @EnableCaching
 @RequiredArgsConstructor
-@Slf4j
-@EnableConfigurationProperties({RedisProperties.class, CacheProperties.class})
-public class RedisConfig {
+@EnableConfigurationProperties(CacheProperties.class)
+public class RedisConfig implements CachingConfigurer {
 
-    private final RedisProperties redisProperties;
     private final CacheProperties cacheProperties;
 
-    @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
-        log.info("Configuring Redis connection: host={}, port={}",
-                redisProperties.getHost(), redisProperties.getPort());
-        return new LettuceConnectionFactory(
-                redisProperties.getHost(),
-                redisProperties.getPort());
+    @Override
+    public CacheErrorHandler errorHandler() {
+        return new ResilientCacheErrorHandler();
     }
 
+    // ── Redis ObjectMapper ────────────────────────────────────────────────────
+
+    private static ObjectMapper buildRedisObjectMapper() {
+        BasicPolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
+                .allowIfBaseType(Object.class)
+                .allowIfSubType("ecommerce.")
+                .allowIfSubType("java.util.")
+                .allowIfSubType("java.time.")
+                .allowIfSubType("org.springframework.")
+                .build();
+
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.activateDefaultTyping(ptv, ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
+        mapper.setVisibility(mapper.getSerializationConfig().getDefaultVisibilityChecker()
+                .withFieldVisibility(JsonAutoDetect.Visibility.ANY)
+                .withGetterVisibility(JsonAutoDetect.Visibility.NONE)
+                .withIsGetterVisibility(JsonAutoDetect.Visibility.NONE));
+        return mapper;
+    }
+
+    private static final GenericJackson2JsonRedisSerializer REDIS_SERIALIZER =
+            new GenericJackson2JsonRedisSerializer(buildRedisObjectMapper());
+
+    private static final StringRedisSerializer STRING_SERIALIZER = new StringRedisSerializer();
+
+    // ── RedisTemplate ────────────────────────────────────────────────────────
+
     @Bean
+    @Profile("!test")
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
-
-        GenericJackson2JsonRedisSerializer jsonSerializer = jsonSerializer();
-        StringRedisSerializer stringSerializer = new StringRedisSerializer();
-
-        template.setKeySerializer(stringSerializer);
-        template.setValueSerializer(jsonSerializer);
-        template.setHashKeySerializer(stringSerializer);
-        template.setHashValueSerializer(jsonSerializer);
+        template.setKeySerializer(STRING_SERIALIZER);
+        template.setValueSerializer(REDIS_SERIALIZER);
+        template.setHashKeySerializer(STRING_SERIALIZER);
+        template.setHashValueSerializer(REDIS_SERIALIZER);
         template.afterPropertiesSet();
-
-        log.info("RedisTemplate configured");
         return template;
     }
 
+    // ── CacheManager ─────────────────────────────────────────────────────────
+
     @Bean
+    @Profile("!test")
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        GenericJackson2JsonRedisSerializer jsonSerializer = jsonSerializer();
-        StringRedisSerializer stringSerializer = new StringRedisSerializer();
+        RedisCacheConfiguration base = baseConfig();
 
-        RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(cacheProperties.getRedis().getDefaultTtl())
-                .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(stringSerializer))
-                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jsonSerializer))
-                .disableCachingNullValues();
+        Duration defaultTtl = cacheProperties.getRedis().getDefaultTtl();
 
-        Map<String, RedisCacheConfiguration> cacheConfigs = new HashMap<>();
+        Map<String, RedisCacheConfiguration> perCache = Map.ofEntries(
+                // Auth / Principals
+                entry(base, CacheNames.USER_PRINCIPALS,         Duration.ofMinutes(5)),
+                entry(base, CacheNames.USER_PROFILE,            Duration.ofMinutes(15)),
+                // Products
+                entry(base, CacheNames.PRODUCTS,                Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_PAGE,           Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_SEARCH,         Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_PREDICATE,      Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_FILTER,         Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_CATEGORY,       Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_CATEGORY_NAME,  Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_PRICE_RANGE,    Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_STATUS,         Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_REORDER,        Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_DISCOUNTED,     Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_FEATURED,       Duration.ofMinutes(30)),
+                entry(base, CacheNames.PRODUCTS_NEW,            Duration.ofMinutes(10)),
+                entry(base, CacheNames.PRODUCTS_BESTSELLER,     Duration.ofMinutes(10)),
+                entry(base, CacheNames.PRODUCTS_TOP_RATED,      Duration.ofMinutes(10)),
+                entry(base, CacheNames.PRODUCTS_TRENDING,       Duration.ofMinutes(5)),
+                // Categories
+                entry(base, CacheNames.CATEGORIES,              Duration.ofHours(1)),
+                entry(base, CacheNames.CATEGORIES_LIST,         Duration.ofHours(1)),
+                entry(base, CacheNames.CATEGORIES_PAGED,        Duration.ofHours(1)),
+                entry(base, CacheNames.CATEGORIES_SEARCH,       Duration.ofHours(1)),
+                entry(base, CacheNames.CATEGORIES_FILTER,       Duration.ofHours(1)),
+                entry(base, CacheNames.CATEGORIES_STATS,        Duration.ofHours(1)),
+                // Orders
+                entry(base, CacheNames.ORDERS,                  Duration.ofMinutes(15)),
+                entry(base, CacheNames.ORDER,                   Duration.ofMinutes(15)),
+                entry(base, CacheNames.ORDER_EXISTS,            Duration.ofMinutes(15)),
+                entry(base, CacheNames.USER_ORDERS,             Duration.ofMinutes(15)),
+                entry(base, CacheNames.ORDER_STATS,             Duration.ofMinutes(15)),
+                entry(base, CacheNames.ORDER_COUNTS,            Duration.ofMinutes(15)),
+                entry(base, CacheNames.ORDERS_PREDICATE,        Duration.ofMinutes(15)),
+                entry(base, CacheNames.ORDERS_SEARCH,           Duration.ofMinutes(15)),
+                entry(base, CacheNames.ORDERS_FILTER,           Duration.ofMinutes(15)),
+                // Users
+                entry(base, CacheNames.USERS,                   Duration.ofMinutes(15)),
+                entry(base, CacheNames.USERS_PAGE,              Duration.ofMinutes(15)),
+                entry(base, CacheNames.USERS_SEARCH,            Duration.ofMinutes(15)),
+                entry(base, CacheNames.USERS_ROLE,              Duration.ofMinutes(15)),
+                entry(base, CacheNames.USERS_ACTIVE,            Duration.ofMinutes(15)),
+                entry(base, CacheNames.USERS_PREDICATE,         Duration.ofMinutes(15)),
+                // Reviews
+                entry(base, CacheNames.REVIEWS,                 Duration.ofMinutes(15)),
+                entry(base, CacheNames.REVIEW,                  Duration.ofMinutes(15)),
+                entry(base, CacheNames.REVIEWS_PREDICATE,       Duration.ofMinutes(15)),
+                entry(base, CacheNames.REVIEW_STATS,            Duration.ofMinutes(15)),
+                entry(base, CacheNames.RATING_DISTRIBUTION,     Duration.ofMinutes(15)),
+                entry(base, CacheNames.REVIEW_TRENDS,           Duration.ofMinutes(15)),
+                entry(base, CacheNames.TOP_RATED_PRODUCTS,      Duration.ofMinutes(15)),
+                entry(base, CacheNames.MOST_REVIEWED_PRODUCTS,  Duration.ofMinutes(15)),
+                entry(base, CacheNames.USER_REVIEWS,            Duration.ofMinutes(15)),
+                entry(base, CacheNames.REVIEW_LISTS,            Duration.ofMinutes(15)),
+                entry(base, CacheNames.ADMIN_REVIEWS,           Duration.ofMinutes(15)),
+                // Wishlists
+                entry(base, CacheNames.WISHLIST,                Duration.ofMinutes(30)),
+                entry(base, CacheNames.WISHLIST_PAGINATED,      Duration.ofMinutes(30)),
+                entry(base, CacheNames.WISHLIST_SUMMARY,        Duration.ofMinutes(30)),
+                entry(base, CacheNames.WISHLIST_CHECK,          Duration.ofMinutes(30)),
+                entry(base, CacheNames.WISHLIST_DROPS,          Duration.ofMinutes(30)),
+                entry(base, CacheNames.WISHLIST_ANALYTICS,      Duration.ofMinutes(30)),
+                // Security-critical
+                entry(base, CacheNames.TOKEN_BLACKLIST,         cacheProperties.getRedis().getTokenBlacklistTtl()),
+                entry(base, CacheNames.STOCK_RESERVATIONS,      Duration.ofMinutes(15)),
+                // Admin / misc
+                entry(base, CacheNames.ADMIN_DASHBOARD,         Duration.ofMinutes(5)),
+                entry(base, CacheNames.ADMIN_ANALYTICS,         Duration.ofMinutes(10)),
+                entry(base, CacheNames.SELLER_DASHBOARD,        Duration.ofMinutes(10)),
+                entry(base, CacheNames.FAQS,                    Duration.ofHours(1)),
+                entry(base, CacheNames.SEARCH_FILTERS,          Duration.ofHours(1)),
+                entry(base, CacheNames.SETTINGS,                Duration.ofHours(1))
+        );
 
-        // Products — 5 min (read-heavy, change with catalog updates)
-        cacheConfigs.put(CacheNames.PRODUCTS,               defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put(CacheNames.PRODUCTS_PAGE,          defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put(CacheNames.PRODUCTS_SEARCH,        defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put(CacheNames.PRODUCTS_PREDICATE,     defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put(CacheNames.PRODUCTS_FILTER,        defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put(CacheNames.PRODUCTS_CATEGORY,      defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put(CacheNames.PRODUCTS_CATEGORY_NAME, defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put(CacheNames.PRODUCTS_PRICE_RANGE,   defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put(CacheNames.PRODUCTS_STATUS,        defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put(CacheNames.PRODUCTS_REORDER,       defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put(CacheNames.PRODUCTS_DISCOUNTED,    defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put(CacheNames.PRODUCTS_FEATURED,      defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigs.put(CacheNames.PRODUCTS_NEW,           defaultConfig.entryTtl(Duration.ofMinutes(10)));
-        cacheConfigs.put(CacheNames.PRODUCTS_BESTSELLER,    defaultConfig.entryTtl(Duration.ofMinutes(10)));
-        cacheConfigs.put(CacheNames.PRODUCTS_TOP_RATED,     defaultConfig.entryTtl(Duration.ofMinutes(10)));
-        cacheConfigs.put(CacheNames.PRODUCTS_TRENDING,      defaultConfig.entryTtl(Duration.ofMinutes(5)));
-
-        // Categories — 1 hour (rarely change)
-        cacheConfigs.put(CacheNames.CATEGORIES,        defaultConfig.entryTtl(Duration.ofHours(1)));
-        cacheConfigs.put(CacheNames.CATEGORIES_LIST,   defaultConfig.entryTtl(Duration.ofHours(1)));
-        cacheConfigs.put(CacheNames.CATEGORIES_PAGED,  defaultConfig.entryTtl(Duration.ofHours(1)));
-        cacheConfigs.put(CacheNames.CATEGORIES_SEARCH, defaultConfig.entryTtl(Duration.ofHours(1)));
-        cacheConfigs.put(CacheNames.CATEGORIES_FILTER, defaultConfig.entryTtl(Duration.ofHours(1)));
-        cacheConfigs.put(CacheNames.CATEGORIES_STATS,  defaultConfig.entryTtl(Duration.ofHours(1)));
-
-        // Orders — 15 min
-        cacheConfigs.put(CacheNames.ORDERS,           defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.ORDER,            defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.ORDER_EXISTS,     defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.USER_ORDERS,      defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.ORDER_STATS,      defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.ORDER_COUNTS,     defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.ORDERS_PREDICATE, defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.ORDERS_SEARCH,    defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.ORDERS_FILTER,    defaultConfig.entryTtl(Duration.ofMinutes(15)));
-
-        // Users — 15 min
-        cacheConfigs.put(CacheNames.USERS,           defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.USERS_PAGE,      defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.USERS_SEARCH,    defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.USERS_ROLE,      defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.USERS_ACTIVE,    defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.USERS_PREDICATE, defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.USER_PRINCIPALS, defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put(CacheNames.USER_PROFILE,    defaultConfig.entryTtl(Duration.ofMinutes(15)));
-
-        // Reviews — 15 min
-        cacheConfigs.put(CacheNames.REVIEWS,                defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.REVIEW,                 defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.REVIEWS_PREDICATE,      defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.REVIEW_STATS,           defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.RATING_DISTRIBUTION,    defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.REVIEW_TRENDS,          defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.TOP_RATED_PRODUCTS,     defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.MOST_REVIEWED_PRODUCTS, defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.USER_REVIEWS,           defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.REVIEW_LISTS,           defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put(CacheNames.ADMIN_REVIEWS,          defaultConfig.entryTtl(Duration.ofMinutes(15)));
-
-        // Wishlists — 30 min
-        cacheConfigs.put(CacheNames.WISHLIST,           defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigs.put(CacheNames.WISHLIST_PAGINATED, defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigs.put(CacheNames.WISHLIST_SUMMARY,   defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigs.put(CacheNames.WISHLIST_CHECK,     defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigs.put(CacheNames.WISHLIST_DROPS,     defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigs.put(CacheNames.WISHLIST_ANALYTICS, defaultConfig.entryTtl(Duration.ofMinutes(30)));
-
-        // Security-critical
-        cacheConfigs.put(CacheNames.TOKEN_BLACKLIST,    defaultConfig.entryTtl(Duration.ofHours(24)));
-        cacheConfigs.put(CacheNames.STOCK_RESERVATIONS, defaultConfig.entryTtl(Duration.ofMinutes(15)));
-
-        // Admin / misc
-        cacheConfigs.put(CacheNames.ADMIN_DASHBOARD,  defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put(CacheNames.ADMIN_ANALYTICS,  defaultConfig.entryTtl(Duration.ofMinutes(10)));
-        cacheConfigs.put(CacheNames.SELLER_DASHBOARD, defaultConfig.entryTtl(Duration.ofMinutes(10)));
-        cacheConfigs.put(CacheNames.FAQS,             defaultConfig.entryTtl(Duration.ofMinutes(60)));
-        cacheConfigs.put(CacheNames.SEARCH_FILTERS,   defaultConfig.entryTtl(Duration.ofMinutes(60)));
-        cacheConfigs.put(CacheNames.SETTINGS,         defaultConfig.entryTtl(Duration.ofMinutes(60)));
-
-        log.info("Redis CacheManager configured with {} named caches", cacheConfigs.size());
+        log.info("Redis CacheManager configured with {} per-cache TTLs (default={})", perCache.size(), defaultTtl);
         return RedisCacheManager.builder(connectionFactory)
-                .cacheDefaults(defaultConfig)
-                .withInitialCacheConfigurations(cacheConfigs)
-                .transactionAware()
+                .cacheDefaults(base.entryTtl(defaultTtl))
+                .withInitialCacheConfigurations(perCache)
                 .build();
     }
 
@@ -175,15 +193,18 @@ public class RedisConfig {
                 cb.getHalfOpenRequests());
     }
 
-    private GenericJackson2JsonRedisSerializer jsonSerializer() {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.activateDefaultTyping(
-                BasicPolymorphicTypeValidator.builder()
-                        .allowIfBaseType(Object.class)
-                        .build(),
-                ObjectMapper.DefaultTyping.NON_FINAL,
-                JsonTypeInfo.As.PROPERTY);
-        return new GenericJackson2JsonRedisSerializer(objectMapper);
+    private static Map.Entry<String, RedisCacheConfiguration> entry(
+            RedisCacheConfiguration base, String name, Duration ttl) {
+        return Map.entry(name, base.entryTtl(ttl));
+    }
+
+    private static RedisCacheConfiguration baseConfig() {
+        return RedisCacheConfiguration.defaultCacheConfig()
+                .prefixCacheNameWith("fynza:")
+                .serializeKeysWith(
+                        RedisSerializationContext.SerializationPair.fromSerializer(STRING_SERIALIZER))
+                .serializeValuesWith(
+                        RedisSerializationContext.SerializationPair.fromSerializer(REDIS_SERIALIZER))
+                .disableCachingNullValues();
     }
 }

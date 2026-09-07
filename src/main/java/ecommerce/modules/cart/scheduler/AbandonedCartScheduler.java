@@ -65,7 +65,7 @@ public class AbandonedCartScheduler {
             cartRepository.save(cart);
             
             log.info("Marked cart {} as abandoned for user {}", 
-                    cart.getId(), cart.getUserId());
+                    cart.getId(), cart.getUser().getId());
         }
         
         log.info("Marked {} carts as abandoned", cartsToMarkAbandoned.size());
@@ -88,7 +88,7 @@ public class AbandonedCartScheduler {
         for (Cart cart : cartsToDelete) {
             cartRepository.delete(cart);
             log.info("Deleted abandoned cart {} for user {}", 
-                    cart.getId(), cart.getUserId());
+                    cart.getId(), cart.getUser().getId());
         }
         
         log.info("Deleted {} abandoned carts", cartsToDelete.size());

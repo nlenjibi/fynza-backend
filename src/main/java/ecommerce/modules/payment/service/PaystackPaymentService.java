@@ -35,7 +35,7 @@ public class PaystackPaymentService {
      * @return response containing the authorization URL
      */
     public PaystackInitializeResponse initializePayment(PaystackInitializeRequest request) {
-        log.info("Initializing Paystack payment for amount: {} {}", request.getAmount(), request.getCurrency());
+        log.info("Initializing Paystack payment for amount: {} {}", request.getAmount(), request.getCurrency().replace('\n', '_').replace('\r', '_'));
 
         // Generate reference if not provided
         String reference = request.getReference();
@@ -82,10 +82,10 @@ public class PaystackPaymentService {
             ).getBody();
 
             if (response != null && response.isStatus()) {
-                log.info("Payment initialized successfully. Reference: {}", reference);
+                log.info("Payment initialized successfully. Reference: {}", reference.replace('\n', '_').replace('\r', '_'));
                 return response;
             } else {
-                log.error("Paystack initialization failed: {}", response != null ? response.getMessage() : "Unknown error");
+                log.error("Paystack initialization failed: {}", response != null && response.getMessage() != null ? response.getMessage().replace('\n', '_').replace('\r', '_') : "Unknown error");
                 throw new BadRequestException("Failed to initialize payment: " + (response != null ? response.getMessage() : "Unknown error"));
             }
         } catch (HttpClientErrorException e) {
@@ -104,7 +104,7 @@ public class PaystackPaymentService {
      * @return response containing the transaction verification data
      */
     public PaystackVerifyResponse verifyPayment(String reference) {
-        log.info("Verifying Paystack payment for reference: {}", reference);
+        log.info("Verifying Paystack payment for reference: {}", reference.replace('\n', '_').replace('\r', '_'));
 
         String url = paystackProperties.getBaseUrl() + "/transaction/verify/" + reference;
 
@@ -122,10 +122,10 @@ public class PaystackPaymentService {
             ).getBody();
 
             if (response != null && response.isStatus()) {
-                log.info("Payment verified successfully. Status: {}", response.getData() != null ? response.getData().getStatus() : "unknown");
+                log.info("Payment verified successfully. Status: {}", response.getData() != null && response.getData().getStatus() != null ? response.getData().getStatus().replace('\n', '_').replace('\r', '_') : "unknown");
                 return response;
             } else {
-                log.error("Paystack verification failed: {}", response != null ? response.getMessage() : "Unknown error");
+                log.error("Paystack verification failed: {}", response != null && response.getMessage() != null ? response.getMessage().replace('\n', '_').replace('\r', '_') : "Unknown error");
                 throw new BadRequestException("Failed to verify payment: " + (response != null ? response.getMessage() : "Unknown error"));
             }
         } catch (HttpClientErrorException e) {
@@ -145,7 +145,7 @@ public class PaystackPaymentService {
      * @return success message
      */
     public String processRefund(String reference, java.math.BigDecimal amount) {
-        log.info("Processing Paystack refund for reference: {}, amount: {}", reference, amount);
+        log.info("Processing Paystack refund for reference: {}, amount: {}", reference.replace('\n', '_').replace('\r', '_'), amount);
 
         String url = paystackProperties.getBaseUrl() + "/transaction/refund";
 
@@ -171,7 +171,7 @@ public class PaystackPaymentService {
                     String.class
             ).getBody();
 
-            log.info("Refund processed successfully: {}", response);
+            log.info("Refund processed successfully: {}", response != null ? response.replace('\n', '_').replace('\r', '_') : null);
             return "Refund processed successfully";
         } catch (Exception e) {
             log.error("Error processing refund: {}", e.getMessage(), e);

@@ -1,12 +1,11 @@
 package ecommerce.modules.cart.entity;
 
-import ecommerce.common.base.BaseEntity;
 import ecommerce.modules.product.entity.Product;
 import ecommerce.modules.product.entity.ProductVariant;
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -21,9 +20,42 @@ import static ecommerce.modules.cart.entity.ReservationStatus.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@SuperBuilder
-@EqualsAndHashCode(callSuper = true)
-public class StockReservation extends BaseEntity {
+@Builder
+@EqualsAndHashCode
+public class StockReservation {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
+    private UUID publicId;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        publicId = UUID.randomUUID();
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
+        if (isActive == null) isActive = true;
+        if (expiresAt == null) {
+            expiresAt = LocalDateTime.now().plusMinutes(15);
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_item_id", nullable = false, unique = true)
@@ -54,14 +86,6 @@ public class StockReservation extends BaseEntity {
 
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
-
-    @PrePersist
-    protected void onCreate() {
-        super.onCreate();
-        if (expiresAt == null) {
-            expiresAt = LocalDateTime.now().plusMinutes(15);
-        }
-    }
 
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(expiresAt);

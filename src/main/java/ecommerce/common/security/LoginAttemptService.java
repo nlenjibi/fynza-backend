@@ -27,7 +27,6 @@ public class LoginAttemptService {
         this.attemptsCache = Caffeine.newBuilder()
                 .expireAfterWrite(LOCKOUT_DURATION_MINUTES, TimeUnit.MINUTES)
                 .maximumSize(10000)
-                .softValues()  // Allow GC to reclaim memory under pressure
                 .recordStats()
                 .build();
     }
@@ -38,7 +37,7 @@ public class LoginAttemptService {
      */
     public void loginSucceeded(String key) {
         attemptsCache.invalidate(key);
-        log.debug("Login succeeded for key: {}, attempts cleared", maskKey(key));
+        log.debug("Login succeeded for key: {}, attempts cleared", maskKey(key).replace('\n', '_').replace('\r', '_'));
     }
 
     /**
@@ -50,9 +49,9 @@ public class LoginAttemptService {
         attempts++;
         attemptsCache.put(key, attempts);
         if (attempts >= MAX_ATTEMPTS) {
-            log.warn("Account locked for key: {} after {} failed attempts", maskKey(key), attempts);
+            log.warn("Account locked for key: {} after {} failed attempts", maskKey(key).replace('\n', '_').replace('\r', '_'), attempts);
         } else {
-            log.debug("Failed login attempt for key: {}, attempts: {}/{}", maskKey(key), attempts, MAX_ATTEMPTS);
+            log.debug("Failed login attempt for key: {}, attempts: {}/{}", maskKey(key).replace('\n', '_').replace('\r', '_'), attempts, MAX_ATTEMPTS);
         }
     }
 

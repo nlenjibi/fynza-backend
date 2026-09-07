@@ -1,18 +1,19 @@
 package ecommerce.modules.activity.entity;
 
-import ecommerce.common.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
+
+import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Unified entity for tracking all activities and audits across the platform.
- * 
+ *
  * This entity consolidates:
  * - General business activities (logins, orders, products)
  * - Technical audit logs (method calls, request details)
  * - User action tracking (CRUD operations, changes)
- * 
+ *
  * Table: activity_logs
  */
 @Entity
@@ -28,13 +29,30 @@ import lombok.experimental.SuperBuilder;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@SuperBuilder
-public class ActivityLog extends BaseEntity {
+@Builder
+public class ActivityLog {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
+    private UUID publicId;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
     // =================================================================
     // USER IDENTIFICATION
     // =================================================================
-    
+
     @Column(name = "user_id")
     private java.util.UUID userId;
 
@@ -47,7 +65,7 @@ public class ActivityLog extends BaseEntity {
     // =================================================================
     // ACTIVITY/AUDIT TYPE
     // =================================================================
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "activity_type", length = 50)
     private ActivityType activityType;
@@ -61,7 +79,7 @@ public class ActivityLog extends BaseEntity {
     // =================================================================
     // BUSINESS ACTIVITY FIELDS
     // =================================================================
-    
+
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
@@ -74,7 +92,7 @@ public class ActivityLog extends BaseEntity {
     // =================================================================
     // ENTITY TRACKING
     // =================================================================
-    
+
     @Column(name = "entity_type", length = 100)
     private String entityType;
 
@@ -84,7 +102,7 @@ public class ActivityLog extends BaseEntity {
     // =================================================================
     // TECHNICAL AUDIT FIELDS
     // =================================================================
-    
+
     @Column(name = "method_name", length = 200)
     private String methodName;
 
@@ -100,12 +118,25 @@ public class ActivityLog extends BaseEntity {
     // =================================================================
     // REQUEST CONTEXT
     // =================================================================
-    
+
     @Column(name = "ip_address", length = 50)
     private String ipAddress;
 
     @Column(name = "user_agent", length = 500)
     private String userAgent;
+
+    @PrePersist
+    protected void onCreate() {
+        publicId = UUID.randomUUID();
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
+        if (isActive == null) isActive = true;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
 
     // =================================================================
     // ENUMS
@@ -121,39 +152,39 @@ public class ActivityLog extends BaseEntity {
         USER_CREATED,
         USER_UPDATED,
         USER_DELETED,
-        
+
         // Order activities
         ORDER_CREATED,
         ORDER_UPDATED,
         ORDER_CANCELLED,
-        
+
         // Product activities
         PRODUCT_CREATED,
         PRODUCT_UPDATED,
         PRODUCT_DELETED,
-        
+
         // Category activities
         CATEGORY_CREATED,
         CATEGORY_UPDATED,
         CATEGORY_DELETED,
-        
+
         // Review activities
         REVIEW_APPROVED,
         REVIEW_REJECTED,
-        
+
         // Coupon activities
         COUPON_CREATED,
         COUPON_UPDATED,
         COUPON_DELETED,
-        
+
         // Settings activities
         SETTINGS_UPDATED,
-        
+
         // Payment activities
         PAYMENT_PROCESSED,
         REFUND_PROCESSED,
         DELIVERY_UPDATED,
-        
+
         // Data operations
         EXPORT_DATA,
         IMPORT_DATA

@@ -87,18 +87,6 @@ type ConversationPage {
 # Inputs
 # ─────────────────────────────────────────────────────────────────────────────
 
-input CreateConversationInput {
-    subject: String!
-    category: ConversationCategory = GENERAL
-    content: String!
-    orderId: ID
-    productId: ID
-}
-
-input SendMessageInput {
-    content: String!
-}
-
 input ConversationFilterInput {
     status: String
     priority: String
@@ -130,15 +118,7 @@ extend type Query {
 
 extend type Mutation {
 
-    # ── Customer/Seller Mutations (AUTHENTICATED) ────────────────────────
-    createConversation(input: CreateConversationInput!): Conversation!
-    replyToConversation(id: ID!, input: SendMessageInput!): Conversation!
+    # ── UX State (AUTHENTICATED) ─────────────────────────────────────────
     markConversationAsRead(id: ID!): Boolean!
     toggleConversationStar(id: ID!): Conversation!
-    deleteConversation(id: ID!): Boolean!
-
-    # ── Admin Mutations (ADMIN) ──────────────────────────────────────────
-    adminReplyToConversation(id: ID!, input: SendMessageInput!): Conversation!
-    updateConversationStatus(id: ID!, status: String!): Conversation!
-    adminDeleteConversation(id: ID!): Boolean!
 }

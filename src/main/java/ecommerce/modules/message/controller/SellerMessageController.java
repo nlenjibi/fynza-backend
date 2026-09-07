@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/sellers/messages")
+@RequestMapping("/v1/sellers/messages")
 @RequiredArgsConstructor
 @Tag(name = "Seller Messages", description = "Seller message management endpoints")
 public class SellerMessageController {

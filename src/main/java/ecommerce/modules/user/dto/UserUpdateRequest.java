@@ -26,4 +26,5 @@ public class UserUpdateRequest {
 
     private String role;
     private Boolean isActive;
+    private String profileImageUrl;
 }

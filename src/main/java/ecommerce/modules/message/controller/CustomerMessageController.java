@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/customer/messages")
+@RequestMapping("/v1/customer/messages")
 @RequiredArgsConstructor
 @Tag(name = "Customer Messages", description = "Customer message management endpoints")
 public class CustomerMessageController {

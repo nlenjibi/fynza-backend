@@ -2,6 +2,7 @@ package ecommerce.modules.product.service;
 
 import ecommerce.common.enums.ProductStatus;
 import ecommerce.modules.product.dto.AdminProductStatsResponse;
+import java.util.List;
 import ecommerce.modules.product.dto.CreateProductRequest;
 import ecommerce.modules.product.dto.ProductFilterRequest;
 import ecommerce.modules.product.dto.ProductResponse;
@@ -55,4 +56,6 @@ public interface ProductService {
     boolean canUpdate(String productId, String userId);
 
     boolean canDelete(String productId, String userId);
+
+    void assignTagsToProduct(UUID productId, List<String> tagNames, UUID sellerId);
 }

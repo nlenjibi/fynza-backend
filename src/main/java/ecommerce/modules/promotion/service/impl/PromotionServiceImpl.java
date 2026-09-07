@@ -10,7 +10,6 @@ import ecommerce.modules.promotion.repository.PromotionSellerRepository;
 import ecommerce.modules.promotion.service.PromotionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,7 +51,7 @@ public class PromotionServiceImpl implements PromotionService {
 
     @Override
     public PromotionResponse getPromotion(UUID promotionId) {
-        Promotion promotion = promotionRepository.findById(promotionId)
+        Promotion promotion = promotionRepository.findByPublicId(promotionId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Promotion", promotionId));
         return mapToResponse(promotion);
     }
@@ -60,7 +59,7 @@ public class PromotionServiceImpl implements PromotionService {
     @Override
     @Transactional
     public void joinPromotion(UUID promotionId, UUID sellerId) {
-        Promotion promotion = promotionRepository.findById(promotionId)
+        Promotion promotion = promotionRepository.findByPublicId(promotionId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Promotion", promotionId));
 
         if (!promotion.getIsActive()) {
@@ -94,7 +93,7 @@ public class PromotionServiceImpl implements PromotionService {
 
     private PromotionResponse mapToResponse(Promotion promotion) {
         return PromotionResponse.builder()
-                .id(promotion.getId())
+                .id(promotion.getPublicId())
                 .name(promotion.getName())
                 .description(promotion.getDescription())
                 .bannerImage(promotion.getBannerImage())
@@ -118,7 +117,7 @@ public class PromotionServiceImpl implements PromotionService {
         PromotionResponse response = mapToResponse(promotion);
         if (sellerId != null) {
             response.setIsParticipating(
-                    promotionSellerRepository.existsByPromotionIdAndSellerId(promotion.getId(), sellerId));
+                    promotionSellerRepository.existsByPromotionIdAndSellerId(promotion.getPublicId(), sellerId));
         }
         return response;
     }

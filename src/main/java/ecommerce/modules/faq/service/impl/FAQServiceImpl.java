@@ -49,7 +49,7 @@ public class FAQServiceImpl implements FAQService {
     @Override
     @Cacheable(value = "faqs", key = "'search_' + #query.hashCode() + '_' + #pageable.pageNumber")
     public Page<FAQResponse> searchFAQs(String query, Pageable pageable) {
-        log.debug("Searching FAQs with query: {}", query);
+        log.debug("Searching FAQs with query: {}", query.replace('\n', '_').replace('\r', '_'));
         return faqRepository.findByIsActiveTrueAndQuestionContainingIgnoreCaseOrAnswerContainingIgnoreCase(
                 true, query, query, pageable).map(this::toResponse);
     }
@@ -57,7 +57,7 @@ public class FAQServiceImpl implements FAQService {
     @Override
     public FAQResponse getFAQById(UUID id) {
         log.debug("Getting FAQ by id: {}", id);
-        FAQ faq = faqRepository.findById(id)
+        FAQ faq = faqRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FAQ not found"));
         return toResponse(faq);
     }
@@ -66,7 +66,7 @@ public class FAQServiceImpl implements FAQService {
     @Transactional
     @CacheEvict(value = "faqs", allEntries = true)
     public FAQResponse createFAQ(CreateFAQRequest request) {
-        log.info("Creating new FAQ with question: {}", request.getQuestion());
+        log.info("Creating new FAQ with question: {}", request.getQuestion().replace('\n', '_').replace('\r', '_'));
         
         FAQ faq = FAQ.builder()
                 .question(request.getQuestion())
@@ -88,7 +88,7 @@ public class FAQServiceImpl implements FAQService {
     public FAQResponse updateFAQ(UUID id, UpdateFAQRequest request) {
         log.info("Updating FAQ with id: {}", id);
         
-        FAQ faq = faqRepository.findById(id)
+        FAQ faq = faqRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FAQ not found"));
         
         if (request.getQuestion() != null) {
@@ -115,11 +115,10 @@ public class FAQServiceImpl implements FAQService {
     public void deleteFAQ(UUID id) {
         log.info("Deleting FAQ with id: {}", id);
         
-        if (!faqRepository.existsById(id)) {
-            throw new ResourceNotFoundException("FAQ not found");
-        }
-        
-        faqRepository.deleteById(id);
+        FAQ faqToDelete = faqRepository.findByPublicId(id)
+                .orElseThrow(() -> new ResourceNotFoundException("FAQ not found"));
+
+        faqRepository.delete(faqToDelete);
         log.info("FAQ deleted with id: {}", id);
     }
 
@@ -129,7 +128,7 @@ public class FAQServiceImpl implements FAQService {
     public FAQResponse toggleFAQStatus(UUID id) {
         log.info("Toggling FAQ status for id: {}", id);
         
-        FAQ faq = faqRepository.findById(id)
+        FAQ faq = faqRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FAQ not found"));
         
         faq.setIsActive(!faq.getIsActive());
@@ -208,7 +207,7 @@ public class FAQServiceImpl implements FAQService {
     public FAQResponse incrementViewCount(UUID id) {
         log.debug("Incrementing view count for FAQ: {}", id);
         
-        FAQ faq = faqRepository.findById(id)
+        FAQ faq = faqRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FAQ not found"));
         
         faq.setViewCount((faq.getViewCount() != null ? faq.getViewCount() : 0) + 1);
@@ -219,15 +218,15 @@ public class FAQServiceImpl implements FAQService {
 
     private FAQResponse toResponse(FAQ faq) {
         return FAQResponse.builder()
-                .id(faq.getId())
+                .id(faq.getPublicId())
                 .question(faq.getQuestion())
                 .answer(faq.getAnswer())
                 .category(faq.getCategory())
                 .isActive(faq.getIsActive())
                 .viewCount(faq.getViewCount())
                 .displayOrder(faq.getDisplayOrder())
-                .createdAt(faq.getCreatedAt())
-                .updatedAt(faq.getUpdatedAt())
+                .createdAt(faq.getCreatedAt() != null ? faq.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
+                .updatedAt(faq.getUpdatedAt() != null ? faq.getUpdatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 }

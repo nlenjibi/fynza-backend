@@ -41,13 +41,13 @@ public class TagServiceImpl implements TagService {
                 .build();
 
         Tag savedTag = tagRepository.save(tag);
-        log.info("Created new tag: {}", savedTag.getName());
+        log.info("Created new tag: {}", savedTag.getName().replace('\n', '_').replace('\r', '_'));
         return mapToResponse(savedTag);
     }
 
     @Override
     public TagResponse getTag(UUID tagId) {
-        Tag tag = tagRepository.findById(tagId)
+        Tag tag = tagRepository.findByPublicId(tagId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Tag", tagId));
         return mapToResponse(tag);
     }
@@ -83,7 +83,7 @@ public class TagServiceImpl implements TagService {
     @Override
     @Transactional
     public TagResponse updateTag(UUID tagId, CreateTagRequest request) {
-        Tag tag = tagRepository.findById(tagId)
+        Tag tag = tagRepository.findByPublicId(tagId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Tag", tagId));
 
         if (!tag.getName().equalsIgnoreCase(request.getName()) && tagRepository.existsByName(request.getName())) {
@@ -99,30 +99,31 @@ public class TagServiceImpl implements TagService {
         }
 
         Tag updatedTag = tagRepository.save(tag);
-        log.info("Updated tag: {}", updatedTag.getName());
+        log.info("Updated tag: {}", updatedTag.getName().replace('\n', '_').replace('\r', '_'));
         return mapToResponse(updatedTag);
     }
 
     @Override
     @Transactional
     public void deleteTag(UUID tagId) {
-        if (!tagRepository.existsById(tagId)) {
-            throw new ResourceNotFoundException("Tag not found with id: " + tagId);
-        }
-        tagRepository.deleteById(tagId);
+        Tag tag = tagRepository.findByPublicId(tagId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tag not found with id: " + tagId));
+        tagRepository.deleteById(tag.getId());
         log.info("Deleted tag with id: {}", tagId);
     }
 
     @Override
     @Transactional
     public void incrementUsage(UUID tagId) {
-        tagRepository.incrementUsageCount(tagId);
+        tagRepository.findByPublicId(tagId)
+                .ifPresent(t -> tagRepository.incrementUsageCount(t.getId()));
     }
 
     @Override
     @Transactional
     public void decrementUsage(UUID tagId) {
-        tagRepository.decrementUsageCount(tagId);
+        tagRepository.findByPublicId(tagId)
+                .ifPresent(t -> tagRepository.decrementUsageCount(t.getId()));
     }
 
     @Override
@@ -140,7 +141,7 @@ public class TagServiceImpl implements TagService {
 
     private TagResponse mapToResponse(Tag tag) {
         return TagResponse.builder()
-                .id(tag.getId())
+                .id(tag.getPublicId())
                 .name(tag.getName())
                 .description(tag.getDescription())
                 .color(tag.getColor())

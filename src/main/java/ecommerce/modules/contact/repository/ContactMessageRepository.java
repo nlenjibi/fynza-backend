@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -16,7 +17,7 @@ import java.util.UUID;
  * Provides CRUD operations and custom queries for contact message management.
  */
 @Repository
-public interface ContactMessageRepository extends JpaRepository<ContactMessage, UUID> {
+public interface ContactMessageRepository extends JpaRepository<ContactMessage, Long> {
 
     /**
      * Find contact messages by status with pagination.
@@ -127,6 +128,8 @@ public interface ContactMessageRepository extends JpaRepository<ContactMessage, 
      * @return page of unassigned contact messages
      */
     Page<ContactMessage> findByAssignedToIsNull(Pageable pageable);
+
+    Optional<ContactMessage> findByPublicId(UUID publicId);
 
     /**
      * Search contact messages by multiple fields including assigned user.

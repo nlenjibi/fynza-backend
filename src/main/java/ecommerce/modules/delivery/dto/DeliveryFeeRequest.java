@@ -1,7 +1,6 @@
 package ecommerce.modules.delivery.dto;
 
 import ecommerce.common.enums.DeliveryMethod;
-import ecommerce.modules.delivery.entity.DeliveryFee;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;

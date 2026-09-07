@@ -12,6 +12,10 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -34,13 +38,13 @@ public class SiteSettingsService {
         log.debug("Fetching general settings");
         SiteSettings settings = getOrCreateSettings();
         return GeneralSettingsResponse.builder()
-                .id(settings.getId())
+                .id(settings.getPublicId())
                 .siteName(settings.getSiteName())
                 .siteEmail(settings.getSiteEmail())
                 .sitePhone(settings.getSitePhone())
                 .currency(settings.getCurrency())
                 .timezone(settings.getTimezone())
-                .updatedAt(settings.getUpdatedAt())
+                .updatedAt(toLocalDateTime(settings.getUpdatedAt()))
                 .build();
     }
 
@@ -56,13 +60,13 @@ public class SiteSettingsService {
         settings.setTimezone(request.getTimezone());
         settings = siteSettingsRepository.save(settings);
         return GeneralSettingsResponse.builder()
-                .id(settings.getId())
+                .id(settings.getPublicId())
                 .siteName(settings.getSiteName())
                 .siteEmail(settings.getSiteEmail())
                 .sitePhone(settings.getSitePhone())
                 .currency(settings.getCurrency())
                 .timezone(settings.getTimezone())
-                .updatedAt(settings.getUpdatedAt())
+                .updatedAt(toLocalDateTime(settings.getUpdatedAt()))
                 .build();
     }
 
@@ -72,11 +76,11 @@ public class SiteSettingsService {
         log.debug("Fetching payment settings");
         SiteSettings settings = getOrCreateSettings();
         return PaymentSettingsResponse.builder()
-                .id(settings.getId())
+                .id(settings.getPublicId())
                 .paystackPublicKey(maskKey(settings.getPaystackPublicKey()))
                 .enableCashOnDelivery(settings.getEnableCashOnDelivery())
                 .enableMobileMoney(settings.getEnableMobileMoney())
-                .updatedAt(settings.getUpdatedAt())
+                .updatedAt(toLocalDateTime(settings.getUpdatedAt()))
                 .build();
     }
 
@@ -91,11 +95,11 @@ public class SiteSettingsService {
         settings.setEnableMobileMoney(request.getEnableMobileMoney());
         settings = siteSettingsRepository.save(settings);
         return PaymentSettingsResponse.builder()
-                .id(settings.getId())
+                .id(settings.getPublicId())
                 .paystackPublicKey(maskKey(settings.getPaystackPublicKey()))
                 .enableCashOnDelivery(settings.getEnableCashOnDelivery())
                 .enableMobileMoney(settings.getEnableMobileMoney())
-                .updatedAt(settings.getUpdatedAt())
+                .updatedAt(toLocalDateTime(settings.getUpdatedAt()))
                 .build();
     }
     @Cacheable(value = "settings", key = "'shipping'")
@@ -103,11 +107,11 @@ public class SiteSettingsService {
     public ShippingSettingsResponse getShippingSettings() {
         SiteSettings settings = getOrCreateSettings();
         return ShippingSettingsResponse.builder()
-                .id(settings.getId())
+                .id(settings.getPublicId())
                 .shippingCost(settings.getShippingCost())
                 .freeShippingThreshold(settings.getFreeShippingThreshold())
                 .estimatedDeliveryDays(settings.getEstimatedDeliveryDays())
-                .updatedAt(settings.getUpdatedAt())
+                .updatedAt(toLocalDateTime(settings.getUpdatedAt()))
                 .build();
     }
 
@@ -120,11 +124,11 @@ public class SiteSettingsService {
         settings.setEstimatedDeliveryDays(request.getEstimatedDeliveryDays());
         settings = siteSettingsRepository.save(settings);
         return ShippingSettingsResponse.builder()
-                .id(settings.getId())
+                .id(settings.getPublicId())
                 .shippingCost(settings.getShippingCost())
                 .freeShippingThreshold(settings.getFreeShippingThreshold())
                 .estimatedDeliveryDays(settings.getEstimatedDeliveryDays())
-                .updatedAt(settings.getUpdatedAt())
+                .updatedAt(toLocalDateTime(settings.getUpdatedAt()))
                 .build();
     }
 
@@ -133,10 +137,10 @@ public class SiteSettingsService {
     public TaxSettingsResponse getTaxSettings() {
         SiteSettings settings = getOrCreateSettings();
         return TaxSettingsResponse.builder()
-                .id(settings.getId())
+                .id(settings.getPublicId())
                 .taxRate(settings.getTaxRate())
                 .taxNumber(settings.getTaxNumber())
-                .updatedAt(settings.getUpdatedAt())
+                .updatedAt(toLocalDateTime(settings.getUpdatedAt()))
                 .build();
     }
 
@@ -148,10 +152,10 @@ public class SiteSettingsService {
         settings.setTaxNumber(request.getTaxNumber());
         settings = siteSettingsRepository.save(settings);
         return TaxSettingsResponse.builder()
-                .id(settings.getId())
+                .id(settings.getPublicId())
                 .taxRate(settings.getTaxRate())
                 .taxNumber(settings.getTaxNumber())
-                .updatedAt(settings.getUpdatedAt())
+                .updatedAt(toLocalDateTime(settings.getUpdatedAt()))
                 .build();
     }
     @Cacheable(value = "settings", key = "'email'")
@@ -159,11 +163,11 @@ public class SiteSettingsService {
     public EmailSettingsResponse getEmailSettings() {
         SiteSettings settings = getOrCreateSettings();
         return EmailSettingsResponse.builder()
-                .id(settings.getId())
+                .id(settings.getPublicId())
                 .smtpHost(settings.getSmtpHost())
                 .smtpPort(settings.getSmtpPort())
                 .smtpEmail(settings.getSmtpEmail())
-                .updatedAt(settings.getUpdatedAt())
+                .updatedAt(toLocalDateTime(settings.getUpdatedAt()))
                 .build();
     }
 
@@ -177,11 +181,11 @@ public class SiteSettingsService {
         settings.setSmtpPassword(request.getSmtpPassword());
         settings = siteSettingsRepository.save(settings);
         return EmailSettingsResponse.builder()
-                .id(settings.getId())
+                .id(settings.getPublicId())
                 .smtpHost(settings.getSmtpHost())
                 .smtpPort(settings.getSmtpPort())
                 .smtpEmail(settings.getSmtpEmail())
-                .updatedAt(settings.getUpdatedAt())
+                .updatedAt(toLocalDateTime(settings.getUpdatedAt()))
                 .build();
     }
 
@@ -190,7 +194,7 @@ public class SiteSettingsService {
     public NotificationSettingsResponse getNotificationSettings() {
         SiteSettings settings = getOrCreateSettings();
         return NotificationSettingsResponse.builder()
-                .id(settings.getId())
+                .id(settings.getPublicId())
                 .orderUpdates(settings.getEnableOrderUpdates())
                 .paymentConfirmation(settings.getEnablePaymentConfirmation())
                 .shippingUpdates(settings.getEnableShippingUpdates())
@@ -203,7 +207,7 @@ public class SiteSettingsService {
                 .promotionalSms(settings.getEnablePromotionalSms())
                 .browserNotifications(settings.getEnableBrowserNotifications())
                 .appNotifications(settings.getEnableAppNotifications())
-                .updatedAt(settings.getUpdatedAt())
+                .updatedAt(toLocalDateTime(settings.getUpdatedAt()))
                 .build();
     }
 
@@ -225,7 +229,7 @@ public class SiteSettingsService {
         if (request.getAppNotifications() != null) settings.setEnableAppNotifications(request.getAppNotifications());
         settings = siteSettingsRepository.save(settings);
         return NotificationSettingsResponse.builder()
-                .id(settings.getId())
+                .id(settings.getPublicId())
                 .orderUpdates(settings.getEnableOrderUpdates())
                 .paymentConfirmation(settings.getEnablePaymentConfirmation())
                 .shippingUpdates(settings.getEnableShippingUpdates())
@@ -238,7 +242,7 @@ public class SiteSettingsService {
                 .promotionalSms(settings.getEnablePromotionalSms())
                 .browserNotifications(settings.getEnableBrowserNotifications())
                 .appNotifications(settings.getEnableAppNotifications())
-                .updatedAt(settings.getUpdatedAt())
+                .updatedAt(toLocalDateTime(settings.getUpdatedAt()))
                 .build();
     }
     @Cacheable(value = "settings", key = "'security'")
@@ -246,11 +250,11 @@ public class SiteSettingsService {
     public SecuritySettingsResponse getSecuritySettings() {
         SiteSettings settings = getOrCreateSettings();
         return SecuritySettingsResponse.builder()
-                .id(settings.getId())
+                .id(settings.getPublicId())
                 .twoFactorEnabled(settings.getTwoFactorEnabled())
                 .sessionTimeoutMinutes(settings.getSessionTimeoutMinutes())
                 .loginNotifications(settings.getLoginNotifications())
-                .updatedAt(settings.getUpdatedAt())
+                .updatedAt(toLocalDateTime(settings.getUpdatedAt()))
                 .build();
     }
 
@@ -263,11 +267,11 @@ public class SiteSettingsService {
         settings.setLoginNotifications(request.getLoginNotifications());
         settings = siteSettingsRepository.save(settings);
         return SecuritySettingsResponse.builder()
-                .id(settings.getId())
+                .id(settings.getPublicId())
                 .twoFactorEnabled(settings.getTwoFactorEnabled())
                 .sessionTimeoutMinutes(settings.getSessionTimeoutMinutes())
                 .loginNotifications(settings.getLoginNotifications())
-                .updatedAt(settings.getUpdatedAt())
+                .updatedAt(toLocalDateTime(settings.getUpdatedAt()))
                 .build();
     }
 
@@ -298,5 +302,9 @@ public class SiteSettingsService {
     private String maskKey(String key) {
         if (key == null || key.length() < 12) return key;
         return key.substring(0, 8) + "..." + key.substring(key.length() - 4);
+    }
+
+    private LocalDateTime toLocalDateTime(Instant instant) {
+        return instant != null ? instant.atZone(ZoneId.systemDefault()).toLocalDateTime() : null;
     }
 }

@@ -4,18 +4,19 @@ import ecommerce.common.enums.*;
 import ecommerce.common.exception.DuplicateResourceException;
 import ecommerce.common.exception.ResourceNotFoundException;
 import ecommerce.modules.auth.service.SecurityService;
-import ecommerce.modules.notification.entity.Notification;
-import ecommerce.modules.notification.repository.NotificationRepository;
 import ecommerce.modules.user.dto.*;
-import ecommerce.modules.user.entity.User;
 import ecommerce.modules.user.entity.Address;
 import ecommerce.modules.user.entity.SellerProfile;
-import ecommerce.modules.user.mapper.UserMapper;
-import ecommerce.modules.user.mapper.AddressMapper;
-import ecommerce.modules.user.repository.UserRepository;
+import ecommerce.modules.user.entity.User;
+import ecommerce.modules.order.entity.Order;
+import ecommerce.modules.order.repository.OrderRepository;
+import ecommerce.modules.user.entity.CustomerProfile;
 import ecommerce.modules.user.repository.AddressRepository;
+import ecommerce.modules.user.repository.CustomerProfileRepository;
 import ecommerce.modules.user.repository.SellerProfileRepository;
+import ecommerce.modules.user.repository.UserRepository;
 import ecommerce.modules.user.service.UserService;
+import ecommerce.modules.wishlist.repository.WishlistItemRepository;
 import ecommerce.common.util.TokenValidationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,18 +25,23 @@ import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -43,17 +49,77 @@ import java.util.Optional;
 @Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
 
-    private final UserMapper userMapper;
-    private final AddressMapper addressMapper;
     private final UserRepository userRepository;
     private final AddressRepository addressRepository;
     private final SellerProfileRepository sellerProfileRepository;
+    private final CustomerProfileRepository customerProfileRepository;
+    private final WishlistItemRepository wishlistItemRepository;
+    private final OrderRepository orderRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenValidationService tokenValidationService;
-    private final NotificationRepository notificationRepository;
     private final SecurityService securityService;
     private static final String USER_NOT_FOUND = "User not found with id: ";
 
+    // ── Conversion helpers ───────────────────────────────────────────────────
+
+    private UserDto toUserDto(User user) {
+        return UserDto.builder()
+                .id(user.getPublicId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .fullName(user.getFullName())
+                .phone(user.getPhone())
+                .role(user.getRole())
+                .isActive(user.getIsActive())
+                .profileImageUrl(user.getProfileImageUrl())
+                .status(user.getStatus())
+                .emailVerified(user.getIsEmailVerified())
+                .lastLoginAt(user.getLastLoginAt())
+                .createdAt(user.getCreatedAt() != null
+                        ? LocalDateTime.ofInstant(user.getCreatedAt(), ZoneId.systemDefault()) : null)
+                .updatedAt(user.getUpdatedAt() != null
+                        ? LocalDateTime.ofInstant(user.getUpdatedAt(), ZoneId.systemDefault()) : null)
+                .build();
+    }
+
+    private AddressDto toAddressDto(Address address) {
+        return AddressDto.builder()
+                .id(address.getPublicId())
+                .label(address.getLabel())
+                .addressType(address.getAddressType())
+                .streetAddress(address.getStreetAddress())
+                .city(address.getCity())
+                .state(address.getState())
+                .postalCode(address.getPostalCode())
+                .country(address.getCountry())
+                .isDefault(address.getIsDefault())
+                .createdAt(address.getCreatedAt() != null
+                        ? LocalDateTime.ofInstant(address.getCreatedAt(), ZoneId.systemDefault()) : null)
+                .updatedAt(address.getUpdatedAt() != null
+                        ? LocalDateTime.ofInstant(address.getUpdatedAt(), ZoneId.systemDefault()) : null)
+                .build();
+    }
+
+    private Address toAddress(AddressRequest request) {
+        return Address.builder()
+                .label(request.getLabel())
+                .streetAddress(request.getStreetAddress())
+                .city(request.getCity())
+                .state(request.getState())
+                .postalCode(request.getPostalCode())
+                .country(request.getCountry())
+                .isDefault(request.getIsDefault() != null ? request.getIsDefault() : false)
+                .build();
+    }
+
+    private User findUserByPublicId(UUID publicId) {
+        return userRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + publicId));
+    }
+
+    // ── User CRUD ────────────────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -74,38 +140,42 @@ public class UserServiceImpl implements UserService {
             throw new DuplicateResourceException("Email already exists: " + request.getEmail());
         }
 
-        User user = userMapper.toEntity(request);
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-
+        Role role = Role.CUSTOMER;
         if (request.getRole() != null && !request.getRole().isBlank()) {
             try {
-                user.setRole(Role.valueOf(request.getRole().toUpperCase()));
+                role = Role.valueOf(request.getRole().toUpperCase());
             } catch (IllegalArgumentException e) {
                 throw new IllegalArgumentException("Invalid role: " + request.getRole());
             }
-        } else {
-            user.setRole(Role.CUSTOMER);
         }
 
+        User user = User.builder()
+                .username(request.getUsername())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .phone(request.getPhone())
+                .role(role)
+                .build();
+
         userRepository.save(user);
-        log.info("User created with id: {}", user.getId());
-        return userMapper.toDto(user);
+        log.info("User created with publicId: {}", user.getPublicId());
+        return toUserDto(user);
     }
 
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "users", key = "#id")
     public Optional<UserDto> getUserById(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + id));
-        return Optional.of(userMapper.toDto(user));
+        return Optional.of(toUserDto(findUserByPublicId(id)));
     }
 
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "users-page", key = "T(org.springframework.util.DigestUtils).md5DigestAsHex(('#page=' + #pageable.pageNumber + '&size=' + #pageable.pageSize + '&sort=' + #pageable.sort).getBytes())")
     public Page<UserDto> getAllUsers(Pageable pageable) {
-        return userRepository.findAll(pageable).map(userMapper::toDto);
+        return userRepository.findAll(pageable).map(this::toUserDto);
     }
 
     @Override
@@ -117,9 +187,13 @@ public class UserServiceImpl implements UserService {
     }, allEntries = true)
     public UserDto updateUser(UUID userId, UserUpdateRequest request) {
         securityService.checkSelfOrAdmin(userId);
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + userId));
-        userMapper.updateEntity(user, request);
+        User user = findUserByPublicId(userId);
+
+        if (request.getFirstName() != null) user.setFirstName(request.getFirstName());
+        if (request.getLastName() != null) user.setLastName(request.getLastName());
+        if (request.getPhone() != null) user.setPhone(request.getPhone());
+        if (request.getProfileImageUrl() != null) user.setProfileImageUrl(request.getProfileImageUrl());
+
         if (request.getRole() != null && !request.getRole().isBlank()) {
             try {
                 user.setRole(Role.valueOf(request.getRole().toUpperCase()));
@@ -128,26 +202,23 @@ public class UserServiceImpl implements UserService {
             }
         }
         userRepository.save(user);
-        tokenValidationService.evictPrincipal(userId);  // profile/role may have changed
-        log.info("User updated with id: {}", userId);
-        return userMapper.toDto(user);
+        tokenValidationService.evictPrincipal(userId);
+        log.info("User updated with publicId: {}", userId);
+        return toUserDto(user);
     }
 
     @Override
     @Transactional
     @CacheEvict(value = {
-            "users",
-            "users-page", "users-search", "users-role", "users-active",
+            "users", "users-page", "users-search", "users-role", "users-active",
             "users-predicate", "admin-dashboard"
     }, allEntries = true)
     public void deleteUser(UUID id) {
         securityService.checkSelfOrAdmin(id);
-        if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException(USER_NOT_FOUND + id);
-        }
-        userRepository.deleteById(id);
-        tokenValidationService.evictPrincipal(id);   // user gone – clear cached principal
-        log.info("User deleted with id: {}", id);
+        User user = findUserByPublicId(id);
+        userRepository.delete(user);
+        tokenValidationService.evictPrincipal(id);
+        log.info("User deleted with publicId: {}", id);
     }
 
     @Override
@@ -155,16 +226,15 @@ public class UserServiceImpl implements UserService {
     @CacheEvict(value = {"users", "admin-dashboard"}, allEntries = true)
     public void changePassword(UUID userId, ChangePasswordRequest request) {
         securityService.checkSelfOrAdmin(userId);
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + userId));
+        User user = findUserByPublicId(userId);
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             throw new ResourceNotFoundException("Password does not match");
         }
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setLastPasswordChange(LocalDateTime.now());
         userRepository.save(user);
-        tokenValidationService.evictPrincipal(userId);  // password changed – stale principal must not be served
-        log.info("Password changed for user with id: {}", userId);
+        tokenValidationService.evictPrincipal(userId);
+        log.info("Password changed for user with publicId: {}", userId);
     }
 
     @Override
@@ -175,10 +245,7 @@ public class UserServiceImpl implements UserService {
             "users-predicate", "admin-dashboard"
     }, allEntries = true)
     public UserDto updateUserRole(UUID userId, UpdateUserRoleRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + userId));
-        
-        Role oldRole = user.getRole();
+        User user = findUserByPublicId(userId);
         if (request.getRole() != null && !request.getRole().isBlank()) {
             try {
                 user.setRole(Role.valueOf(request.getRole().toUpperCase()));
@@ -187,13 +254,9 @@ public class UserServiceImpl implements UserService {
             }
         }
         userRepository.save(user);
-        tokenValidationService.evictPrincipal(userId);  // role changed – authorities in cached principal are stale
-        
-        // Send notification about role change
-        sendRoleChangeNotification(user, oldRole, user.getRole());
-        
-        log.info("User role updated for user with id: {}", userId);
-        return userMapper.toDto(user);
+        tokenValidationService.evictPrincipal(userId);
+        log.info("User role updated for publicId: {}", userId);
+        return toUserDto(user);
     }
 
     @Override
@@ -208,39 +271,24 @@ public class UserServiceImpl implements UserService {
         if (request.getIsActive() == null) {
             throw new IllegalArgumentException("isActive is required");
         }
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + userId));
-        
-        boolean oldStatus = user.getIsActive();
+        User user = findUserByPublicId(userId);
         user.setIsActive(request.getIsActive());
         userRepository.save(user);
-        tokenValidationService.evictPrincipal(userId);  // isActive changed – enabled() in cached principal is stale
-        
-        // Send notification about status change
-        sendStatusChangeNotification(user, oldStatus, request.getIsActive());
-        
-        log.info("User status updated for user with id: {} to isActive={}", userId, request.getIsActive());
-        return userMapper.toDto(user);
+        tokenValidationService.evictPrincipal(userId);
+        log.info("User status updated for publicId: {} to isActive={}", userId, request.getIsActive());
+        return toUserDto(user);
     }
 
     @Override
     @Transactional
     @CacheEvict(value = {"users", "admin-dashboard"}, allEntries = true)
     public Boolean lockUserAccount(UUID userId) {
-        log.info("Locking user account: {}", userId);
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + userId));
-        
-        if (user.getIsLocked() != null && user.getIsLocked()) {
-            log.warn("User account already locked: {}", userId);
-            return true;
-        }
-        
+        User user = findUserByPublicId(userId);
+        if (Boolean.TRUE.equals(user.getIsLocked())) return true;
         user.setIsLocked(true);
         userRepository.save(user);
         tokenValidationService.evictPrincipal(userId);
-        
-        log.info("User account locked successfully: {}", userId);
+        log.info("User account locked: {}", userId);
         return true;
     }
 
@@ -248,19 +296,11 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @CacheEvict(value = {"users", "admin-dashboard"}, allEntries = true)
     public Boolean unlockUserAccount(UUID userId) {
-        log.info("Unlocking user account: {}", userId);
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + userId));
-        
-        if (user.getIsLocked() == null || !user.getIsLocked()) {
-            log.warn("User account already unlocked: {}", userId);
-            return true;
-        }
-        
+        User user = findUserByPublicId(userId);
+        if (!Boolean.TRUE.equals(user.getIsLocked())) return true;
         user.setIsLocked(false);
         userRepository.save(user);
-        
-        log.info("User account unlocked successfully: {}", userId);
+        log.info("User account unlocked: {}", userId);
         return true;
     }
 
@@ -272,126 +312,53 @@ public class UserServiceImpl implements UserService {
     }, allEntries = true)
     public List<UserDto> bulkUpdateUsers(BulkUserUpdateRequest request) {
         List<UserDto> updatedUsers = new ArrayList<>();
-        
+
         for (UUID userId : request.getUserIds()) {
             try {
-                User user = userRepository.findById(userId).orElse(null);
+                User user = userRepository.findByPublicId(userId).orElse(null);
                 if (user == null) {
                     log.warn("User not found for bulk update: {}", userId);
                     continue;
                 }
-                
-                // Update role if provided
                 if (request.getRole() != null && !request.getRole().isBlank()) {
                     try {
-                        Role oldRole = user.getRole();
                         user.setRole(Role.valueOf(request.getRole().toUpperCase()));
                         userRepository.save(user);
-                        
-                        if (Boolean.TRUE.equals(request.getSendNotification())) {
-                            sendRoleChangeNotification(user, oldRole, user.getRole());
-                        }
                         tokenValidationService.evictPrincipal(userId);
                     } catch (IllegalArgumentException e) {
                         log.warn("Invalid role in bulk update: {}", request.getRole());
                     }
                 }
-                
-                // Update status if provided
                 if (request.getIsActive() != null) {
-                    boolean oldStatus = user.getIsActive();
                     user.setIsActive(request.getIsActive());
                     userRepository.save(user);
-                    
-                    if (Boolean.TRUE.equals(request.getSendNotification())) {
-                        sendStatusChangeNotification(user, oldStatus, request.getIsActive());
-                    }
                     tokenValidationService.evictPrincipal(userId);
                 }
-                
-                updatedUsers.add(userMapper.toDto(user));
+                updatedUsers.add(toUserDto(user));
             } catch (Exception e) {
                 log.error("Error updating user {} in bulk update: {}", userId, e.getMessage());
             }
         }
-        
-        log.info("Bulk update completed: {} users updated out of {}", 
+
+        log.info("Bulk update completed: {} users updated out of {}",
                 updatedUsers.size(), request.getUserIds().size());
         return updatedUsers;
     }
 
-    /**
-     * Send notification to user about role change
-     */
-    private void sendRoleChangeNotification(User user, Role oldRole, Role newRole) {
-        try {
-            String message = String.format(
-                    "Your account role has been changed from %s to %s.",
-                    oldRole != null ? oldRole.name() : "NONE",
-                    newRole != null ? newRole.name() : "NONE");
-            
-            Notification notification = Notification.builder()
-                    .user(user)
-                    .type("ROLE_CHANGE")
-                    .title("Role Updated")
-                    .message(message)
-                    .isRead(false)
-                    .build();
-            
-            notificationRepository.save(notification);
-            log.debug("Role change notification sent to user {}", user.getId());
-        } catch (Exception e) {
-            log.warn("Failed to send role change notification to user {}: {}", 
-                    user.getId(), e.getMessage());
-        }
-    }
-
-    /**
-     * Send notification to user about status change
-     */
-    private void sendStatusChangeNotification(User user, boolean oldStatus, boolean newStatus) {
-        try {
-            String message;
-            if (oldStatus && !newStatus) {
-                message = "Your account has been deactivated. Please contact support for assistance.";
-            } else if (!oldStatus && newStatus) {
-                message = "Your account has been activated. You can now log in to your account.";
-            } else {
-                return; // No meaningful change
-            }
-            
-            Notification notification = Notification.builder()
-                    .user(user)
-                    .type("STATUS_CHANGE")
-                    .title(newStatus ? "Account Activated" : "Account Deactivated")
-                    .message(message)
-                    .isRead(false)
-                    .build();
-            
-            notificationRepository.save(notification);
-            log.debug("Status change notification sent to user {}", user.getId());
-        } catch (Exception e) {
-            log.warn("Failed to send status change notification to user {}: {}", 
-                    user.getId(), e.getMessage());
-        }
-    }
-
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "users-predicate", key = "T(org.springframework.util.DigestUtils).md5DigestAsHex(('#predicate=' + #predicate.toString() + '&page=' + #pageable.pageNumber + '&size=' + #pageable.pageSize + '&sort=' + #pageable.sort).getBytes())")
-    public Page<UserDto> findUsersWithPredicate(com.querydsl.core.types.Predicate predicate, Pageable pageable) {
-        return userRepository.findAll(predicate, pageable).map(userMapper::toDto);
+    @Cacheable(value = "users-predicate", key = "T(org.springframework.util.DigestUtils).md5DigestAsHex(('#page=' + #pageable.pageNumber + '&size=' + #pageable.pageSize).getBytes())")
+    public Page<UserDto> findUsersWithPredicate(Specification<User> spec, Pageable pageable) {
+        return userRepository.findAll(spec, pageable).map(this::toUserDto);
     }
 
-    // ==================== Customer Profile Operations ====================
+    // ── Customer Profile ─────────────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "user-profile", key = "#userId")
     public UserDto getCustomerProfile(UUID userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + userId));
-        return userMapper.toDto(user);
+        return toUserDto(findUserByPublicId(userId));
     }
 
     @Override
@@ -399,107 +366,82 @@ public class UserServiceImpl implements UserService {
     @CachePut(value = "user-profile", key = "#userId")
     @CacheEvict(value = {"users"}, allEntries = true)
     public UserDto updateCustomerProfile(UUID userId, UserDto request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + userId));
+        User user = findUserByPublicId(userId);
 
-        if (request.getFirstName() != null) {
-            user.setFirstName(request.getFirstName());
-        }
-        if (request.getLastName() != null) {
-            user.setLastName(request.getLastName());
-        }
-        if (request.getPhone() != null) {
-            user.setPhone(request.getPhone());
-        }
-        if (request.getProfileImageUrl() != null) {
-            user.setProfileImageUrl(request.getProfileImageUrl());
-        }
+        if (request.getFirstName() != null) user.setFirstName(request.getFirstName());
+        if (request.getLastName() != null) user.setLastName(request.getLastName());
+        if (request.getPhone() != null) user.setPhone(request.getPhone());
+        if (request.getProfileImageUrl() != null) user.setProfileImageUrl(request.getProfileImageUrl());
 
-        User updatedUser = userRepository.save(user);
+        userRepository.save(user);
         log.info("Customer profile updated for user: {}", userId);
-        return userMapper.toDto(updatedUser);
+        return toUserDto(user);
     }
 
-    // ==================== Address Operations ====================
+    // ── Address Operations ───────────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
     public List<AddressDto> getCustomerAddresses(UUID userId) {
-        if (!userRepository.existsById(userId)) {
+        if (userRepository.findByPublicId(userId).isEmpty()) {
             throw new ResourceNotFoundException(USER_NOT_FOUND + userId);
         }
-        List<Address> addresses = addressRepository.findByUserId(userId);
-        return addresses.stream()
-                .map(addressMapper::toDto)
+        return addressRepository.findByUser_PublicId(userId).stream()
+                .map(this::toAddressDto)
                 .toList();
     }
 
     @Override
     @Transactional
     public AddressDto addCustomerAddress(UUID userId, AddressRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND + userId));
+        User user = findUserByPublicId(userId);
 
         if (Boolean.TRUE.equals(request.getIsDefault())) {
-            addressRepository.clearDefaultByUserId(userId);
+            addressRepository.clearDefaultByUserPublicId(userId);
         }
 
-        Address address = addressMapper.toEntity(request);
+        Address address = toAddress(request);
         address.setUser(user);
 
         Address savedAddress = addressRepository.save(address);
         log.info("Address added for user: {}", userId);
-        return addressMapper.toDto(savedAddress);
+        return toAddressDto(savedAddress);
     }
 
     @Override
     @Transactional
     public AddressDto updateCustomerAddress(UUID userId, UUID addressId, AddressRequest request) {
-        Address address = addressRepository.findById(addressId)
+        Address address = addressRepository.findByPublicId(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + addressId));
 
-        if (!address.getUser().getId().equals(userId)) {
+        if (!address.getUser().getPublicId().equals(userId)) {
             throw new ResourceNotFoundException("Address not found with id: " + addressId);
         }
 
         if (Boolean.TRUE.equals(request.getIsDefault())) {
-            addressRepository.clearDefaultByUserId(userId);
+            addressRepository.clearDefaultByUserPublicId(userId);
         }
 
-        if (request.getLabel() != null) {
-            address.setLabel(request.getLabel());
-        }
-        if (request.getStreetAddress() != null) {
-            address.setStreetAddress(request.getStreetAddress());
-        }
-        if (request.getCity() != null) {
-            address.setCity(request.getCity());
-        }
-        if (request.getState() != null) {
-            address.setState(request.getState());
-        }
-        if (request.getPostalCode() != null) {
-            address.setPostalCode(request.getPostalCode());
-        }
-        if (request.getCountry() != null) {
-            address.setCountry(request.getCountry());
-        }
-        if (request.getIsDefault() != null) {
-            address.setIsDefault(request.getIsDefault());
-        }
+        if (request.getLabel() != null) address.setLabel(request.getLabel());
+        if (request.getStreetAddress() != null) address.setStreetAddress(request.getStreetAddress());
+        if (request.getCity() != null) address.setCity(request.getCity());
+        if (request.getState() != null) address.setState(request.getState());
+        if (request.getPostalCode() != null) address.setPostalCode(request.getPostalCode());
+        if (request.getCountry() != null) address.setCountry(request.getCountry());
+        if (request.getIsDefault() != null) address.setIsDefault(request.getIsDefault());
 
         Address updatedAddress = addressRepository.save(address);
         log.info("Address updated for user: {}", userId);
-        return addressMapper.toDto(updatedAddress);
+        return toAddressDto(updatedAddress);
     }
 
     @Override
     @Transactional
     public void deleteCustomerAddress(UUID userId, UUID addressId) {
-        Address address = addressRepository.findById(addressId)
+        Address address = addressRepository.findByPublicId(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + addressId));
 
-        if (!address.getUser().getId().equals(userId)) {
+        if (!address.getUser().getPublicId().equals(userId)) {
             throw new ResourceNotFoundException("Address not found with id: " + addressId);
         }
 
@@ -507,11 +449,11 @@ public class UserServiceImpl implements UserService {
         log.info("Address deleted for user: {}", userId);
     }
 
+    // ── Statistics ───────────────────────────────────────────────────────────
+
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getCustomerStats() {
-        log.debug("Fetching customer statistics");
-
         long total = userRepository.countCustomers();
         long active = userRepository.countActiveCustomers();
         long blocked = userRepository.countCustomersByStatus(UserStatus.BLOCKED);
@@ -522,22 +464,17 @@ public class UserServiceImpl implements UserService {
         stats.put("activeCustomers", active);
         stats.put("blockedCustomers", blocked);
         stats.put("inactiveCustomers", inactive);
-
         return stats;
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<UserDto> searchCustomers(String query, String status, Pageable pageable) {
-        log.debug("Searching customers - query: {}, status: {}", query, status);
-
         UserStatus userStatus = null;
         if (status != null && !status.isBlank()) {
             userStatus = UserStatus.valueOf(status.toUpperCase());
         }
-
-        Page<User> users = userRepository.searchCustomers(query, userStatus, pageable);
-        return users.map(userMapper::toDto);
+        return userRepository.searchCustomers(query, userStatus, pageable).map(this::toUserDto);
     }
 
     @Override
@@ -550,16 +487,11 @@ public class UserServiceImpl implements UserService {
             userStatus = UserStatus.valueOf(status.toUpperCase());
         }
 
-        List<User> users;
-        if (userStatus != null) {
-            users = userRepository.findByStatus(userStatus, Pageable.unpaged()).getContent();
-        } else {
-            users = userRepository.findAll();
-        }
+        List<User> users = userStatus != null
+                ? userRepository.findByStatus(userStatus, Pageable.unpaged()).getContent()
+                : userRepository.findAll();
 
-        StringBuilder csv = new StringBuilder();
-        csv.append("Name,Email,Phone,Status,Joined Date,Last Login\n");
-
+        StringBuilder csv = new StringBuilder("Name,Email,Phone,Status,Joined Date,Last Login\n");
         for (User user : users) {
             csv.append(String.format("%s,%s,%s,%s,%s,%s\n",
                     escapeCsv(user.getFullName()),
@@ -569,37 +501,19 @@ public class UserServiceImpl implements UserService {
                     user.getCreatedAt(),
                     user.getLastLoginAt() != null ? user.getLastLoginAt() : ""));
         }
-
         return csv.toString();
-    }
-
-    private String escapeCsv(String value) {
-        if (value == null) return "";
-        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
-            return "\"" + value.replace("\"", "\"\"") + "\"";
-        }
-        return value;
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<UserDto> searchSellers(String query, String status, Pageable pageable) {
-        log.debug("Searching sellers - query: {}, status: {}", query, status);
-
-        UserStatus userStatus = null;
-        if (status != null && !status.isBlank()) {
-            userStatus = UserStatus.valueOf(status.toUpperCase());
-        }
-
-        Page<SellerProfile> sellers = sellerProfileRepository.searchSellers(query, null, pageable);
-        return sellers.map(seller -> userMapper.toDto(seller.getUser()));
+        return sellerProfileRepository.searchSellers(query, null, pageable)
+                .map(seller -> toUserDto(seller.getUser()));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getSellerStats() {
-        log.debug("Fetching seller statistics");
-
         long total = sellerProfileRepository.countAllSellers();
         long active = sellerProfileRepository.countBySellerStatus(SellerStatus.ACTIVE);
         long pending = sellerProfileRepository.countBySellerStatus(SellerStatus.PENDING);
@@ -610,53 +524,138 @@ public class UserServiceImpl implements UserService {
         stats.put("activeSellers", active);
         stats.put("pendingSellers", pending);
         stats.put("suspendedSellers", suspended);
-
         return stats;
     }
 
     @Override
     @Transactional
     public UserDto approveSeller(UUID sellerId) {
-        log.info("Approving seller: {}", sellerId);
-
-        SellerProfile profile = sellerProfileRepository.findById(sellerId)
+        SellerProfile profile = sellerProfileRepository.findByPublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
-
         profile.setSellerStatus(SellerStatus.ACTIVE);
         profile.setVerificationStatus(VerificationStatus.VERIFIED);
         sellerProfileRepository.save(profile);
-
-        log.info("Seller {} approved successfully", sellerId);
-        return userMapper.toDto(profile.getUser());
+        log.info("Seller {} approved", sellerId);
+        return toUserDto(profile.getUser());
     }
 
     @Override
     @Transactional
     public UserDto suspendSeller(UUID sellerId) {
-        log.info("Suspending seller: {}", sellerId);
-
-        SellerProfile profile = sellerProfileRepository.findById(sellerId)
+        SellerProfile profile = sellerProfileRepository.findByPublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
-
         profile.setSellerStatus(SellerStatus.SUSPENDED);
         sellerProfileRepository.save(profile);
-
-        log.info("Seller {} suspended successfully", sellerId);
-        return userMapper.toDto(profile.getUser());
+        log.info("Seller {} suspended", sellerId);
+        return toUserDto(profile.getUser());
     }
 
     @Override
     @Transactional
     public UserDto reactivateSeller(UUID sellerId) {
-        log.info("Reactivating seller: {}", sellerId);
-
-        SellerProfile profile = sellerProfileRepository.findById(sellerId)
+        SellerProfile profile = sellerProfileRepository.findByPublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller profile not found"));
-
         profile.setSellerStatus(SellerStatus.ACTIVE);
         sellerProfileRepository.save(profile);
+        log.info("Seller {} reactivated", sellerId);
+        return toUserDto(profile.getUser());
+    }
 
-        log.info("Seller {} reactivated successfully", sellerId);
-        return userMapper.toDto(profile.getUser());
+    // ── Customer Dashboard & Loyalty ─────────────────────────────────────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public CustomerDashboardResponse getCustomerDashboard(UUID userId) {
+        CustomerProfile profile = customerProfileRepository.findByUserId(userId).orElse(null);
+        long wishlistItems = wishlistItemRepository.countByUser_PublicId(userId);
+        List<Order> recentOrderEntities = orderRepository.findByCustomer_PublicId(userId,
+                org.springframework.data.domain.PageRequest.of(0, 10)).getContent();
+        long totalOrders = orderRepository.findByCustomer_PublicId(userId,
+                org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE)).getTotalElements();
+        long savedAddresses = addressRepository.findByUser_PublicId(userId).size();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d, yyyy");
+        List<CustomerDashboardResponse.RecentOrderDto> recentOrders = recentOrderEntities.stream()
+                .sorted((a, b) -> {
+                    if (a.getCreatedAt() == null && b.getCreatedAt() == null) return 0;
+                    if (a.getCreatedAt() == null) return 1;
+                    if (b.getCreatedAt() == null) return -1;
+                    return b.getCreatedAt().compareTo(a.getCreatedAt());
+                })
+                .limit(5)
+                .map(order -> CustomerDashboardResponse.RecentOrderDto.builder()
+                        .orderId(order.getId().toString())
+                        .orderNumber(order.getOrderNumber())
+                        .orderDate(order.getCreatedAt() != null
+                                ? formatter.format(order.getCreatedAt().atZone(ZoneId.systemDefault()))
+                                : "N/A")
+                        .status(order.getStatus().name())
+                        .totalAmount(order.getTotalAmount())
+                        .build())
+                .collect(Collectors.toList());
+
+        return CustomerDashboardResponse.builder()
+                .totalOrders(totalOrders)
+                .wishlistItems(wishlistItems)
+                .savedAddresses(savedAddresses)
+                .loyaltyPoints(profile != null ? profile.getLoyaltyPoints() : 0)
+                .totalSpent(profile != null ? profile.getTotalSpent() : BigDecimal.ZERO)
+                .membershipStatus(profile != null ? profile.getMembershipStatus().name() : "NONE")
+                .recentOrders(recentOrders)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LoyaltyRedemptionResponse getLoyaltyBalance(UUID userId) {
+        CustomerProfile profile = customerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer profile not found for user: " + userId));
+        int points = profile.getLoyaltyPoints() != null ? profile.getLoyaltyPoints() : 0;
+        BigDecimal availableDiscount = BigDecimal.valueOf(points).multiply(BigDecimal.valueOf(0.10));
+        return LoyaltyRedemptionResponse.builder()
+                .previousPoints(0)
+                .redeemedPoints(0)
+                .remainingPoints(points)
+                .discountAmount(availableDiscount)
+                .rewardType("AVAILABLE")
+                .message(points + " points available - " + availableDiscount + " worth of discounts")
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public LoyaltyRedemptionResponse redeemLoyaltyPoints(UUID userId, int pointsToRedeem, String rewardType) {
+        CustomerProfile profile = customerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer profile not found for user: " + userId));
+        int currentPoints = profile.getLoyaltyPoints() != null ? profile.getLoyaltyPoints() : 0;
+
+        if (currentPoints < 100 || pointsToRedeem < 100 || pointsToRedeem > currentPoints) {
+            throw new IllegalArgumentException("Insufficient loyalty points for redemption");
+        }
+
+        BigDecimal discountAmount = BigDecimal.valueOf(pointsToRedeem).multiply(BigDecimal.valueOf(0.10));
+        profile.setLoyaltyPoints(currentPoints - pointsToRedeem);
+        customerProfileRepository.save(profile);
+
+        String type = rewardType != null ? rewardType : "DISCOUNT";
+        String couponCode = "LOYALTY-" + pointsToRedeem + "-" + userId.toString().substring(0, 8).toUpperCase();
+
+        return LoyaltyRedemptionResponse.builder()
+                .previousPoints(currentPoints)
+                .redeemedPoints(pointsToRedeem)
+                .remainingPoints(currentPoints - pointsToRedeem)
+                .discountAmount(discountAmount)
+                .rewardType(type)
+                .couponCode(couponCode)
+                .message("Successfully redeemed " + pointsToRedeem + " points for " + discountAmount + " discount!")
+                .build();
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) return "";
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
 }

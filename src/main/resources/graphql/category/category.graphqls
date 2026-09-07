@@ -37,26 +37,6 @@ type CategoryStats {
 # Inputs
 # ─────────────────────────────────────────────────────────────────────────────
 
-input CategoryCreateInput {
-    name: String!
-    description: String
-    parentCategoryId: ID
-    image: String
-    slug: String
-    featured: Boolean = false
-    isActive: Boolean = true
-}
-
-input CategoryUpdateInput {
-    name: String
-    description: String
-    parentCategoryId: ID
-    image: String
-    slug: String
-    featured: Boolean
-    isActive: Boolean
-}
-
 input CategoryFilterInput {
     name: String
     description: String
@@ -88,17 +68,3 @@ extend type Query {
     categoryStats: CategoryStats!
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Mutations
-# ─────────────────────────────────────────────────────────────────────────────
-
-extend type Mutation {
-
-    # ── Category CRUD (SELLER/ADMIN) ─────────────────────────────────────
-    createCategory(input: CategoryCreateInput!): Category!
-    updateCategory(id: ID!, input: CategoryUpdateInput!): Category!
-
-    # ── Admin Operations (ADMIN) ─────────────────────────────────────────
-    deleteCategory(id: ID!): Boolean!
-    updateCategoryStatus(id: ID!, isActive: Boolean!): Category!
-}

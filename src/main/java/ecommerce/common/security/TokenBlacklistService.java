@@ -67,8 +67,8 @@ public class TokenBlacklistService {
     /**
      * Returns {@code true} if {@code token} is on the blacklist.
      *
-     * <p>Fail-closed: any Redis error (including circuit-open) causes this
-     * method to return {@code true}, blocking the request.
+     * <p>Fail-closed: any Redis error causes this method to return {@code true},
+     * blocking the request to prevent use of revoked tokens during an outage.
      */
     public boolean isTokenBlacklisted(String token) {
         String hash = hashToken(token);

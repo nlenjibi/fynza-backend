@@ -8,7 +8,6 @@ import ecommerce.modules.follow.dto.FollowerResponse;
 import ecommerce.modules.follow.entity.StoreFollow;
 import ecommerce.modules.follow.repository.StoreFollowRepository;
 import ecommerce.modules.follow.service.FollowService;
-import ecommerce.modules.order.entity.Order;
 import ecommerce.modules.order.repository.OrderRepository;
 import ecommerce.modules.user.entity.SellerProfile;
 import ecommerce.modules.user.entity.User;
@@ -23,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -46,7 +44,7 @@ public class FollowServiceImpl implements FollowService {
         User customer = userRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 
-        SellerProfile seller = sellerProfileRepository.findById(sellerId)
+        SellerProfile seller = sellerProfileRepository.findByPublicId(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller not found"));
 
         StoreFollow follow = StoreFollow.builder()
@@ -133,7 +131,7 @@ public class FollowServiceImpl implements FollowService {
                 .sum();
 
         return FollowerResponse.builder()
-                .id(follow.getId())
+                .id(follow.getPublicId())
                 .customerId(customer.getId())
                 .customerName(customer.getFirstName() + " " + customer.getLastName())
                 .customerEmail(customer.getEmail())
@@ -149,8 +147,8 @@ public class FollowServiceImpl implements FollowService {
         SellerProfile seller = follow.getSeller();
         
         return FollowedStoreResponse.builder()
-                .id(follow.getId())
-                .sellerId(seller.getId())
+                .id(follow.getPublicId())
+                .sellerId(seller.getPublicId())
                 .storeName(seller.getStoreName())
                 .storeLogo(seller.getStoreLogo())
                 .isVerified(seller.getVerificationStatus() == ecommerce.common.enums.VerificationStatus.VERIFIED)

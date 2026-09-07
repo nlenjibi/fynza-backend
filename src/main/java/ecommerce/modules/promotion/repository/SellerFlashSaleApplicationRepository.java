@@ -1,20 +1,21 @@
 package ecommerce.modules.promotion.repository;
 
-import ecommerce.common.base.BaseRepository;
 import ecommerce.modules.promotion.entity.SellerFlashSaleApplication;
 import ecommerce.modules.promotion.entity.SellerFlashSaleApplication.Status;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface SellerFlashSaleApplicationRepository extends BaseRepository<SellerFlashSaleApplication, UUID> {
+public interface SellerFlashSaleApplicationRepository extends JpaRepository<SellerFlashSaleApplication, Long> {
+
+    Optional<SellerFlashSaleApplication> findByPublicId(UUID publicId);
 
     Optional<SellerFlashSaleApplication> findByFlashSaleIdAndSellerId(UUID flashSaleId, UUID sellerId);
 

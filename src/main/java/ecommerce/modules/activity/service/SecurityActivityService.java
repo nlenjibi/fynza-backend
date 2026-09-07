@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -36,7 +37,7 @@ public class SecurityActivityService {
                 .deviceInfo(deviceInfo)
                 .location(location)
                 .status(status)
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .build();
         securityActivityRepository.save(activity);
         log.debug("Security activity logged: {} for user: {}", type, userId);
