@@ -95,8 +95,7 @@ public class SecurityConfig {
     @SuppressWarnings("java:S4502") // CSRF disabled intentionally — see class Javadoc
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // lgtm[java/spring-disabled-csrf-protection] — stateless JWT API; CSRF does not apply
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable) // lgtm[java/spring-disabled-csrf-protection]
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 // ── HTTP security response headers (OWASP A05) ────────────────

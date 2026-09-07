@@ -42,7 +42,7 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
                 ? request.getUserPrincipal().getName() : "anonymous";
 
         log.warn("Access denied [{}] for user '{}' on '{}': {}",
-                accessDeniedException.getClass().getSimpleName(), username,
+                accessDeniedException.getClass().getSimpleName(), username.replace('\n', '_').replace('\r', '_'),
                 request.getRequestURI(), accessDeniedException.getMessage());
 
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);

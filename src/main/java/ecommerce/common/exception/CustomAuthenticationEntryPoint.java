@@ -71,11 +71,11 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
         Throwable root = authException.getCause() != null ? authException.getCause() : authException;
 
         if (root instanceof AuthenticationServiceException) {
-            log.error("Authentication service error on '{}': {}", request.getRequestURI(), root.getMessage(), root);
+            log.error("Authentication service error on '{}': {}", request.getRequestURI().replace('\n', '_').replace('\r', '_'), root.getMessage(), root);
         } else if (root instanceof JwtException) {
-            log.warn("Security violation [{}] on '{}': {}", root.getClass().getSimpleName(), request.getRequestURI(), root.getMessage());
+            log.warn("Security violation [{}] on '{}': {}", root.getClass().getSimpleName(), request.getRequestURI().replace('\n', '_').replace('\r', '_'), root.getMessage());
         } else {
-            log.info("Authentication failure [{}] on '{}': {}", root.getClass().getSimpleName(), request.getRequestURI(), root.getMessage());
+            log.info("Authentication failure [{}] on '{}': {}", root.getClass().getSimpleName(), request.getRequestURI().replace('\n', '_').replace('\r', '_'), root.getMessage());
         }
 
         ExceptionInfo info = resolve(root);

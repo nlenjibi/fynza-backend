@@ -30,7 +30,7 @@ public class SearchAsyncService {
         searchQueryCounts.computeIfAbsent(query, k -> new AtomicLong(0)).incrementAndGet();
         lastSearchTime.put(query, LocalDateTime.now());
         
-        log.debug("Recorded search query: {} (total: {})", query, searchQueryCounts.get(query).get());
+        log.debug("Recorded search query: {} (total: {})", query.replace('\n', '_').replace('\r', '_'), searchQueryCounts.get(query).get());
     }
 
     @Async("searchExecutor")

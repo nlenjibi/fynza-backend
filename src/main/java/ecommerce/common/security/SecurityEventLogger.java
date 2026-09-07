@@ -15,16 +15,16 @@ public class SecurityEventLogger {
                                boolean success, String method, String failureReason) {
         if (success) {
             log.info("LOGIN_SUCCESS: email={}, ip={}, method={}, userAgent={}",
-                    email, ip, method, truncateUserAgent(userAgent));
+                    email.replace('\n', '_').replace('\r', '_'), ip.replace('\n', '_').replace('\r', '_'), method.replace('\n', '_').replace('\r', '_'), truncateUserAgent(userAgent));
         } else {
             log.warn("LOGIN_FAILURE: email={}, ip={}, method={}, reason={}, userAgent={}",
-                    email, ip, method, failureReason, truncateUserAgent(userAgent));
+                    email.replace('\n', '_').replace('\r', '_'), ip.replace('\n', '_').replace('\r', '_'), method.replace('\n', '_').replace('\r', '_'), failureReason.replace('\n', '_').replace('\r', '_'), truncateUserAgent(userAgent));
         }
     }
 
     @Async("securityEventExecutor")
     public void logLogout(UUID userId, String email, String ip) {
-        log.info("LOGOUT: userId={}, email={}, ip={}", userId, email, ip);
+        log.info("LOGOUT: userId={}, email={}, ip={}", userId, email.replace('\n', '_').replace('\r', '_'), ip.replace('\n', '_').replace('\r', '_'));
     }
 
     @Async("securityEventExecutor")

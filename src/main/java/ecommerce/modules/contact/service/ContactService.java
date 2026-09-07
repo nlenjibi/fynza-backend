@@ -29,7 +29,7 @@ public class ContactService {
 
     @Transactional
     public ContactMessageResponse createMessage(ContactMessageRequest request) {
-        log.info("Creating new contact message from: {}", request.getEmail());
+        log.info("Creating new contact message from: {}", request.getEmail().replace('\n', '_').replace('\r', '_'));
 
         ContactMessage message = ContactMessage.builder()
                 .name(request.getName())
@@ -83,7 +83,7 @@ public class ContactService {
         message.setStatus(ContactStatus.RESPONDED);
 
         ContactMessage updatedMessage = contactMessageRepository.save(message);
-        log.info("Contact message {} responded by admin {}", id, request.getAdminId());
+        log.info("Contact message {} responded by admin {}", id, request.getAdminId().replace('\n', '_').replace('\r', '_'));
 
         return ContactMessageResponse.from(updatedMessage);
     }
@@ -155,7 +155,7 @@ public class ContactService {
 
     @Transactional(readOnly = true)
     public Page<ContactMessageResponse> searchMessages(String searchTerm, Pageable pageable) {
-        log.debug("Searching contact messages with term: {}", searchTerm);
+        log.debug("Searching contact messages with term: {}", searchTerm.replace('\n', '_').replace('\r', '_'));
 
         return contactMessageRepository.searchMessages(searchTerm, pageable)
                 .map(ContactMessageResponse::from);

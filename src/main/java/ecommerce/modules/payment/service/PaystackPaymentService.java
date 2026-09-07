@@ -35,7 +35,7 @@ public class PaystackPaymentService {
      * @return response containing the authorization URL
      */
     public PaystackInitializeResponse initializePayment(PaystackInitializeRequest request) {
-        log.info("Initializing Paystack payment for amount: {} {}", request.getAmount(), request.getCurrency());
+        log.info("Initializing Paystack payment for amount: {} {}", request.getAmount(), request.getCurrency().replace('\n', '_').replace('\r', '_'));
 
         // Generate reference if not provided
         String reference = request.getReference();
@@ -82,7 +82,7 @@ public class PaystackPaymentService {
             ).getBody();
 
             if (response != null && response.isStatus()) {
-                log.info("Payment initialized successfully. Reference: {}", reference);
+                log.info("Payment initialized successfully. Reference: {}", reference.replace('\n', '_').replace('\r', '_'));
                 return response;
             } else {
                 log.error("Paystack initialization failed: {}", response != null ? response.getMessage() : "Unknown error");
@@ -104,7 +104,7 @@ public class PaystackPaymentService {
      * @return response containing the transaction verification data
      */
     public PaystackVerifyResponse verifyPayment(String reference) {
-        log.info("Verifying Paystack payment for reference: {}", reference);
+        log.info("Verifying Paystack payment for reference: {}", reference.replace('\n', '_').replace('\r', '_'));
 
         String url = paystackProperties.getBaseUrl() + "/transaction/verify/" + reference;
 
@@ -145,7 +145,7 @@ public class PaystackPaymentService {
      * @return success message
      */
     public String processRefund(String reference, java.math.BigDecimal amount) {
-        log.info("Processing Paystack refund for reference: {}, amount: {}", reference, amount);
+        log.info("Processing Paystack refund for reference: {}, amount: {}", reference.replace('\n', '_').replace('\r', '_'), amount);
 
         String url = paystackProperties.getBaseUrl() + "/transaction/refund";
 

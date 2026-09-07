@@ -65,7 +65,23 @@ public class TokenValidationService {
             return ValidationResult.noToken();
         }
 
-        // Check token validation cache first (fastest path)
+        // ── 1. Signature / expiry (CPU, no I/O) ───────────────────────────────
+        // Must happen before cache lookup: an expired token must never be served from cache.
+        if (!jwtTokenProvider.validateToken(jwt)) {
+            return ValidationResult.invalid();
+        }
+
+        // ── 2. Blacklist check — executed unconditionally before any cache read ──
+        // Keeping this before the cache lookup prevents a revoked token that is still
+        // resident in the validation cache from bypassing the blacklist check.
+        if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
+            tokenValidationCache.invalidate(jwt); // evict stale cache entry if present
+            log.warn("Blacklisted token attempted");
+            return ValidationResult.reject(
+                    new BadCredentialsException("Token has been revoked. Please login again."));
+        }
+
+        // ── Cache lookup (fastest path — all security checks already passed above) ──
         CachedAuthentication cached = tokenValidationCache.getIfPresent(jwt);
         if (cached != null) {
             log.debug("Token cache hit for user {}", cached.username());
@@ -73,18 +89,6 @@ public class TokenValidationService {
                     cached.authentication().getPrincipal(),
                     null,
                     cached.authentication().getAuthorities()));
-        }
-
-        // ── 1. Signature / expiry (CPU, no I/O) ───────────────────────────────
-        if (!jwtTokenProvider.validateToken(jwt)) {
-            return ValidationResult.invalid();
-        }
-
-        // ── 2. Blacklist check (Caffeine + Bloom Filter in-memory) ───────────
-        if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
-            log.warn("Blacklisted token attempted");
-            return ValidationResult.reject(
-                    new BadCredentialsException("Token has been revoked. Please login again."));
         }
 
         UUID userId = jwtTokenProvider.getUserIdFromToken(jwt);

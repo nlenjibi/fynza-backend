@@ -41,7 +41,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleFynzaException(FynzaException ex,
                                                                HttpServletRequest request) {
         log.warn("Domain exception [{}] on '{}': {}", ex.getClass().getSimpleName(),
-                request.getRequestURI(), ex.getMessage());
+                request.getRequestURI().replace('\n', '_').replace('\r', '_'), ex.getMessage());
 
         ErrorResponse body = ErrorResponse.builder()
                 .code(ex.getCode())
@@ -70,7 +70,7 @@ public class GlobalExceptionHandler {
         ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                 (existing, replacement) -> existing));
 
-        log.warn("Validation failure on '{}': {}", request.getRequestURI(), errors);
+        log.warn("Validation failure on '{}': {}", request.getRequestURI().replace('\n', '_').replace('\r', '_'), errors);
 
         return ResponseEntity.badRequest().body(ErrorResponse.builder()
                 .code("VALIDATION_ERROR")
@@ -92,7 +92,7 @@ public class GlobalExceptionHandler {
                         (existing, replacement) -> existing
                 ));
 
-        log.warn("Constraint violation on '{}': {}", request.getRequestURI(), errors);
+        log.warn("Constraint violation on '{}': {}", request.getRequestURI().replace('\n', '_').replace('\r', '_'), errors);
 
         return ResponseEntity.badRequest().body(ErrorResponse.builder()
                 .code("VALIDATION_ERROR")
@@ -107,7 +107,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMessageNotReadable(
             HttpMessageNotReadableException ex, HttpServletRequest request) {
 
-        log.warn("Malformed request body on '{}': {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Malformed request body on '{}': {}", request.getRequestURI().replace('\n', '_').replace('\r', '_'), ex.getMessage());
 
         return ResponseEntity.badRequest().body(ErrorResponse.builder()
                 .code("MALFORMED_REQUEST")
@@ -122,7 +122,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMissingParam(
             MissingServletRequestParameterException ex, HttpServletRequest request) {
 
-        log.warn("Missing parameter '{}' on '{}'", ex.getParameterName(), request.getRequestURI());
+        log.warn("Missing parameter '{}' on '{}'", ex.getParameterName(), request.getRequestURI().replace('\n', '_').replace('\r', '_'));
 
         return ResponseEntity.badRequest().body(ErrorResponse.builder()
                 .code("MISSING_PARAMETER")
@@ -139,7 +139,7 @@ public class GlobalExceptionHandler {
 
         String expected = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown";
         String message = String.format("Parameter '%s' must be of type %s.", ex.getName(), expected);
-        log.warn("Type mismatch on '{}': {}", request.getRequestURI(), message);
+        log.warn("Type mismatch on '{}': {}", request.getRequestURI().replace('\n', '_').replace('\r', '_'), message);
 
         return ResponseEntity.badRequest().body(ErrorResponse.builder()
                 .code("TYPE_MISMATCH")
@@ -161,7 +161,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleBadCredentials(AuthenticationException ex,
                                                                HttpServletRequest request) {
         log.warn("Authentication failure [{}] on '{}': {}", ex.getClass().getSimpleName(),
-                request.getRequestURI(), ex.getMessage());
+                request.getRequestURI().replace('\n', '_').replace('\r', '_'), ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ErrorResponse.builder()
                 .code("INVALID_CREDENTIALS")
                 .message("Invalid username or password.")
@@ -180,7 +180,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleAccountStatus(AuthenticationException ex,
                                                               HttpServletRequest request) {
         log.warn("Account status failure [{}] on '{}': {}", ex.getClass().getSimpleName(),
-                request.getRequestURI(), ex.getMessage());
+                request.getRequestURI().replace('\n', '_').replace('\r', '_'), ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ErrorResponse.builder()
                 .code("ACCOUNT_STATUS_ERROR")
                 .message(resolveAccountStatusMessage(ex))
@@ -201,7 +201,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex,
                                                              HttpServletRequest request) {
-        log.warn("Access denied on '{}': {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Access denied on '{}': {}", request.getRequestURI().replace('\n', '_').replace('\r', '_'), ex.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorResponse.builder()
                 .code("FORBIDDEN")
                 .message("You do not have permission to access this resource.")
@@ -214,7 +214,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccountLockedException.class)
     public ResponseEntity<ErrorResponse> handleAccountLocked(AccountLockedException ex,
                                                               HttpServletRequest request) {
-        log.warn("Locked account access attempt on '{}': {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Locked account access attempt on '{}': {}", request.getRequestURI().replace('\n', '_').replace('\r', '_'), ex.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorResponse.builder()
                 .code("ACCOUNT_LOCKED")
                 .message(ex.getMessage())
@@ -252,7 +252,7 @@ public class GlobalExceptionHandler {
         String cause = ex.getMostSpecificCause() != null
                 ? ex.getMostSpecificCause().getMessage()
                 : ex.getMessage();
-        log.warn("Data integrity violation on '{}': {}", request.getRequestURI(), cause);
+        log.warn("Data integrity violation on '{}': {}", request.getRequestURI().replace('\n', '_').replace('\r', '_'), cause);
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.builder()
                 .code("DATA_CONFLICT")
@@ -267,7 +267,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleOptimisticLocking(
             OptimisticLockingFailureException ex, HttpServletRequest request) {
 
-        log.warn("Optimistic locking conflict on '{}': {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Optimistic locking conflict on '{}': {}", request.getRequestURI().replace('\n', '_').replace('\r', '_'), ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.builder()
                 .code("CONCURRENT_MODIFICATION")
@@ -286,7 +286,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleRateLimitExceeded(
             RateLimitingAspect.RateLimitExceededException ex, HttpServletRequest request) {
 
-        log.warn("Rate limit exceeded on '{}': {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Rate limit exceeded on '{}': {}", request.getRequestURI().replace('\n', '_').replace('\r', '_'), ex.getMessage());
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(ErrorResponse.builder()
                 .code("RATE_LIMIT_EXCEEDED")
                 .message("Too many requests. Please slow down and try again later.")
@@ -302,7 +302,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex, HttpServletRequest request) {
-        log.error("Unexpected error on '{}': {}", request.getRequestURI(), ex.getMessage(), ex);
+        log.error("Unexpected error on '{}': {}", request.getRequestURI().replace('\n', '_').replace('\r', '_'), ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ErrorResponse.builder()
                 .code("INTERNAL_ERROR")
                 .message("An unexpected error occurred. Please contact support if this persists.")

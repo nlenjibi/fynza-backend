@@ -36,7 +36,7 @@ public class PaystackController {
             @Valid @RequestBody PaystackInitializeRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
 
-        log.info("Payment initialization request for amount: {} {}", request.getAmount(), request.getCurrency());
+        log.info("Payment initialization request for amount: {} {}", request.getAmount(), request.getCurrency().replace('\n', '_').replace('\r', '_'));
 
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
             if (!idempotencyService.validatePayload(idempotencyKey, request)) {
@@ -45,7 +45,7 @@ public class PaystackController {
                                 .message("Idempotency key already used with different payload")
                                 .build());
             }
-            idempotencyService.check(idempotencyKey).ifPresent(cached -> log.debug("Returning cached payment init for key={}", idempotencyKey));
+            idempotencyService.check(idempotencyKey).ifPresent(cached -> log.debug("Returning cached payment init for key={}", idempotencyKey.replace('\n', '_').replace('\r', '_')));
         }
 
         PaystackInitializeResponse response = paystackPaymentService.initializePayment(request);
@@ -67,7 +67,7 @@ public class PaystackController {
     public ResponseEntity<ApiResponse<PaystackVerifyResponse>> verifyPayment(
             @PathVariable String reference) {
 
-        log.info("Payment verification request for reference: {}", reference);
+        log.info("Payment verification request for reference: {}", reference.replace('\n', '_').replace('\r', '_'));
 
         PaystackVerifyResponse response = paystackPaymentService.verifyPayment(reference);
 
@@ -87,7 +87,7 @@ public class PaystackController {
             @RequestBody(required = false) Map<String, BigDecimal> request,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
 
-        log.info("Refund request for reference: {}", reference);
+        log.info("Refund request for reference: {}", reference.replace('\n', '_').replace('\r', '_'));
 
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
             if (!idempotencyService.validatePayload(idempotencyKey, request)) {
