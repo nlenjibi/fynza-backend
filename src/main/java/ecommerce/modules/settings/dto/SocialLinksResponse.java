@@ -6,7 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 @Data
@@ -27,7 +29,7 @@ public class SocialLinksResponse {
 
     public static SocialLinksResponse from(SocialLinks links) {
         return SocialLinksResponse.builder()
-                .id(links.getId())
+                .id(links.getPublicId())
                 .facebookUrl(links.getFacebookUrl())
                 .twitterUrl(links.getTwitterUrl())
                 .instagramUrl(links.getInstagramUrl())
@@ -36,7 +38,7 @@ public class SocialLinksResponse {
                 .tiktokUrl(links.getTiktokUrl())
                 .pinterestUrl(links.getPinterestUrl())
                 .whatsappNumber(links.getWhatsappNumber())
-                .updatedAt(links.getUpdatedAt())
+                .updatedAt(links.getUpdatedAt() != null ? links.getUpdatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 }

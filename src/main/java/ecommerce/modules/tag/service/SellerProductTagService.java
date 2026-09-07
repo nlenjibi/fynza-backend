@@ -97,7 +97,7 @@ public class SellerProductTagService {
     public List<Tag> getTagsForProduct(UUID productId) {
         List<SellerProductTag> productTags = sellerProductTagRepository.findByProductId(productId);
         List<UUID> tagIds = productTags.stream().map(SellerProductTag::getTagId).toList();
-        return tagRepository.findAllById(tagIds);
+        return tagRepository.findByPublicIdIn(tagIds);
     }
 
     @Transactional(readOnly = true)
