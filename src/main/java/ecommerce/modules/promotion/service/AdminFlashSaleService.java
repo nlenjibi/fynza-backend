@@ -1,6 +1,5 @@
 package ecommerce.modules.promotion.service;
 
-import ecommerce.common.exception.BadRequestException;
 import ecommerce.common.exception.ResourceNotFoundException;
 import ecommerce.modules.promotion.entity.AdminFlashSale;
 import ecommerce.modules.promotion.entity.AdminFlashSale.Status;
