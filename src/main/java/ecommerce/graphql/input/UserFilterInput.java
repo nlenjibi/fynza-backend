@@ -1,6 +1,5 @@
 package ecommerce.graphql.input;
 
-import ecommerce.common.enums.PaymentMethod;
 import ecommerce.common.enums.Role;
 import lombok.Data;
 

@@ -24,7 +24,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
-import java.util.UUID;
 
 @Controller
 @RequiredArgsConstructor

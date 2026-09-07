@@ -6,7 +6,6 @@ import ecommerce.graphql.dto.CategoryStats;
 import ecommerce.graphql.input.CategoryFilterInput;
 import ecommerce.graphql.input.PageInput;
 import ecommerce.graphql.input.SortDirection;
-import ecommerce.modules.category.dto.CategoryCreateRequest;
 import ecommerce.modules.category.dto.CategoryResponse;
 import ecommerce.modules.category.service.CategoryService;
 import lombok.RequiredArgsConstructor;

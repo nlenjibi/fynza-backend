@@ -5,7 +5,6 @@ import ecommerce.common.security.UserPrincipal;
 import ecommerce.modules.notification.dto.NotificationResponse;
 import ecommerce.modules.notification.service.NotificationService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
