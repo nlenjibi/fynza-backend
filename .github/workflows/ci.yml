@@ -93,6 +93,7 @@ jobs:
         if: env.NVD_API_KEY != ''
         run: |
           ./mvnw -B org.owasp:dependency-check-maven:check \
+            -Ddependency-check.skip=false \
             -DfailBuildOnCVSS=9 \
             -DnvdApiKey="${NVD_API_KEY}" \
             -Dformats=SARIF,HTML \
