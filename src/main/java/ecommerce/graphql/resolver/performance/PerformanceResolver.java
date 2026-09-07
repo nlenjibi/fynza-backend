@@ -1,7 +1,6 @@
 package ecommerce.graphql.resolver.performance;
 
 import ecommerce.graphql.dto.*;
-import ecommerce.graphql.input.ContentAnalyticsInput;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -10,7 +9,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
-import java.util.UUID;
 
 @Controller
 @RequiredArgsConstructor

@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.boot.autoconfigure.graphql.GraphQlSourceBuilderCustomizer;
-import org.springframework.graphql.execution.GraphQlSource;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;

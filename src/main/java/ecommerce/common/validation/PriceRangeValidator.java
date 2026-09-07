@@ -4,8 +4,6 @@ import ecommerce.modules.product.entity.Product;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
-import java.math.BigDecimal;
-
 public class PriceRangeValidator implements ConstraintValidator<ValidPriceRange, Product> {
 
     @Override
