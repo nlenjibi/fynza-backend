@@ -670,11 +670,8 @@ jobs:
       - name: Verify all required checks passed
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
+          OPTIONAL: 'dependency-review sbom provenance sign-image api-tests'
         run: |
-          # Jobs that are intentionally skipped for certain event types are acceptable.
-          # Only a hard failure or cancellation on a required job blocks the merge.
-          OPTIONAL='dependency-review sbom provenance sign-image api-tests'
-
           echo "$NEEDS_JSON" | python3 - <<'PYEOF'
           import json, os, sys
 
