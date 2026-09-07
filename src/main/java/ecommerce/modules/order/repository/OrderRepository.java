@@ -1,6 +1,5 @@
 package ecommerce.modules.order.repository;
 
-import ecommerce.common.enums.PaymentMethod;
 import ecommerce.modules.order.entity.Order;
 import ecommerce.common.enums.OrderStatus;
 import ecommerce.modules.order.entity.PaymentStatus;

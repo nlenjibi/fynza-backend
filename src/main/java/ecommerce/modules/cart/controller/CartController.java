@@ -9,7 +9,6 @@ import ecommerce.modules.cart.dto.ReservationResponse;
 import ecommerce.modules.cart.dto.UpdateCartItemRequest;
 import ecommerce.modules.cart.service.CartService;
 import ecommerce.modules.cart.async.StockReservationAsyncService;
-import ecommerce.modules.auth.service.SecurityService;
 import ecommerce.common.security.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

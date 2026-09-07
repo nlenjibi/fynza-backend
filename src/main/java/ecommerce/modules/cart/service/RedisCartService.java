@@ -1,9 +1,7 @@
 package ecommerce.modules.cart.service;
 
-import ecommerce.modules.cart.dto.AddToCartRequest;
 import ecommerce.modules.cart.dto.CartItemResponse;
 import ecommerce.modules.cart.dto.CartResponse;
-import ecommerce.modules.product.dto.ProductResponse;
 
 import java.util.UUID;
 

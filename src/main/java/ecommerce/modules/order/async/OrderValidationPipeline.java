@@ -1,7 +1,6 @@
 package ecommerce.modules.order.async;
 
 import ecommerce.common.enums.OrderStatus;
-import ecommerce.common.enums.PaymentStatus;
 import ecommerce.common.config.AsyncProperties;
 import ecommerce.modules.order.entity.Order;
 import ecommerce.modules.order.repository.OrderRepository;
@@ -12,7 +11,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;

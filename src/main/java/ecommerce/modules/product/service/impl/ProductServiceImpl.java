@@ -1,7 +1,6 @@
 package ecommerce.modules.product.service.impl;
 
 import ecommerce.common.enums.InventoryStatus;
-import ecommerce.common.enums.PaymentMethod;
 import ecommerce.common.enums.ProductStatus;
 import ecommerce.common.enums.Role;
 import ecommerce.common.exception.ResourceNotFoundException;
