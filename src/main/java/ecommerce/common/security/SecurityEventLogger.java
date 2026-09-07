@@ -57,6 +57,7 @@ public class SecurityEventLogger {
 
     private String truncateUserAgent(String userAgent) {
         if (userAgent == null) return "unknown";
-        return userAgent.length() > 100 ? userAgent.substring(0, 100) + "..." : userAgent;
+        String truncated = userAgent.length() > 100 ? userAgent.substring(0, 100) + "..." : userAgent;
+        return truncated.replace('\n', '_').replace('\r', '_');
     }
 }
