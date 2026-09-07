@@ -109,19 +109,6 @@ public class TokenValidationService {
                     new LockedException("Account is locked. Please contact support."));
         }
 
-        // ── 6. Password-change timestamp check (requires passwordChanged claim in token) ──────────────
-        // Note: This check requires passwordChanged claim to be added to JWT token
-        // Currently disabled - can be enabled once token includes passwordChanged claim
-        // Long tokenPasswordChangedAt   = jwtTokenProvider.getPasswordChangedAtFromToken(jwt);
-        // Long principalPasswordChanged = principal.getLastPasswordChangeEpoch();
-        // if (tokenPasswordChangedAt != null && principalPasswordChanged != null
-        //         && tokenPasswordChangedAt < principalPasswordChanged) {
-        //     log.warn("Token predates password change for user: {}", userId);
-        //     return ValidationResult.reject(
-        //             new CredentialsExpiredException(
-        //                     "Password has been changed. Please login again."));
-        // }
-
         // ── All checks passed – build the Authentication object ───────────────
         Authentication auth = new UsernamePasswordAuthenticationToken(
                 principal, null, principal.getAuthorities());
@@ -153,7 +140,7 @@ public class TokenValidationService {
     /**
      * Evicts the cached {@link UserPrincipal} for {@code userId}.
      * Call this after any operation that changes the user's security-relevant
-c     * state: password change, lock/unlock, role update, logout-all.
+     * state: password change, lock/unlock, role update, logout-all.
      *
      * @param userId The user's unique identifier (UUID)
      */

@@ -115,8 +115,8 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 
                 .authorizeHttpRequests(auth -> {
-                    // Public product browsing — path is relative to context-path (no /api prefix here)
-                    auth.requestMatchers("/api/v1/products", "/api/v1/products/**").permitAll();
+                    // Public product browsing
+                    auth.requestMatchers("/v1/products", "/v1/products/**").permitAll();
 
                     // Module-scoped rules (Swagger, Auth, etc.)
                     if (securityRules != null) {
@@ -163,7 +163,7 @@ public class SecurityConfig {
         // Explicit allowlist — never use "*" with credentialed requests (OWASP A01)
         config.setAllowedHeaders(List.of(
                 "Content-Type", "Authorization", "Accept",
-                "X-Requested-With", "Origin", "X-Request-Id"));
+                "X-Requested-With", "Origin", "X-Request-Id", "Idempotency-Key"));
         config.setExposedHeaders(List.of("Authorization", "X-Request-Id"));
         config.setAllowCredentials(true);
         config.setMaxAge(maxAge);

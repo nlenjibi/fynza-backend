@@ -81,23 +81,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return bearer.substring(7);
         }
 
-        // For OAuth2 with HttpOnly cookies, also try to extract from cookies
-        // Check for access_token cookie (set by OAuth2AuthenticationSuccessHandler)
         jakarta.servlet.http.Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (jakarta.servlet.http.Cookie cookie : cookies) {
-                if ("access_token".equals(cookie.getName())) {
+                String name = cookie.getName();
+                if ("access_token".equals(name) || "auth-token".equals(name)) {
                     String token = cookie.getValue();
                     if (StringUtils.hasText(token)) {
-                        log.debug("Extracted JWT from access_token cookie");
-                        return token;
-                    }
-                }
-                // Also check for auth-token cookie (alternative name)
-                if ("auth-token".equals(cookie.getName())) {
-                    String token = cookie.getValue();
-                    if (StringUtils.hasText(token)) {
-                        log.debug("Extracted JWT from auth-token cookie");
+                        log.debug("Extracted JWT from {} cookie", name);
                         return token;
                     }
                 }

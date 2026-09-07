@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.StampedLock;
 
 @Service
 @Slf4j
@@ -21,7 +20,6 @@ public class SecurityEventService {
 
     private final Cache<String, Integer> failedLoginAttempts;
     private final Map<String, AccessLogEntry> accessLog;
-    private final StampedLock accessLogLock = new StampedLock();
     private final int maxFailedAttempts;
     private final int lockoutDurationMinutes;
 
@@ -36,7 +34,6 @@ public class SecurityEventService {
         this.failedLoginAttempts = Caffeine.newBuilder()
                 .maximumSize(10000)
                 .expireAfterWrite(lockoutDurationMinutes * 2, TimeUnit.MINUTES)
-                .softValues()  // Allow GC to reclaim memory under pressure
                 .recordStats()
                 .build();
         
@@ -159,24 +156,15 @@ public class SecurityEventService {
         ));
     }
 
-    /**
-     * Add entry to access log with StampedLock for thread safety
-     */
     private void addAccessLogEntry(AccessLogEntry entry) {
-        long stamp = accessLogLock.writeLock();
-        try {
-            String key = entry.identifier().toLowerCase();
-            accessLog.put(key, entry);
-            // Keep only last MAX_ACCESS_LOG_ENTRIES
+        synchronized (accessLog) {
+            accessLog.put(entry.identifier().toLowerCase(), entry);
             if (accessLog.size() > MAX_ACCESS_LOG_ENTRIES) {
-                // Remove oldest entries (simple approach - just clear half)
                 List<String> keysToRemove = new ArrayList<>(accessLog.keySet());
                 for (int i = 0; i < keysToRemove.size() / 2; i++) {
                     accessLog.remove(keysToRemove.get(i));
                 }
             }
-        } finally {
-            accessLogLock.unlockWrite(stamp);
         }
     }
 
@@ -193,27 +181,10 @@ public class SecurityEventService {
         return new SecurityStats(
                 failedLoginAttempts.estimatedSize(),
                 failedLoginAttempts.stats().hitRate(),
-                getAccessLogSize(),
+                accessLog.size(),
                 maxFailedAttempts,
                 lockoutDurationMinutes
         );
-    }
-
-    /**
-     * Get access log size with optimistic read
-     */
-    private int getAccessLogSize() {
-        long stamp = accessLogLock.tryOptimisticRead();
-        int size = accessLog.size();
-        if (!accessLogLock.validate(stamp)) {
-            stamp = accessLogLock.readLock();
-            try {
-                size = accessLog.size();
-            } finally {
-                accessLogLock.unlockRead(stamp);
-            }
-        }
-        return size;
     }
 
     public record AccessLogEntry(
