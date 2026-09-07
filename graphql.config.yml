@@ -1,0 +1,6 @@
+schema: "src/main/resources/graphql/**/*.graphqls"
+
+exclude:
+  - "target/**"
+  - "build/**"
+  - "**/node_modules/**"

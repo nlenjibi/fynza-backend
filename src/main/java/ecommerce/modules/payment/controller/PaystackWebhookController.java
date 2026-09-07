@@ -9,6 +9,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.util.HexFormat;
+
 /**
  * Controller for handling Paystack webhook events.
  */
@@ -32,12 +37,14 @@ public class PaystackWebhookController {
 
         log.info("Received Paystack webhook");
 
-        // Verify webhook signature in production
-        // String computedSignature = HMAC_SHA256.sign(payload, paystackProperties.getWebhookSecret());
-        // if (!signature.equals(computedSignature)) {
-        //     log.warn("Invalid webhook signature");
-        //     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid signature");
-        // }
+        String secret = paystackProperties.getWebhookSecret();
+        if (secret != null && !secret.isBlank()) {
+            String expected = hmacSha256Hex(payload, secret);
+            if (!expected.equals(signature)) {
+                log.warn("Paystack webhook signature mismatch — possible spoofed request");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid signature");
+            }
+        }
 
         try {
             JsonNode event = objectMapper.readTree(payload);
@@ -63,6 +70,17 @@ public class PaystackWebhookController {
         } catch (Exception e) {
             log.error("Error processing webhook: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing webhook");
+        }
+    }
+
+    private String hmacSha256Hex(String data, String secret) {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            byte[] hash = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to compute webhook signature", e);
         }
     }
 

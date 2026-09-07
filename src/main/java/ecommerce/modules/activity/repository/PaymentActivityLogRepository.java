@@ -19,7 +19,7 @@ import java.util.UUID;
  * Provides data access operations for payment-specific activity logs.
  */
 @Repository
-public interface PaymentActivityLogRepository extends JpaRepository<PaymentActivityLog, UUID> {
+public interface PaymentActivityLogRepository extends JpaRepository<PaymentActivityLog, Long> {
 
     /**
      * Find all payment activities for a specific user, ordered by creation date descending.

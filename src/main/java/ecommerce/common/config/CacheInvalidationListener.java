@@ -8,7 +8,6 @@ import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 /**
  * Redis Pub/Sub Listener for Cross-Instance Cache Invalidation

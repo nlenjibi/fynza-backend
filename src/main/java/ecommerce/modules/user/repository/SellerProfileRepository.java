@@ -1,11 +1,11 @@
 package ecommerce.modules.user.repository;
 
-import ecommerce.common.base.BaseRepository;
 import ecommerce.common.enums.SellerStatus;
 import ecommerce.common.enums.VerificationStatus;
 import ecommerce.modules.user.entity.SellerProfile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -15,11 +15,13 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface SellerProfileRepository extends BaseRepository<SellerProfile, UUID> {
+public interface SellerProfileRepository extends JpaRepository<SellerProfile, Long> {
 
-    Optional<SellerProfile> findByUserId(UUID userId);
+    Optional<SellerProfile> findByPublicId(UUID publicId);
 
-    List<SellerProfile> findByUserIdIn(List<UUID> userIds);
+    Optional<SellerProfile> findByUser_PublicId(UUID userPublicId);
+
+    List<SellerProfile> findByUser_PublicIdIn(List<UUID> userPublicIds);
 
     @Query("SELECT sp FROM SellerProfile sp WHERE sp.verificationStatus = :status")
     Page<SellerProfile> findByVerificationStatus(VerificationStatus status, Pageable pageable);

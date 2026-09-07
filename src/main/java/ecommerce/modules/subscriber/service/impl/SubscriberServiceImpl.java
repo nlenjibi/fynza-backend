@@ -29,7 +29,7 @@ public class SubscriberServiceImpl implements SubscriberService {
     @Override
     @Transactional
     public SubscriberResponse subscribe(SubscriberRequest request, String ipAddress) {
-        log.info("Processing new subscription for email: {}", request.getEmail());
+        log.info("Processing new subscription for email: {}", request.getEmail().replace('\n', '_').replace('\r', '_'));
 
         String email = request.getEmail().toLowerCase().trim();
 
@@ -76,7 +76,7 @@ public class SubscriberServiceImpl implements SubscriberService {
     public SubscriberResponse unsubscribe(UUID id) {
         log.info("Unsubscribing subscriber with ID: {}", id);
 
-        Subscriber subscriber = subscriberRepository.findById(id)
+        Subscriber subscriber = subscriberRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscriber not found"));
 
         subscriber.setStatus(Subscriber.SubscriberStatus.UNSUBSCRIBED);
@@ -91,7 +91,7 @@ public class SubscriberServiceImpl implements SubscriberService {
     @Override
     @Transactional(readOnly = true)
     public Page<SubscriberResponse> getAllSubscribers(Subscriber.SubscriberStatus status, String search, Pageable pageable) {
-        log.debug("Fetching subscribers - status: {}, search: {}", status, search);
+        log.debug("Fetching subscribers - status: {}, search: {}", status, search != null ? search.replace('\n', '_').replace('\r', '_') : null);
 
         Page<Subscriber> subscribers;
 
@@ -113,7 +113,7 @@ public class SubscriberServiceImpl implements SubscriberService {
     @Override
     @Transactional(readOnly = true)
     public SubscriberResponse getSubscriberById(UUID id) {
-        Subscriber subscriber = subscriberRepository.findById(id)
+        Subscriber subscriber = subscriberRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscriber not found with ID: " + id));
         return SubscriberResponse.from(subscriber);
     }
@@ -123,7 +123,7 @@ public class SubscriberServiceImpl implements SubscriberService {
     public void deleteSubscriber(UUID id) {
         log.info("Deleting subscriber with ID: {}", id);
 
-        Subscriber subscriber = subscriberRepository.findById(id)
+        Subscriber subscriber = subscriberRepository.findByPublicId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscriber not found with ID: " + id));
 
         subscriber.setIsActive(false);

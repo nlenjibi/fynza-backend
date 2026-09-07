@@ -1,6 +1,5 @@
 package ecommerce.modules.report.repository;
 
-import ecommerce.common.enums.ReportFormat;
 import ecommerce.common.enums.ReportType;
 import ecommerce.modules.report.entity.Report;
 import org.springframework.data.domain.Page;
@@ -16,7 +15,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface ReportRepository extends JpaRepository<Report, UUID> {
+public interface ReportRepository extends JpaRepository<Report, Long> {
+
+    Optional<Report> findByPublicId(UUID publicId);
 
     Optional<Report> findByReportNumber(String reportNumber);
 

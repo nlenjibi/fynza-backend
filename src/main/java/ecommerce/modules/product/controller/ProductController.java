@@ -1,6 +1,5 @@
 package ecommerce.modules.product.controller;
 
-import ecommerce.common.enums.PaymentMethod;
 import ecommerce.common.enums.Role;
 import ecommerce.common.response.ApiResponse;
 import ecommerce.common.response.PaginatedResponse;

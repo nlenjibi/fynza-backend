@@ -1,22 +1,22 @@
 package ecommerce.modules.message.repository;
 
-import ecommerce.common.base.BaseRepository;
 import ecommerce.common.enums.MessageStatus;
 import ecommerce.common.enums.MessageType;
 import ecommerce.modules.message.entity.Conversation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface ConversationRepository extends BaseRepository<Conversation, UUID> {
+public interface ConversationRepository extends JpaRepository<Conversation, Long> {
+
+    Optional<Conversation> findByPublicId(UUID publicId);
 
     Page<Conversation> findByParticipantIdOrderByCreatedAtDesc(UUID participantId, Pageable pageable);
 
@@ -42,7 +42,7 @@ public interface ConversationRepository extends BaseRepository<Conversation, UUI
 
     long countByStatus(MessageStatus status);
 
-    Optional<Conversation> findByIdAndParticipantId(UUID id, UUID participantId);
+    Optional<Conversation> findByIdAndParticipantId(Long id, UUID participantId);
 
     @Query("SELECT c FROM Conversation c WHERE " +
            "(:status IS NULL OR c.status = :status) AND " +

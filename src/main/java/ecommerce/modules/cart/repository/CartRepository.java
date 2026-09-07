@@ -1,7 +1,7 @@
 package ecommerce.modules.cart.repository;
 
-import ecommerce.common.base.BaseRepository;
 import ecommerce.modules.cart.entity.Cart;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,11 +12,18 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface CartRepository extends BaseRepository<Cart, UUID> {
-    Optional<Cart> findByUserId(UUID userId);
+public interface CartRepository extends JpaRepository<Cart, Long> {
 
-    @Query("SELECT c FROM Cart c LEFT JOIN FETCH c.items WHERE c.userId = :userId")
-    Optional<Cart> findByUserIdWithItems(@Param("userId") UUID userId);
+    Optional<Cart> findByUser_Id(UUID userId);
+
+    default Optional<Cart> findByUserId(UUID userId) { return findByUser_Id(userId); }
+
+    Optional<Cart> findByPublicId(UUID publicId);
+
+    @Query("SELECT c FROM Cart c LEFT JOIN FETCH c.items WHERE c.user.id = :userId")
+    Optional<Cart> findByUserPublicIdWithItems(@Param("userId") UUID userId);
+
+    default Optional<Cart> findByUserIdWithItems(UUID userId) { return findByUserPublicIdWithItems(userId); }
 
     // Abandoned cart queries
     @Query("SELECT c FROM Cart c WHERE c.isCheckedOut = false " +

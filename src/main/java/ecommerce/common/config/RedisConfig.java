@@ -1,17 +1,18 @@
 package ecommerce.common.config;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachingConfigurer;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -21,137 +22,136 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 
+import static ecommerce.common.config.CacheConfig.*;
+
 /**
- * Redis Configuration (L2 Cache)
- * 
- * Smart Caching Strategy (per system.md):
- * - Token blacklist: Redis only (24 hours)
- * - Stock reservations: Redis only (15 min)
- * - Shared product cache: Redis only (5 min)
- * - Categories: Redis only (1 hour)
- * - User sessions: Redis only (15 min)
- * 
- * NOT cached in Redis (per smart guidelines):
- * - Orders (write-heavy, real-time)
- * - Payments (critical, real-time)
- * - Cart items (frequently changing)
+ * Redis-backed cache configuration, active on non-test profiles.
+ *
+ * <h3>Serialization security (OWASP A08)</h3>
+ * Uses {@link BasicPolymorphicTypeValidator} with an explicit package allowlist
+ * instead of the unsafe {@code LaissezFaireSubTypeValidator}, which would permit
+ * deserialization of arbitrary classes — a known RCE vector (CVE-2017-7525 family).
+ *
+ * <h3>Connection factory</h3>
+ * Spring Boot auto-configures a {@code LettuceConnectionFactory} from
+ * {@code spring.data.redis.*} properties (SSL, sentinel, cluster, pooling
+ * all handled). We inject the auto-configured factory rather than creating one.
  */
-@Configuration
-@RequiredArgsConstructor
 @Slf4j
-@EnableConfigurationProperties(RedisProperties.class)
-@ConditionalOnProperty(name = "cache.level", havingValue = "redis")
-public class RedisConfig {
+@Configuration
+@EnableCaching
+public class RedisConfig implements CachingConfigurer {
 
-    // Smart caching - only cache read-heavy, infrequently changing data
-    // Per system.md: products (5 min), categories (1 hour), userSessions (15 min)
-    // Redis-only: tokenBlacklist (24 hours), stockReservations (15 min)
-
-    private final RedisProperties redisProperties;
-
-    @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
-        log.info("Configuring Redis connection: host={}, port={}",
-                redisProperties.getHost(),
-                redisProperties.getPort());
-        return new org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory(
-                redisProperties.getHost(),
-                redisProperties.getPort()
-        );
+    @Override
+    public CacheErrorHandler errorHandler() {
+        return new ResilientCacheErrorHandler();
     }
 
+    // ── Redis ObjectMapper ────────────────────────────────────────────────────
+    // Separate from the HTTP ObjectMapper. Default typing writes @class metadata
+    // so cached values round-trip to their original type (not LinkedHashMap).
+    // The validator restricts deserialization to known ecommerce packages only.
+
+    private static ObjectMapper buildRedisObjectMapper() {
+        BasicPolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
+                .allowIfBaseType(Object.class)
+                .allowIfSubType("ecommerce.")
+                .allowIfSubType("java.util.")
+                .allowIfSubType("java.time.")
+                .allowIfSubType("org.springframework.")
+                .build();
+
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.activateDefaultTyping(ptv, ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
+        mapper.setVisibility(mapper.getSerializationConfig().getDefaultVisibilityChecker()
+                .withFieldVisibility(JsonAutoDetect.Visibility.ANY)
+                .withGetterVisibility(JsonAutoDetect.Visibility.NONE)
+                .withIsGetterVisibility(JsonAutoDetect.Visibility.NONE));
+        return mapper;
+    }
+
+    private static final GenericJackson2JsonRedisSerializer REDIS_SERIALIZER =
+            new GenericJackson2JsonRedisSerializer(buildRedisObjectMapper());
+
+    private static final StringRedisSerializer STRING_SERIALIZER = new StringRedisSerializer();
+
+    // ── RedisTemplate ────────────────────────────────────────────────────────
+
     @Bean
+    @Profile("!test")
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.activateDefaultTyping(
-                LaissezFaireSubTypeValidator.instance,
-                ObjectMapper.DefaultTyping.NON_FINAL,
-                JsonTypeInfo.As.PROPERTY
-        );
-
-        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
-        StringRedisSerializer stringSerializer = new StringRedisSerializer();
-
-        template.setKeySerializer(stringSerializer);
-        template.setValueSerializer(jsonSerializer);
-        template.setHashKeySerializer(stringSerializer);
-        template.setHashValueSerializer(jsonSerializer);
-
+        template.setKeySerializer(STRING_SERIALIZER);
+        template.setValueSerializer(REDIS_SERIALIZER);
+        template.setHashKeySerializer(STRING_SERIALIZER);
+        template.setHashValueSerializer(REDIS_SERIALIZER);
         template.afterPropertiesSet();
-        log.info("RedisTemplate configured successfully");
         return template;
     }
 
+    // ── CacheManager ─────────────────────────────────────────────────────────
+
     @Bean
+    @Profile("!test")
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.activateDefaultTyping(
-                LaissezFaireSubTypeValidator.instance,
-                ObjectMapper.DefaultTyping.NON_FINAL,
-                JsonTypeInfo.As.PROPERTY
+        RedisCacheConfiguration base = baseConfig();
+
+        Map<String, RedisCacheConfiguration> perCache = Map.ofEntries(
+                // Auth / Principals
+                entry(base, USER_PRINCIPALS_CACHE,      Duration.ofMinutes(5)),
+                // Products
+                entry(base, PRODUCTS_CACHE,             Duration.ofMinutes(5)),
+                entry(base, PRODUCTS_PAGE_CACHE,        Duration.ofMinutes(5)),
+                entry(base, PRODUCTS_SEARCH_CACHE,      Duration.ofMinutes(5)),
+                entry(base, PRODUCTS_FEATURED_CACHE,    Duration.ofMinutes(30)),
+                entry(base, PRODUCTS_BESTSELLER_CACHE,  Duration.ofMinutes(30)),
+                entry(base, PRODUCTS_TRENDING_CACHE,    Duration.ofMinutes(10)),
+                // Categories
+                entry(base, CATEGORIES_CACHE,           Duration.ofHours(1)),
+                entry(base, CATEGORIES_LIST_CACHE,      Duration.ofHours(1)),
+                // Wishlists
+                entry(base, WISHLIST_CACHE,             Duration.ofMinutes(30)),
+                entry(base, WISHLIST_SUMMARY_CACHE,     Duration.ofMinutes(30)),
+                // Orders
+                entry(base, ORDER_CACHE,                Duration.ofMinutes(15)),
+                entry(base, ORDER_STATS_CACHE,          Duration.ofMinutes(15)),
+                // Reviews
+                entry(base, REVIEWS_CACHE,              Duration.ofMinutes(15)),
+                entry(base, REVIEW_STATS_CACHE,         Duration.ofMinutes(15)),
+                // Users
+                entry(base, USERS_CACHE,                Duration.ofMinutes(15)),
+                // Security / Tokens
+                entry(base, "tokenBlacklist",           Duration.ofHours(24)),
+                entry(base, "stockReservations",        Duration.ofMinutes(15)),
+                // Misc
+                entry(base, "faqs",                     Duration.ofHours(1)),
+                entry(base, "settings",                 Duration.ofHours(1)),
+                entry(base, DASHBOARD_CACHE,            Duration.ofMinutes(5))
         );
 
-        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
-        StringRedisSerializer stringSerializer = new StringRedisSerializer();
-
-        RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofMinutes(15))
-                .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(stringSerializer))
-                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jsonSerializer))
-                .disableCachingNullValues();
-
-        Map<String, RedisCacheConfiguration> cacheConfigs = new HashMap<>();
-
-        // Per system.md TTL specifications
-        cacheConfigs.put("products", defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put("categories", defaultConfig.entryTtl(Duration.ofHours(1)));
-        cacheConfigs.put("userSessions", defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put("user-profile", defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put("wishlists", defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigs.put("wishlists-paginated", defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigs.put("wishlists-summary", defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigs.put("wishlists-check", defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigs.put("wishlists-drops", defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigs.put("wishlists-analytics", defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigs.put("orders", defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put("order", defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put("order-stats", defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put("reviews", defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put("review", defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put("review-stats", defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put("review-lists", defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put("reviews-predicate", defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put("user-reviews", defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put("admin-dashboard", defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        cacheConfigs.put("admin-analytics", defaultConfig.entryTtl(Duration.ofMinutes(10)));
-        cacheConfigs.put("users", defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put("users-page", defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put("users-predicate", defaultConfig.entryTtl(Duration.ofMinutes(15)));
-        cacheConfigs.put("seller-dashboard", defaultConfig.entryTtl(Duration.ofMinutes(10)));
-        cacheConfigs.put("faqs", defaultConfig.entryTtl(Duration.ofMinutes(60)));
-        cacheConfigs.put("searchFilters", defaultConfig.entryTtl(Duration.ofMinutes(60)));
-        cacheConfigs.put("settings", defaultConfig.entryTtl(Duration.ofMinutes(60)));
-        
-        // Security-critical, longer TTL
-        cacheConfigs.put("tokenBlacklist", defaultConfig.entryTtl(Duration.ofHours(24)));
-        cacheConfigs.put("userPrincipals", defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        
-        // Stock reservations - per architecture.md
-        cacheConfigs.put("stockReservations", defaultConfig.entryTtl(Duration.ofMinutes(15)));
-
-        log.info("Redis CacheManager configured with {} caches (smart caching enabled)", cacheConfigs.size());
+        log.info("Redis CacheManager configured with {} per-cache TTLs", perCache.size());
         return RedisCacheManager.builder(connectionFactory)
-                .cacheDefaults(defaultConfig)
-                .withInitialCacheConfigurations(cacheConfigs)
-                .transactionAware()
+                .cacheDefaults(base.entryTtl(Duration.ofMinutes(15)))
+                .withInitialCacheConfigurations(perCache)
                 .build();
+    }
+
+    private static Map.Entry<String, RedisCacheConfiguration> entry(
+            RedisCacheConfiguration base, String name, Duration ttl) {
+        return Map.entry(name, base.entryTtl(ttl));
+    }
+
+    private static RedisCacheConfiguration baseConfig() {
+        return RedisCacheConfiguration.defaultCacheConfig()
+                .prefixCacheNameWith("fynza:")
+                .serializeKeysWith(
+                        RedisSerializationContext.SerializationPair.fromSerializer(STRING_SERIALIZER))
+                .serializeValuesWith(
+                        RedisSerializationContext.SerializationPair.fromSerializer(REDIS_SERIALIZER))
+                .disableCachingNullValues();
     }
 }

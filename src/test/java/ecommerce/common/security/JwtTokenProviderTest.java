@@ -1,5 +1,6 @@
 package ecommerce.common.security;
 
+import ecommerce.common.config.TokenProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -7,7 +8,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -30,10 +30,10 @@ class JwtTokenProviderTest {
 
     @BeforeEach
     void setUp() {
-        jwtTokenProvider = new JwtTokenProvider();
-        ReflectionTestUtils.setField(jwtTokenProvider, "jwtSecret", secretKey);
-        ReflectionTestUtils.setField(jwtTokenProvider, "accessTokenExpiration", 900000L); // 15 minutes
-        ReflectionTestUtils.setField(jwtTokenProvider, "refreshTokenExpiration", 604800000L); // 7 days
+        TokenProperties tokenProperties = new TokenProperties();
+        tokenProperties.setAccessMinutes(15);
+        tokenProperties.setRefreshDays(7);
+        jwtTokenProvider = new JwtTokenProvider(tokenProperties, secretKey);
     }
 
     @Nested

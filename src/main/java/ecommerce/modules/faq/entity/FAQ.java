@@ -1,10 +1,11 @@
 package ecommerce.modules.faq.entity;
 
-import ecommerce.common.base.BaseEntity;
 import ecommerce.common.enums.FAQCategory;
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
+
+import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "faqs", indexes = {
@@ -15,8 +16,21 @@ import lombok.experimental.SuperBuilder;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@SuperBuilder
-public class FAQ extends BaseEntity {
+@Builder
+public class FAQ {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
+    private UUID publicId;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
     @Column(name = "question", nullable = false, length = 500)
     private String question;
@@ -39,4 +53,17 @@ public class FAQ extends BaseEntity {
     @Column(name = "display_order", nullable = false)
     @Builder.Default
     private Integer displayOrder = 0;
+
+    @PrePersist
+    protected void onCreate() {
+        publicId = UUID.randomUUID();
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
+        if (isActive == null) isActive = true;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
 }
