@@ -74,11 +74,11 @@ public interface ReviewRepository extends JpaRepository<Review, Long>, JpaSpecif
     long countRejectedReviews();
 
     @Query("SELECT r.rating, COUNT(r) FROM Review r JOIN r.product p WHERE p.seller.id = :sellerId AND r.deleted = false GROUP BY r.rating")
-    List<Object[]> getSellerRatingDistribution(@Param("sellerId") Long sellerId);
+    List<Object[]> getSellerRatingDistribution(@Param("sellerId") UUID sellerId);
 
     @Query("SELECT COUNT(r), AVG(r.rating) FROM Review r JOIN r.product p WHERE p.seller.id = :sellerId AND r.deleted = false")
-    Object[] getSellerReviewStats(@Param("sellerId") Long sellerId);
+    Object[] getSellerReviewStats(@Param("sellerId") UUID sellerId);
 
     @Query("SELECT COUNT(r) FROM Review r JOIN r.product p WHERE p.seller.id = :sellerId AND r.deleted = false AND r.approved = false")
-    long countPendingSellerReviews(@Param("sellerId") Long sellerId);
+    long countPendingSellerReviews(@Param("sellerId") UUID sellerId);
 }
