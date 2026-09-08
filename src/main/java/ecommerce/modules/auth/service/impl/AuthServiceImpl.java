@@ -2,6 +2,7 @@ package ecommerce.modules.auth.service.impl;
 
 import ecommerce.common.config.TokenProperties;
 import ecommerce.common.enums.Role;
+import ecommerce.common.enums.ScopeType;
 import ecommerce.common.enums.UserStatus;
 import ecommerce.common.event.FynzaEventPublisher;
 import ecommerce.common.event.user.PasswordResetRequestedEvent;
@@ -26,6 +27,9 @@ import ecommerce.modules.auth.service.AuthService;
 import ecommerce.common.security.JwtTokenProvider;
 import ecommerce.common.security.LoginAttemptService;
 import ecommerce.common.security.SecurityEventLogger;
+import ecommerce.modules.authz.entity.UserRoleEntity;
+import ecommerce.modules.authz.repository.RoleEntityRepository;
+import ecommerce.modules.authz.repository.UserRoleEntityRepository;
 import ecommerce.modules.user.entity.CustomerProfile;
 import ecommerce.modules.user.entity.SellerProfile;
 import ecommerce.modules.user.entity.User;
@@ -70,6 +74,8 @@ public class AuthServiceImpl implements AuthService {
     private final LoginAttemptService loginAttemptService;
     private final SecurityEventLogger securityEventLogger;
     private final FynzaEventPublisher eventPublisher;
+    private final RoleEntityRepository roleEntityRepository;
+    private final UserRoleEntityRepository userRoleEntityRepository;
 
 
     @Override
@@ -101,6 +107,14 @@ public class AuthServiceImpl implements AuthService {
 
         user = userRepository.save(user);
         log.info("User registered successfully with ID: {}", user.getId());
+
+        final User savedUser = user;
+        roleEntityRepository.findByCode(savedUser.getRole().name()).ifPresent(roleEntity ->
+                userRoleEntityRepository.save(UserRoleEntity.builder()
+                        .userId(savedUser.getId())
+                        .role(roleEntity)
+                        .scopeType(ScopeType.GLOBAL)
+                        .build()));
 
         if (role == Role.SELLER) {
             SellerProfile sellerProfile = SellerProfile.builder()
