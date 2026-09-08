@@ -19,7 +19,7 @@ public interface AuthzAdminService {
     void                revokePermission(RevokePermissionRequest request);
 
     UserRoleDto         assignRole(AssignRoleRequest request, UUID actorId);
-    void                revokeRole(RevokeRoleRequest request);
+    void                revokeRole(RevokeRoleRequest request, UUID actorId);
     List<UserRoleDto>   getUserRoles(UUID userId);
 
     List<PermissionDto> listPermissions();

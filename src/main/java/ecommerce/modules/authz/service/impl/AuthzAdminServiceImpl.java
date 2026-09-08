@@ -177,6 +177,7 @@ public class AuthzAdminServiceImpl implements AuthzAdminService {
                     tokenValidationService.evictPrincipal(request.getUserId());
                     auditLogService.log(AuditLogEntry.builder()
                             .action(AuditAction.ROLE_REVOKED)
+                            .actorPublicId(actorId)
                             .entityType("USER")
                             .entityPublicId(request.getUserId())
                             .reason("Revoked " + request.getRoleCode())
