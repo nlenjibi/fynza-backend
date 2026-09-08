@@ -79,6 +79,15 @@ fynza:
       wait-duration: 30s
       half-open-requests: 3
 
+jwt:
+  cache:
+    max-size: 10000
+    expire-after-write-minutes: 10
+    expire-after-access-minutes: 5
+  bloom-filter:
+    expected-insertions: 50000
+    fpp: 0.001
+
 rate-limit:
   enabled: ${ENABLE_RATE_LIMITING:false}
   login:

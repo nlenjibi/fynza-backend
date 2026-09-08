@@ -589,6 +589,13 @@ jobs:
           name: app-jar
           path: target/
 
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Attest JAR provenance
         uses: actions/attest-build-provenance@v2
         with:

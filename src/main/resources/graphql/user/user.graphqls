@@ -1,10 +1,10 @@
 # =============================================================================
 # User GraphQL Schema
-# Covers: User queries, Customer dashboard, Loyalty, Profile, Addresses
+# Covers: me / profile queries, admin user management, customer dashboard
 # =============================================================================
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Enums
+# Enums (local to this schema file; kept in sync with Java enums)
 # ─────────────────────────────────────────────────────────────────────────────
 
 enum Role {
@@ -15,10 +15,12 @@ enum Role {
 }
 
 enum UserStatus {
+    PENDING_VERIFICATION
     ACTIVE
-    INACTIVE
-    BANNED
     SUSPENDED
+    LOCKED
+    DISABLED
+    DELETED
 }
 
 enum AddressType {
@@ -38,6 +40,7 @@ type User {
     firstName: String!
     lastName: String!
     fullName: String!
+    displayName: String
     phone: String
     profileImageUrl: String
     role: Role!
@@ -49,8 +52,30 @@ type User {
     lastLoginAt: DateTime
 }
 
+type UserProfile {
+    id: ID!
+    email: String!
+    username: String!
+    firstName: String!
+    lastName: String!
+    displayName: String
+    phone: String
+    avatarUrl: String
+    dateOfBirth: String
+    language: String!
+    timezone: String!
+    currency: String!
+    role: Role!
+    status: UserStatus!
+    emailVerified: Boolean!
+    mfaEnabled: Boolean!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    deletionRequestedAt: DateTime
+}
+
 type UserPage {
-    content: [User!]!
+    content: [UserProfile!]!
     pageInfo: PageInfo!
 }
 
@@ -115,6 +140,7 @@ type LoyaltyRedemption {
 input UserFilterInput {
     search: String
     role: Role
+    status: UserStatus
     active: Boolean
     emailVerified: Boolean
     createdAfter: DateTime
@@ -128,18 +154,16 @@ input UserFilterInput {
 # ─────────────────────────────────────────────────────────────────────────────
 
 extend type Query {
-    # ── Public User Queries ──────────────────────────────────────────────
-    user(id: ID!): User
-
-    # ── Admin User Queries (ADMIN/MANAGER) ───────────────────────────────
-    users(pagination: PageInput, filter: UserFilterInput): UserPage!
-
-    # ── Authenticated User Queries ───────────────────────────────────────
+    # ── Authenticated self-service ────────────────────────────────────────────
+    me: UserProfile
     currentUser: User
 
-    # ── Customer Queries (CUSTOMER) ──────────────────────────────────────
+    # ── Admin user queries (ADMIN only) ──────────────────────────────────────
+    user(id: ID!): UserProfile
+    users(pagination: PageInput, filter: UserFilterInput): UserPage!
+
+    # ── Customer queries ──────────────────────────────────────────────────────
     customerDashboard: CustomerDashboard!
     myAddresses: [Address!]!
     loyaltyBalance: LoyaltyRedemption!
 }
-
