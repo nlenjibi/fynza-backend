@@ -41,11 +41,6 @@ spring:
           max-idle: ${REDIS_POOL_MAX_IDLE:8}
           min-idle: ${REDIS_POOL_MIN_IDLE:2}
           max-wait: "${REDIS_POOL_MAX_WAIT:-1ms}"
-  cache:
-    type: caffeine
-    caffeine:
-      spec: maximumSize=1000,expireAfterWrite=30m,recordStats
-    cache-names: products,categories,carts,users,reviews,orders
 
 fynza:
   notifications-enabled: ${NOTIFICATIONS_ENABLED:true}
@@ -74,6 +69,15 @@ fynza:
       api-base-url: ${SLACK_API_BASE_URL:https://slack.com/api}
     retry-job:
       cron: ${NOTIFICATION_RETRY_CRON:0 */2 * * * *}
+  cache:
+    redis:
+      default-ttl: 15m
+      token-blacklist-ttl: 24h
+      user-token-version-ttl: 24h
+    circuit-breaker:
+      failure-threshold: 5
+      wait-duration: 30s
+      half-open-requests: 3
 
 rate-limit:
   enabled: ${ENABLE_RATE_LIMITING:false}
@@ -91,12 +95,6 @@ app:
   frontend-failure-redirect: ${FRONTEND_URL:http://localhost:3000}/auth/login
   cookie:
     secure: ${COOKIE_SECURE:false}
-  token:
-    access-minutes: ${TOKEN_ACCESS_MINUTES:15}
-    refresh-days: ${TOKEN_REFRESH_DAYS:7}
-    email-verification-hours: ${TOKEN_EMAIL_VERIFICATION_HOURS:24}
-    password-reset-minutes: ${TOKEN_PASSWORD_RESET_MINUTES:15}
-    mfa-challenge-minutes: ${TOKEN_MFA_CHALLENGE_MINUTES:5}
   token:
     access-minutes: ${TOKEN_ACCESS_MINUTES:15}
     refresh-days: ${TOKEN_REFRESH_DAYS:7}
@@ -148,6 +146,15 @@ springdoc:
     operations-sorter: alpha
     tags-sorter: alpha
     persist-authorization: true
+
+jwt:
+  cache:
+    max-size: 10000
+    expire-after-write-minutes: 10
+    expire-after-access-minutes: 5
+  bloom-filter:
+    expected-insertions: 50000
+    fpp: 0.001
 
 logging:
   file:
