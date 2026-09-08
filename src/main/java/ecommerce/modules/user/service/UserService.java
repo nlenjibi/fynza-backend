@@ -67,4 +67,35 @@ public interface UserService {
     UserDto suspendSeller(UUID sellerId);
 
     UserDto reactivateSeller(UUID sellerId);
+
+    // ── User Management PRD ───────────────────────────────────────────────────
+
+    /** Returns the full profile view for the authenticated user. */
+    UserProfileResponse getMyProfile(UUID userId);
+
+    /** Updates editable profile fields for the authenticated user. */
+    UserProfileResponse updateMyProfile(UUID userId, UpdateProfileRequest request);
+
+    /** Deactivates the authenticated user's own account (sets status DISABLED, revokes sessions). */
+    void deactivateAccount(UUID userId, AccountDeactivationRequest request);
+
+    /** Records a deletion request; schedules anonymization after the grace period. */
+    void requestAccountDeletion(UUID userId, AccountDeletionRequest request);
+
+    // ── Admin ─────────────────────────────────────────────────────────────────
+
+    /** Admin: search users with optional query/status/role filters. */
+    Page<UserProfileResponse> adminSearchUsers(AdminUserSearchParams params, Pageable pageable);
+
+    /** Admin: fetch a single user by id. */
+    UserProfileResponse adminGetUser(UUID userId);
+
+    /** Admin: suspend a user account. */
+    UserProfileResponse adminSuspendUser(UUID targetId, UUID actorId, AdminSuspendRequest request);
+
+    /** Admin: reactivate a suspended or disabled account. */
+    UserProfileResponse adminActivateUser(UUID targetId);
+
+    /** Admin: permanently disable an account. */
+    UserProfileResponse adminDisableUser(UUID targetId, String reason);
 }
