@@ -18,6 +18,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(of = {"id", "code", "displayName", "active"})
 public class RoleEntity {
 
     @Id

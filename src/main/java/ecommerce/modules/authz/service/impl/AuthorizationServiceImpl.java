@@ -1,6 +1,7 @@
 package ecommerce.modules.authz.service.impl;
 
 import ecommerce.common.enums.ScopeType;
+import ecommerce.common.security.UserPrincipal;
 import ecommerce.modules.authz.repository.UserRoleEntityRepository;
 import ecommerce.modules.authz.service.AuthorizationService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,10 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     public boolean hasPermission(UUID userId, String permissionCode) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) return false;
+        if (userId != null && auth.getPrincipal() instanceof UserPrincipal principal
+                && !principal.getId().equals(userId)) {
+            return false;
+        }
         return auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(permissionCode::equals);
