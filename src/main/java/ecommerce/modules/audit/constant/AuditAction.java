@@ -122,4 +122,13 @@ public final class AuditAction {
     public static final String ADMIN_SETTINGS_UPDATED   = "ADMIN_SETTINGS_UPDATED";
     public static final String REPORT_EXPORTED          = "REPORT_EXPORTED";
     public static final String BULK_ACTION_PERFORMED    = "BULK_ACTION_PERFORMED";
+
+    // ── Authorization & Roles ─────────────────────────────────────────────────
+    public static final String ROLE_ASSIGNED             = "ROLE_ASSIGNED";
+    public static final String ROLE_REVOKED              = "ROLE_REVOKED";
+    public static final String PERMISSION_GRANTED        = "PERMISSION_GRANTED";
+    public static final String PERMISSION_REVOKED        = "PERMISSION_REVOKED";
+    public static final String ACCESS_DENIED             = "ACCESS_DENIED";
+    public static final String TEMPORARY_ACCESS_GRANTED  = "TEMPORARY_ACCESS_GRANTED";
+    public static final String TEMPORARY_ACCESS_EXPIRED  = "TEMPORARY_ACCESS_EXPIRED";
 }
