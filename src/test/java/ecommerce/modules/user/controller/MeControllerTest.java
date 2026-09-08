@@ -31,7 +31,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.core.GrantedAuthority;
@@ -577,7 +576,6 @@ class MeControllerTest {
         @Order(Integer.MIN_VALUE)
         SecurityFilterChain testSecurityFilterChain(HttpSecurity http) throws Exception {
             return http
-                    .csrf(AbstractHttpConfigurer::disable)
                     .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                     .exceptionHandling(ex -> ex
                             .authenticationEntryPoint(customAuthenticationEntryPoint)

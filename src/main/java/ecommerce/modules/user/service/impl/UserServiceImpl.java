@@ -732,8 +732,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public Page<UserProfileResponse> adminSearchUsers(AdminUserSearchParams params, Pageable pageable) {
-        Specification<User> spec = Specification
-                .where(UserSpec.emailOrNameContains(params.getQuery()))
+        Specification<User> spec = UserSpec.emailOrNameContains(params.getQuery())
                 .and(params.getStatus() != null ? UserSpec.hasStatus(params.getStatus()) : null)
                 .and(params.getRole()   != null ? UserSpec.hasRole(params.getRole())     : null)
                 .and(params.getEmailVerified() != null
