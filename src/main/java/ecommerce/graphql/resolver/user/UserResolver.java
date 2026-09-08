@@ -1,20 +1,27 @@
 package ecommerce.graphql.resolver.user;
 
-import ecommerce.common.security.UserPrincipal;
-import ecommerce.modules.user.dto.*;
-import ecommerce.modules.user.entity.User;
-import ecommerce.modules.user.spec.UserSpec;
-import ecommerce.modules.user.service.UserService;
-import org.springframework.data.jpa.domain.Specification;
 import ecommerce.common.response.PaginatedResponse;
-import ecommerce.graphql.dto.UserResponceDto;
-import ecommerce.graphql.input.*;
+import ecommerce.common.security.UserPrincipal;
+import ecommerce.graphql.dto.UserProfilePageDto;
+import ecommerce.graphql.input.PageInput;
+import ecommerce.graphql.input.SortDirection;
+import ecommerce.graphql.input.UserFilterInput;
+import ecommerce.modules.user.dto.AddressDto;
+import ecommerce.modules.user.dto.AdminUserSearchParams;
+import ecommerce.modules.user.dto.CustomerDashboardResponse;
+import ecommerce.modules.user.dto.LoyaltyRedemptionResponse;
+import ecommerce.modules.user.dto.UserDto;
+import ecommerce.modules.user.dto.UserProfileResponse;
+import ecommerce.modules.user.entity.User;
+import ecommerce.modules.user.service.UserService;
+import ecommerce.modules.user.spec.UserSpec;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
@@ -32,98 +39,92 @@ public class UserResolver {
 
     private final UserService userService;
 
-    // =========================================================================
-    // PUBLIC / AUTHENTICATED QUERIES
-    // =========================================================================
+    // ── Self-service queries ──────────────────────────────────────────────────
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public UserDto user(@Argument UUID id) {
-        log.info("GQL user(id={})", id);
-        return userService.getUserById(id).orElse(null);
+    public UserProfileResponse me(@AuthenticationPrincipal UserPrincipal principal) {
+        log.debug("GQL me(user={})", principal.getId());
+        return userService.getMyProfile(principal.getId());
     }
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
     public UserDto currentUser(@AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL currentUser(user={})", principal.getId());
+        log.debug("GQL currentUser(user={})", principal.getId());
         return userService.getUserById(principal.getId()).orElse(null);
     }
 
-    // =========================================================================
-    // ADMIN/MANAGER USER QUERIES
-    // =========================================================================
+    // ── Admin queries ─────────────────────────────────────────────────────────
 
     @QueryMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public UserResponceDto users(@Argument PageInput pagination, @Argument UserFilterInput filter) {
-        log.info("GQL users");
+    @PreAuthorize("hasRole('ADMIN')")
+    public UserProfileResponse user(@Argument UUID id) {
+        log.debug("GQL user(id={})", id);
+        return userService.adminGetUser(id);
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public UserProfilePageDto users(@Argument PageInput pagination, @Argument UserFilterInput filter) {
+        log.debug("GQL users");
         Pageable pageable = toPageable(pagination);
-        Page<UserDto> userPage = filter != null
-                ? userService.findUsersWithPredicate(buildPredicateFromFilter(filter), pageable)
-                : userService.getAllUsers(pageable);
-        return UserResponceDto.builder()
-                .content(userPage.getContent())
-                .pageInfo(PaginatedResponse.from(userPage))
+
+        AdminUserSearchParams params = new AdminUserSearchParams();
+        if (filter != null) {
+            params.setQuery(filter.getSearch() != null ? filter.getSearch() : filter.getName());
+            params.setRole(filter.getRole());
+            params.setEmailVerified(filter.getEmailVerified());
+        }
+
+        Page<UserProfileResponse> page = userService.adminSearchUsers(params, pageable);
+        return UserProfilePageDto.builder()
+                .content(page.getContent())
+                .pageInfo(PaginatedResponse.from(page))
                 .build();
     }
 
-    // =========================================================================
-    // CUSTOMER DASHBOARD QUERY
-    // =========================================================================
+    // ── Customer queries ──────────────────────────────────────────────────────
 
     @QueryMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     public CustomerDashboardResponse customerDashboard(@AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL customerDashboard(user={})", principal.getId());
+        log.debug("GQL customerDashboard(user={})", principal.getId());
         return userService.getCustomerDashboard(principal.getId());
     }
-
-    // =========================================================================
-    // ADDRESS QUERIES
-    // =========================================================================
 
     @QueryMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     public List<AddressDto> myAddresses(@AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL myAddresses(user={})", principal.getId());
+        log.debug("GQL myAddresses(user={})", principal.getId());
         return userService.getCustomerAddresses(principal.getId());
     }
-
-    // =========================================================================
-    // LOYALTY QUERY
-    // =========================================================================
 
     @QueryMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     public LoyaltyRedemptionResponse loyaltyBalance(@AuthenticationPrincipal UserPrincipal principal) {
-        log.info("GQL loyaltyBalance(user={})", principal.getId());
+        log.debug("GQL loyaltyBalance(user={})", principal.getId());
         return userService.getLoyaltyBalance(principal.getId());
     }
 
-    // =========================================================================
-    // FIELD RESOLVERS
-    // =========================================================================
+    // ── Field resolvers ───────────────────────────────────────────────────────
 
     @SchemaMapping(typeName = "User")
     public String fullName(UserDto user) {
         return user.getFullName();
     }
 
-    // =========================================================================
-    // HELPERS
-    // =========================================================================
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private Pageable toPageable(PageInput input) {
-        if (input == null) {
-            return PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
-        }
+        if (input == null) return PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
         Sort sort = input.getDirection() == SortDirection.DESC
                 ? Sort.by(input.getSortBy()).descending()
                 : Sort.by(input.getSortBy()).ascending();
         return PageRequest.of(input.getPage(), input.getSize(), sort);
     }
 
+    @SuppressWarnings("unused")
     private Specification<User> buildPredicateFromFilter(UserFilterInput filter) {
         return Specification.where(UserSpec.emailOrNameContains(filter.getSearch()))
                 .and(filter.getRole() != null ? UserSpec.hasRole(filter.getRole()) : null)
