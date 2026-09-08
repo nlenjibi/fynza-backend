@@ -1,0 +1,154 @@
+# Test profile — no real PostgreSQL, Redis, or external services needed.
+# Activated via @ActiveProfiles("test") on integration test classes.
+
+spring:
+  # ── In-memory datasource (H2, PostgreSQL-compatibility mode) ─────────────
+  datasource:
+    url: jdbc:h2:mem:fynza_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  # ── Disable Liquibase — DDL is handled by Hibernate create-drop above ────
+  liquibase:
+    enabled: false
+
+  # ── Caffeine only (no Redis) ──────────────────────────────────────────────
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=100,expireAfterWrite=1m
+
+  # ── Redis repositories disabled (RedisConfig @Profile("!test") skips beans)
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+  # ── OAuth2 — dummy client values so auto-config does not error ────────────
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-google-client-id
+            client-secret: test-google-client-secret
+            scope: profile, email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+          github:
+            client-id: test-github-client-id
+            client-secret: test-github-client-secret
+            scope: read:user, user:email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+          facebook:
+            client-id: test-facebook-client-id
+            client-secret: test-facebook-client-secret
+            scope: email, public_profile
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+
+# ── CORS ─────────────────────────────────────────────────────────────────────
+cors:
+  allowed-origins: http://localhost:3000
+  allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+  max-age: 3600
+
+# ── JWT ───────────────────────────────────────────────────────────────────────
+jwt:
+  secret: test-secret-key-that-is-at-least-256-bits-long-for-hmac-sha
+  blacklist:
+    max-size: 100
+    expire-after-write-hours: 1
+  cache:
+    max-size: 100
+    expire-after-write-minutes: 5
+    expire-after-access-minutes: 5
+
+# ── App / token configuration ─────────────────────────────────────────────────
+app:
+  frontend:
+    url: http://localhost:3000
+  frontend-success-redirect: http://localhost:3000/auth/oauth2/callback
+  frontend-failure-redirect: http://localhost:3000/auth/login
+  cookie:
+    secure: false
+  token:
+    access-minutes: 15
+    refresh-days: 7
+    email-verification-hours: 24
+    password-reset-minutes: 15
+    mfa-challenge-minutes: 5
+
+# ── Fynza-specific ────────────────────────────────────────────────────────────
+fynza:
+  notifications-enabled: false
+  public-app-base-url: http://localhost:3000
+  notification:
+    email:
+      from: test@fynza.test
+      from-name: Fynza Test
+      provider: gmail
+    slack:
+      bot-token: test-bot-token
+      api-base-url: https://slack.com/api
+    retry-job:
+      cron: 0 */2 * * * *
+
+# ── Cart ─────────────────────────────────────────────────────────────────────
+cart:
+  auto-cleanup-enabled: false
+
+# ── PayPal (dummy) ────────────────────────────────────────────────────────────
+paypal:
+  client-id: test-client-id
+  client-secret: test-client-secret
+  mode: sandbox
+
+# ── Paystack (dummy) ──────────────────────────────────────────────────────────
+paystack:
+  secret-key: test-secret
+  public-key: test-public
+  base-url: https://api.paystack.co
+  webhook-secret: test-webhook
+
+# ── Rate limiting — off in tests ──────────────────────────────────────────────
+rate-limit:
+  enabled: false
+
+# ── Async thread pools (minimal sizing for tests) ─────────────────────────────
+async:
+  notification:
+    core-pool-size: 1
+    max-pool-size: 2
+    queue-capacity: 10
+  order:
+    core-pool-size: 1
+    max-pool-size: 2
+    queue-capacity: 10
+  payment:
+    core-pool-size: 1
+    max-pool-size: 2
+    queue-capacity: 10
+  inventory:
+    core-pool-size: 1
+    max-pool-size: 2
+    queue-capacity: 10
+
+# ── Server — port 0 lets Spring pick a free port ──────────────────────────────
+server:
+  port: 0
+
+# ── Logging — suppress noise ──────────────────────────────────────────────────
+logging:
+  level:
+    root: WARN
+    ecommerce: INFO
+    org.springframework.security: INFO
