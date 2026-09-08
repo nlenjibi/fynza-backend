@@ -2,6 +2,9 @@ package ecommerce.common.exception;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ecommerce.common.response.ErrorResponse;
+import ecommerce.modules.audit.constant.AuditAction;
+import ecommerce.modules.audit.dto.AuditLogEntry;
+import ecommerce.modules.audit.service.AuditLogService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +34,8 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class CustomAccessDeniedHandler implements AccessDeniedHandler {
 
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper    objectMapper;
+    private final AuditLogService auditLogService;
 
     @Override
     public void handle(HttpServletRequest request,
@@ -57,5 +61,13 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
                 .build();
 
         objectMapper.writeValue(response.getOutputStream(), body);
+
+        auditLogService.logImmediately(AuditLogEntry.builder()
+                .action(AuditAction.ACCESS_DENIED)
+                .actorEmail(username)
+                .reason(request.getRequestURI())
+                .status(AuditLogEntry.STATUS_FAILURE)
+                .ipAddress(request.getRemoteAddr())
+                .build());
     }
 }
