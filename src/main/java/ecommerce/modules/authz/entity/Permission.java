@@ -16,6 +16,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(of = {"id", "code", "resource", "action"})
 public class Permission {
 
     @Id
