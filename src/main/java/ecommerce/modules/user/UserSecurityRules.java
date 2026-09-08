@@ -11,10 +11,16 @@ public class UserSecurityRules implements SecurityRules {
     @Override
     public void configure(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry registry) {
         registry
-                // Admin user management
-                .requestMatchers("/v1/users/**").hasRole("ADMIN")
+                // ── Self-service (any authenticated user) ─────────────────────────────
+                .requestMatchers(HttpMethod.GET,  "/v1/users/me").authenticated()
+                .requestMatchers(HttpMethod.PATCH, "/v1/users/me").authenticated()
+                .requestMatchers(HttpMethod.POST, "/v1/users/me/deactivate").authenticated()
+                .requestMatchers(HttpMethod.POST, "/v1/users/me/delete-request").authenticated()
 
-                // Customer self-service endpoints
+                // ── Admin user management ─────────────────────────────────────────────
+                .requestMatchers("/v1/admin/users/**").hasRole("ADMIN")
+
+                // ── Customer self-service ─────────────────────────────────────────────
                 .requestMatchers(HttpMethod.GET,    "/v1/customers/profile").hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.PUT,    "/v1/customers/profile").hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.GET,    "/v1/customers/dashboard").hasRole("CUSTOMER")
@@ -23,6 +29,9 @@ public class UserSecurityRules implements SecurityRules {
                 .requestMatchers(HttpMethod.GET,    "/v1/customers/addresses").hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.POST,   "/v1/customers/addresses").hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.PUT,    "/v1/customers/addresses/{id}").hasRole("CUSTOMER")
-                .requestMatchers(HttpMethod.DELETE, "/v1/customers/addresses/{id}").hasRole("CUSTOMER");
+                .requestMatchers(HttpMethod.DELETE, "/v1/customers/addresses/{id}").hasRole("CUSTOMER")
+
+                // ── Legacy admin user CRUD (kept for backward compat) ─────────────────
+                .requestMatchers("/v1/users/**").hasRole("ADMIN");
     }
 }

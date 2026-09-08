@@ -1,17 +1,16 @@
 package ecommerce.graphql.input;
 
 import ecommerce.common.enums.Role;
+import ecommerce.common.enums.UserStatus;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/**
- * GraphQL Input for User filtering using Specifications
- */
 @Data
 public class UserFilterInput {
     private String search;
     private Role role;
+    private UserStatus status;
     private Boolean active;
     private Boolean emailVerified;
     private LocalDateTime createdAfter;
