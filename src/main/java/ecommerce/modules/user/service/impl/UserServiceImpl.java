@@ -16,6 +16,7 @@ import ecommerce.modules.user.repository.CustomerProfileRepository;
 import ecommerce.modules.user.repository.SellerProfileRepository;
 import ecommerce.modules.user.repository.UserRepository;
 import ecommerce.modules.user.service.UserService;
+import ecommerce.modules.user.spec.UserSpec;
 import ecommerce.modules.wishlist.repository.WishlistItemRepository;
 import ecommerce.common.util.TokenValidationService;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -657,5 +659,168 @@ public class UserServiceImpl implements UserService {
             return "\"" + value.replace("\"", "\"\"") + "\"";
         }
         return value;
+    }
+
+    // ── User Management PRD ───────────────────────────────────────────────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserProfileResponse getMyProfile(UUID userId) {
+        return toProfileResponse(findUserByPublicId(userId));
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {"users", "user-profile"}, key = "#userId")
+    public UserProfileResponse updateMyProfile(UUID userId, UpdateProfileRequest request) {
+        User user = findUserByPublicId(userId);
+
+        if (request.getFirstName()   != null) user.setFirstName(request.getFirstName());
+        if (request.getLastName()    != null) user.setLastName(request.getLastName());
+        if (request.getDisplayName() != null) user.setDisplayName(request.getDisplayName());
+        if (request.getPhone()       != null) user.setPhone(request.getPhone());
+        if (request.getAvatarUrl()   != null) user.setProfileImageUrl(request.getAvatarUrl());
+        if (request.getDateOfBirth() != null) user.setDateOfBirth(request.getDateOfBirth());
+        if (request.getLanguage()    != null) user.setLanguage(request.getLanguage());
+        if (request.getTimezone()    != null) user.setTimezone(request.getTimezone());
+        if (request.getCurrency()    != null) user.setCurrency(request.getCurrency());
+
+        userRepository.save(user);
+        tokenValidationService.evictPrincipal(userId);
+        log.info("Profile updated for user: {}", userId);
+        return toProfileResponse(user);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {"users", "user-profile"}, key = "#userId")
+    public void deactivateAccount(UUID userId, AccountDeactivationRequest request) {
+        if (!request.isConfirm()) {
+            throw new IllegalArgumentException("Confirmation required to deactivate account");
+        }
+        User user = findUserByPublicId(userId);
+        user.setStatus(UserStatus.DISABLED);
+        user.setIsActive(false);
+        user.setDisabledAt(Instant.now());
+        userRepository.save(user);
+        tokenValidationService.evictPrincipal(userId);
+        log.info("Account deactivated for user: {}", userId);
+    }
+
+    @Override
+    @Transactional
+    public void requestAccountDeletion(UUID userId, AccountDeletionRequest request) {
+        if (!request.isConfirm()) {
+            throw new IllegalArgumentException("Confirmation required to request account deletion");
+        }
+        User user = findUserByPublicId(userId);
+        if (user.getDeletionRequestedAt() != null) {
+            throw new IllegalStateException("Deletion request already pending");
+        }
+        Instant now = Instant.now();
+        user.setDeletionRequestedAt(now);
+        user.setScheduledDeletionAt(now.plus(java.time.Duration.ofDays(30)));
+        user.setStatus(UserStatus.DISABLED);
+        user.setIsActive(false);
+        userRepository.save(user);
+        tokenValidationService.evictPrincipal(userId);
+        log.info("Account deletion requested for user: {}", userId);
+    }
+
+    // ── Admin operations ─────────────────────────────────────────────────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<UserProfileResponse> adminSearchUsers(AdminUserSearchParams params, Pageable pageable) {
+        Specification<User> spec = Specification
+                .where(UserSpec.emailOrNameContains(params.getQuery()))
+                .and(params.getStatus() != null ? UserSpec.hasStatus(params.getStatus()) : null)
+                .and(params.getRole()   != null ? UserSpec.hasRole(params.getRole())     : null)
+                .and(params.getEmailVerified() != null
+                        ? (root, q, cb) -> cb.equal(root.get("isEmailVerified"), params.getEmailVerified())
+                        : null);
+        return userRepository.findAll(spec, pageable).map(this::toProfileResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserProfileResponse adminGetUser(UUID userId) {
+        return toProfileResponse(findUserByPublicId(userId));
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {"users", "user-profile", "admin-dashboard"}, allEntries = true)
+    public UserProfileResponse adminSuspendUser(UUID targetId, UUID actorId, AdminSuspendRequest request) {
+        User user = findUserByPublicId(targetId);
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw new IllegalStateException("User is already suspended");
+        }
+        user.setStatus(UserStatus.SUSPENDED);
+        user.setSuspendReason(request.getReason());
+        user.setSuspendedBy(actorId);
+        user.setSuspendedAt(Instant.now());
+        user.setIsActive(false);
+        userRepository.save(user);
+        tokenValidationService.evictPrincipal(targetId);
+        log.info("User {} suspended by {}", targetId, actorId);
+        return toProfileResponse(user);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {"users", "user-profile", "admin-dashboard"}, allEntries = true)
+    public UserProfileResponse adminActivateUser(UUID targetId) {
+        User user = findUserByPublicId(targetId);
+        user.setStatus(UserStatus.ACTIVE);
+        user.setIsActive(true);
+        user.setSuspendReason(null);
+        user.setSuspendedBy(null);
+        user.setSuspendedAt(null);
+        user.setDisabledAt(null);
+        userRepository.save(user);
+        log.info("User {} reactivated", targetId);
+        return toProfileResponse(user);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {"users", "user-profile", "admin-dashboard"}, allEntries = true)
+    public UserProfileResponse adminDisableUser(UUID targetId, String reason) {
+        User user = findUserByPublicId(targetId);
+        user.setStatus(UserStatus.DISABLED);
+        user.setIsActive(false);
+        user.setDisabledAt(Instant.now());
+        if (reason != null) user.setSuspendReason(reason);
+        userRepository.save(user);
+        tokenValidationService.evictPrincipal(targetId);
+        log.info("User {} disabled", targetId);
+        return toProfileResponse(user);
+    }
+
+    // ── Conversion helper ─────────────────────────────────────────────────────
+
+    private UserProfileResponse toProfileResponse(User user) {
+        return UserProfileResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .username(user.getUsername())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .displayName(user.getDisplayName())
+                .phone(user.getPhone())
+                .avatarUrl(user.getProfileImageUrl())
+                .dateOfBirth(user.getDateOfBirth())
+                .language(user.getLanguage())
+                .timezone(user.getTimezone())
+                .currency(user.getCurrency())
+                .role(user.getRole())
+                .status(user.getStatus())
+                .emailVerified(user.getIsEmailVerified())
+                .mfaEnabled(user.getMfaEnabled())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .deletionRequestedAt(user.getDeletionRequestedAt())
+                .build();
     }
 }
