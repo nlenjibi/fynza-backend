@@ -34,14 +34,19 @@ public final class AuditAction {
     public static final String ADDRESS_DELETED          = "ADDRESS_DELETED";
 
     // ── Seller Management ─────────────────────────────────────────────────────
-    public static final String SELLER_REGISTERED        = "SELLER_REGISTERED";
-    public static final String SELLER_APPROVED          = "SELLER_APPROVED";
-    public static final String SELLER_REJECTED          = "SELLER_REJECTED";
-    public static final String SELLER_SUSPENDED         = "SELLER_SUSPENDED";
-    public static final String SELLER_REACTIVATED       = "SELLER_REACTIVATED";
-    public static final String SELLER_PROFILE_UPDATED   = "SELLER_PROFILE_UPDATED";
-    public static final String STORE_CREATED            = "STORE_CREATED";
-    public static final String STORE_UPDATED            = "STORE_UPDATED";
+    public static final String SELLER_REGISTERED            = "SELLER_REGISTERED";
+    public static final String SELLER_APPROVED              = "SELLER_APPROVED";
+    public static final String SELLER_REJECTED              = "SELLER_REJECTED";
+    public static final String SELLER_SUSPENDED             = "SELLER_SUSPENDED";
+    public static final String SELLER_REACTIVATED           = "SELLER_REACTIVATED";
+    public static final String SELLER_BLOCKED               = "SELLER_BLOCKED";
+    public static final String SELLER_CLOSED                = "SELLER_CLOSED";
+    public static final String SELLER_PROFILE_UPDATED       = "SELLER_PROFILE_UPDATED";
+    public static final String SELLER_VERIFICATION_SUBMITTED = "SELLER_VERIFICATION_SUBMITTED";
+    public static final String SELLER_VERIFICATION_APPROVED = "SELLER_VERIFICATION_APPROVED";
+    public static final String SELLER_VERIFICATION_REJECTED = "SELLER_VERIFICATION_REJECTED";
+    public static final String STORE_CREATED                = "STORE_CREATED";
+    public static final String STORE_UPDATED                = "STORE_UPDATED";
 
     // ── Product Management ────────────────────────────────────────────────────
     public static final String PRODUCT_CREATED          = "PRODUCT_CREATED";
