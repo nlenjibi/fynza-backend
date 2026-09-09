@@ -8,8 +8,10 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 public class UserPrincipal implements UserDetails {
@@ -52,6 +54,29 @@ public class UserPrincipal implements UserDetails {
 
     public static UserPrincipal create(User user) {
         return new UserPrincipal(user);
+    }
+
+    public UserPrincipal(User user, Collection<String> permissionCodes) {
+        this.id       = user.getId();
+        this.email    = user.getEmail();
+        this.password = user.getPassword();
+        this.isActive = user.getIsActive();
+        this.isLocked = user.getIsLocked();
+        this.lastPasswordChangeEpoch = user.getLastPasswordChange() != null
+                ? user.getLastPasswordChange()
+                        .atZone(ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli()
+                : null;
+        this.role = user.getRole();
+        List<GrantedAuthority> merged = new ArrayList<>();
+        merged.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+        permissionCodes.forEach(code -> merged.add(new SimpleGrantedAuthority(code)));
+        this.authorities = Collections.unmodifiableList(merged);
+    }
+
+    public static UserPrincipal create(User user, Collection<String> permissionCodes) {
+        return new UserPrincipal(user, permissionCodes);
     }
 
     public boolean isAccountLocked() {
