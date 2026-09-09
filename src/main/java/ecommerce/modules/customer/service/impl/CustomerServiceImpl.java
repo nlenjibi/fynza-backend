@@ -9,7 +9,6 @@ import ecommerce.modules.customer.dto.response.*;
 import ecommerce.modules.customer.entity.Customer;
 import ecommerce.modules.customer.entity.CustomerAddress;
 import ecommerce.modules.customer.entity.CustomerPreference;
-import ecommerce.modules.customer.entity.CustomerStatusHistory;
 import ecommerce.modules.customer.enums.CustomerStatus;
 import ecommerce.modules.customer.exception.CustomerAlreadyExistsException;
 import ecommerce.modules.customer.exception.CustomerNotFoundException;
