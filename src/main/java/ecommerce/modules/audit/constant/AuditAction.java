@@ -127,4 +127,24 @@ public final class AuditAction {
     public static final String ADMIN_SETTINGS_UPDATED   = "ADMIN_SETTINGS_UPDATED";
     public static final String REPORT_EXPORTED          = "REPORT_EXPORTED";
     public static final String BULK_ACTION_PERFORMED    = "BULK_ACTION_PERFORMED";
+
+    // ── Authorization & Roles ─────────────────────────────────────────────────
+    public static final String ROLE_ASSIGNED             = "ROLE_ASSIGNED";
+    public static final String ROLE_REVOKED              = "ROLE_REVOKED";
+    public static final String PERMISSION_GRANTED        = "PERMISSION_GRANTED";
+    public static final String PERMISSION_REVOKED        = "PERMISSION_REVOKED";
+    public static final String ACCESS_DENIED             = "ACCESS_DENIED";
+    public static final String TEMPORARY_ACCESS_GRANTED  = "TEMPORARY_ACCESS_GRANTED";
+    public static final String TEMPORARY_ACCESS_EXPIRED  = "TEMPORARY_ACCESS_EXPIRED";
+
+    // ── Customer Management ───────────────────────────────────────────────────
+    public static final String CUSTOMER_PROVISIONED         = "CUSTOMER_PROVISIONED";
+    public static final String CUSTOMER_UPDATED             = "CUSTOMER_UPDATED";
+    public static final String CUSTOMER_SUSPENDED           = "CUSTOMER_SUSPENDED";
+    public static final String CUSTOMER_ACTIVATED           = "CUSTOMER_ACTIVATED";
+    public static final String CUSTOMER_BLOCKED             = "CUSTOMER_BLOCKED";
+    public static final String CUSTOMER_ADDRESS_ADDED       = "CUSTOMER_ADDRESS_ADDED";
+    public static final String CUSTOMER_ADDRESS_UPDATED     = "CUSTOMER_ADDRESS_UPDATED";
+    public static final String CUSTOMER_ADDRESS_DELETED     = "CUSTOMER_ADDRESS_DELETED";
+    public static final String CUSTOMER_PREFERENCES_UPDATED = "CUSTOMER_PREFERENCES_UPDATED";
 }
