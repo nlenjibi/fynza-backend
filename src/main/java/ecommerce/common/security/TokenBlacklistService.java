@@ -1,171 +1,169 @@
 package ecommerce.common.security;
 
-import com.github.benmanes.caffeine.cache.Caffeine;
+import ecommerce.common.cache.CacheKey;
+import ecommerce.common.cache.CacheProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.util.HexFormat;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 /**
- * Service for managing JWT token blacklist and user token versioning.
- * 
- * <p>Uses SHA-256 hashing for blacklisted tokens to ensure secure storage.
- * Tracks token versions per user to enable immediate invalidation of all
- * user tokens (e.g., on password change or logout from all devices).
- * 
- * <p>Performance optimizations:
- * - Bloom Filter for O(1) quick rejection of valid tokens
- * - Caffeine cache with soft values for memory efficiency under pressure
- * - Synchronized Bloom Filter updates when tokens are blacklisted
+ * Manages JWT token blacklist and per-user token versioning via Redis.
+ *
+ * <p>Security posture: <strong>fail-closed</strong>.
+ * If Redis is unavailable during a blacklist check the token is treated as
+ * blacklisted and the request is rejected, preventing use of revoked tokens
+ * during a cache outage.
+ *
+ * <p>A Guava Bloom Filter provides an in-process O(1) pre-check to avoid
+ * hitting Redis for tokens that are definitely not blacklisted.
  */
 @Slf4j
 @Service
 public class TokenBlacklistService {
 
-    private final com.github.benmanes.caffeine.cache.Cache<String, Boolean> tokenBlacklist;
-    private final com.github.benmanes.caffeine.cache.Cache<String, Long> userTokenVersion;
+    private final RedisTemplate<String, Object> redisTemplate;
     private final BloomFilterService bloomFilterService;
+    private final Duration blacklistTtl;
+    private final Duration tokenVersionTtl;
 
     public TokenBlacklistService(
-            @Value("${jwt.blacklist.max-size:10000}") int maxSize,
-            @Value("${jwt.blacklist.expire-after-write-hours:24}") int expireAfterWriteHours,
-            BloomFilterService bloomFilterService) {
+            RedisTemplate<String, Object> redisTemplate,
+            BloomFilterService bloomFilterService,
+            CacheProperties cacheProperties) {
 
+        this.redisTemplate = redisTemplate;
         this.bloomFilterService = bloomFilterService;
+        this.blacklistTtl = cacheProperties.getRedis().getTokenBlacklistTtl();
+        this.tokenVersionTtl = cacheProperties.getRedis().getUserTokenVersionTtl();
 
-        // Caffeine with soft values to allow GC under memory pressure
-        this.tokenBlacklist = Caffeine.newBuilder()
-                .maximumSize(maxSize)
-                .expireAfterWrite(expireAfterWriteHours, TimeUnit.HOURS)
-                .recordStats()
-                .build();
-
-        this.userTokenVersion = Caffeine.newBuilder()
-                .maximumSize(10000)
-                .expireAfterWrite(expireAfterWriteHours, TimeUnit.HOURS)
-                .softValues()
-                .build();
-
-        log.info("Token blacklist initialized with maxSize={}, expireAfterWriteHours={}, softValues=true",
-                maxSize, expireAfterWriteHours);
+        log.info("TokenBlacklistService initialised — blacklistTtl={}, tokenVersionTtl={}",
+                blacklistTtl, tokenVersionTtl);
     }
 
     /**
-     * Add a token to the blacklist.
-     * @param token The JWT token to blacklist
-     * @param expirationTime Token expiration timestamp in milliseconds
+     * Adds {@code token} to the Redis blacklist.
+     * Fail-closed: propagates on Redis error (caller should handle / surface 500).
      */
     public void blacklistToken(String token, long expirationTime) {
-        String tokenKey = hashToken(token);
-        tokenBlacklist.put(tokenKey, true);
+        String hash = hashToken(token);
+        String key  = CacheKey.tokenBlacklist(hash);
 
-        // Synchronize with Bloom Filter for O(1) quick rejection
-        bloomFilterService.add(tokenKey);
+        long remainingMs = Math.max(expirationTime - System.currentTimeMillis(), 0);
+        Duration ttl = remainingMs > 0 ? Duration.ofMillis(remainingMs) : blacklistTtl;
 
-        long remainingTime = Math.max(expirationTime - System.currentTimeMillis(), 0);
-        log.debug("Token blacklisted, remaining time: {}ms", remainingTime);
+        redisTemplate.opsForValue().set(key, Boolean.TRUE, ttl);
+        bloomFilterService.add(hash);
+
+        log.debug("Token blacklisted, ttl={}", ttl);
     }
 
     /**
-     * Check if a token is blacklisted.
-     * Uses Bloom Filter for quick rejection, then verifies with Caffeine.
-     * 
-     * @param token The JWT token to check
-     * @return true if blacklisted, false otherwise
+     * Returns {@code true} if {@code token} is on the blacklist.
+     *
+     * <p>Fail-closed: any Redis error causes this method to return {@code true},
+     * blocking the request to prevent use of revoked tokens during an outage.
      */
     public boolean isTokenBlacklisted(String token) {
-        String tokenKey = hashToken(token);
-        
-        // First, check Bloom Filter for quick rejection (O(1))
-        // If Bloom Filter says NO, token is definitely not blacklisted
-        if (!bloomFilterService.mightContain(tokenKey)) {
+        if (token == null || token.isBlank()) return false;
+        String hash = hashToken(token);
+
+        // Bloom Filter fast-path: definite NO avoids Redis entirely
+        if (!bloomFilterService.mightContain(hash)) {
             return false;
         }
-        
-        // Bloom Filter said MAYBE - verify with Caffeine cache
-        // This is required to avoid false positives
-        boolean isBlacklisted = tokenBlacklist.getIfPresent(tokenKey) != null;
-        if (isBlacklisted) {
-            log.debug("Blacklisted token detected (verified by cache)");
+
+        String key = CacheKey.tokenBlacklist(hash);
+        try {
+            Boolean blacklisted = (Boolean) redisTemplate.opsForValue().get(key);
+            if (Boolean.TRUE.equals(blacklisted)) {
+                log.debug("Blacklisted token detected");
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            // Fail-closed: Redis unavailable → reject token for security
+            log.error("Redis unavailable during blacklist check (fail-closed, rejecting token): {}", e.getMessage());
+            return true;
         }
-        return isBlacklisted;
     }
 
     /**
-     * Invalidate all tokens for a specific user by updating their token version.
-     * Uses UUID for user identification.
-     * @param userId The user's unique identifier (UUID)
+     * Records a new token-version epoch for {@code userId}, invalidating
+     * all previously issued tokens for that user.
      */
     public void invalidateUserTokens(UUID userId) {
-        String userKey = "user_" + userId.toString();
-        long newVersion = System.currentTimeMillis();
-        userTokenVersion.put(userKey, newVersion);
+        String key     = CacheKey.userTokenVersion(userId);
+        long   version = System.currentTimeMillis();
+        redisTemplate.opsForValue().set(key, version, tokenVersionTtl);
         log.info("Invalidated all tokens for user: {}", userId);
     }
 
-
     /**
-     * Check if a token (identified by its issuedAt timestamp) is still valid
-     * for the given user. Returns false if {@link #invalidateUserTokens} was
-     * called AFTER the token was issued.
-     *
-     * @param userId         the user's unique identifier
-     * @param tokenIssuedAt  the token's {@code iat} claim value in milliseconds
-     * @return true if the token pre-dates any stored invalidation, false otherwise
+     * Returns {@code true} if {@code tokenVersion} is still valid (not superseded).
      */
-    public boolean isUserTokenVersionValid(UUID userId, long tokenIssuedAt) {
-        Long invalidationTimestamp = userTokenVersion.getIfPresent("user_" + userId);
-        return invalidationTimestamp == null || tokenIssuedAt >= invalidationTimestamp;
+    public boolean isUserTokenVersionValid(UUID userId, Long tokenVersion) {
+        Long currentVersion = getUserTokenVersion(userId);
+        if (currentVersion == null) return true;
+        return tokenVersion == null || tokenVersion >= currentVersion;
     }
 
     /**
-     * Clear expired entries from the blacklist.
+     * Returns the current token-version epoch for {@code userId}, or {@code null}
+     * if no invalidation has been recorded.
+     */
+    public Long getUserTokenVersion(UUID userId) {
+        try {
+            Object value = redisTemplate.opsForValue().get(CacheKey.userTokenVersion(userId));
+            if (value instanceof Long l) return l;
+            if (value instanceof Integer i) return i.longValue();
+            if (value instanceof Number n) return n.longValue();
+            return null;
+        } catch (Exception e) {
+            log.warn("Failed to read user token version from Redis for {}: {}", userId, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * No-op — Redis expires blacklisted tokens automatically via TTL.
+     * Kept for scheduler compatibility.
      */
     public void clearExpiredTokens() {
-        tokenBlacklist.cleanUp();
-        log.debug("Expired tokens cleared from blacklist");
+        log.debug("clearExpiredTokens() called — Redis handles TTL expiry automatically");
     }
 
     /**
-     * Get statistics about the token blacklist.
-     * @return TokenBlacklistStats with current statistics
+     * Returns basic stats about the blacklist.
+     * Hit/miss rates are not tracked at the Redis level; size is estimated from key count.
      */
     public TokenBlacklistStats getStats() {
-        return new TokenBlacklistStats(
-                tokenBlacklist.estimatedSize(),
-                tokenBlacklist.stats().hitRate(),
-                tokenBlacklist.stats().missRate()
-        );
+        long size = 0;
+        try {
+            var keys = redisTemplate.keys(CacheKey.of("token-blacklist", "*"));
+            size = keys != null ? keys.size() : 0;
+        } catch (Exception e) {
+            log.warn("Unable to estimate blacklist size from Redis: {}", e.getMessage());
+        }
+        return new TokenBlacklistStats(size, 0.0, 0.0);
     }
 
-    /**
-     * Hash a token using SHA-256 for secure storage.
-     * @param token The token to hash
-     * @return The hashed token
-     */
+    public record TokenBlacklistStats(long currentSize, double hitRate, double missRate) {}
+
     private String hashToken(String token) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
-            log.error("SHA-256 algorithm not available, falling back to hashCode", e);
+            log.error("SHA-256 not available, falling back to hashCode", e);
             return String.valueOf(token.hashCode());
         }
     }
-
-    /**
-     * Record containing token blacklist statistics.
-     */
-    public record TokenBlacklistStats(
-            long currentSize,
-            double hitRate,
-            double missRate
-    ) {}
 }

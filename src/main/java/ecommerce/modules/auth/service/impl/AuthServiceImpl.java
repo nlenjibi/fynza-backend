@@ -2,6 +2,7 @@ package ecommerce.modules.auth.service.impl;
 
 import ecommerce.common.config.TokenProperties;
 import ecommerce.common.enums.Role;
+import ecommerce.common.enums.ScopeType;
 import ecommerce.common.enums.UserStatus;
 import ecommerce.common.event.FynzaEventPublisher;
 import ecommerce.common.event.user.PasswordResetRequestedEvent;
@@ -26,10 +27,11 @@ import ecommerce.modules.auth.service.AuthService;
 import ecommerce.common.security.JwtTokenProvider;
 import ecommerce.common.security.LoginAttemptService;
 import ecommerce.common.security.SecurityEventLogger;
-import ecommerce.modules.user.entity.CustomerProfile;
+import ecommerce.modules.authz.entity.UserRoleEntity;
+import ecommerce.modules.authz.repository.RoleEntityRepository;
+import ecommerce.modules.authz.repository.UserRoleEntityRepository;
 import ecommerce.modules.user.entity.SellerProfile;
 import ecommerce.modules.user.entity.User;
-import ecommerce.modules.user.repository.CustomerProfileRepository;
 import ecommerce.modules.user.repository.SellerProfileRepository;
 import ecommerce.modules.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -59,7 +61,6 @@ public class AuthServiceImpl implements AuthService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
-    private final CustomerProfileRepository customerProfileRepository;
     private final SellerProfileRepository sellerProfileRepository;
     private final AuthRepository authRepository;
     private final VerificationTokenRepository verificationTokenRepository;
@@ -70,6 +71,8 @@ public class AuthServiceImpl implements AuthService {
     private final LoginAttemptService loginAttemptService;
     private final SecurityEventLogger securityEventLogger;
     private final FynzaEventPublisher eventPublisher;
+    private final RoleEntityRepository roleEntityRepository;
+    private final UserRoleEntityRepository userRoleEntityRepository;
 
 
     @Override
@@ -102,6 +105,14 @@ public class AuthServiceImpl implements AuthService {
         user = userRepository.save(user);
         log.info("User registered successfully with ID: {}", user.getId());
 
+        final User savedUser = user;
+        roleEntityRepository.findByCode(savedUser.getRole().name()).ifPresent(roleEntity ->
+                userRoleEntityRepository.save(UserRoleEntity.builder()
+                        .userId(savedUser.getId())
+                        .role(roleEntity)
+                        .scopeType(ScopeType.GLOBAL)
+                        .build()));
+
         if (role == Role.SELLER) {
             SellerProfile sellerProfile = SellerProfile.builder()
                     .user(user)
@@ -109,16 +120,9 @@ public class AuthServiceImpl implements AuthService {
                     .verificationStatus(ecommerce.common.enums.VerificationStatus.PENDING)
                     .build();
             sellerProfileRepository.save(sellerProfile);
-        } else {
-            CustomerProfile customerProfile = CustomerProfile.builder()
-                    .user(user)
-                    .loyaltyPoints(0)
-                    .membershipStatus(ecommerce.common.enums.MembershipStatus.BRONZE)
-                    .totalOrders(0)
-                    .totalSpent(java.math.BigDecimal.ZERO)
-                    .build();
-            customerProfileRepository.save(customerProfile);
         }
+        // Customer provisioning happens asynchronously via CustomerProvisioningListener
+        // which listens to UserRegisteredEvent published below.
 
         String verificationToken = generateSecureToken();
         verificationTokenRepository.save(VerificationToken.builder()
