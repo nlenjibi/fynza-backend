@@ -12,5 +12,6 @@
     <include file="changes/005-linked-identities.sql" relativeToChangelogFile="true"/>
     <include file="changes/006-seller-notification-settings.sql" relativeToChangelogFile="true"/>
     <include file="changes/007-user-profile-columns.sql" relativeToChangelogFile="true"/>
+    <include file="changes/008-seller-management.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

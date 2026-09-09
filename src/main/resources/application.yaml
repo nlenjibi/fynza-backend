@@ -93,6 +93,10 @@ jwt:
     expected-insertions: 50000
     fpp: 0.001
 
+seller:
+  suspension-expiry:
+    cron: ${SELLER_SUSPENSION_EXPIRY_CRON:0 0 * * * *}
+
 rate-limit:
   enabled: ${ENABLE_RATE_LIMITING:false}
   login:
