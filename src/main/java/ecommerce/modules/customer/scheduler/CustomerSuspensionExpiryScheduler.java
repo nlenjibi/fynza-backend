@@ -1,6 +1,5 @@
 package ecommerce.modules.customer.scheduler;
 
-import ecommerce.modules.customer.entity.Customer;
 import ecommerce.modules.customer.entity.CustomerStatusHistory;
 import ecommerce.modules.customer.enums.CustomerStatus;
 import ecommerce.modules.customer.repository.CustomerRepository;
