@@ -30,10 +30,8 @@ import ecommerce.common.security.SecurityEventLogger;
 import ecommerce.modules.authz.entity.UserRoleEntity;
 import ecommerce.modules.authz.repository.RoleEntityRepository;
 import ecommerce.modules.authz.repository.UserRoleEntityRepository;
-import ecommerce.modules.user.entity.CustomerProfile;
 import ecommerce.modules.user.entity.SellerProfile;
 import ecommerce.modules.user.entity.User;
-import ecommerce.modules.user.repository.CustomerProfileRepository;
 import ecommerce.modules.user.repository.SellerProfileRepository;
 import ecommerce.modules.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -63,7 +61,6 @@ public class AuthServiceImpl implements AuthService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
-    private final CustomerProfileRepository customerProfileRepository;
     private final SellerProfileRepository sellerProfileRepository;
     private final AuthRepository authRepository;
     private final VerificationTokenRepository verificationTokenRepository;
@@ -123,16 +120,9 @@ public class AuthServiceImpl implements AuthService {
                     .verificationStatus(ecommerce.common.enums.VerificationStatus.PENDING)
                     .build();
             sellerProfileRepository.save(sellerProfile);
-        } else {
-            CustomerProfile customerProfile = CustomerProfile.builder()
-                    .user(user)
-                    .loyaltyPoints(0)
-                    .membershipStatus(ecommerce.common.enums.MembershipStatus.BRONZE)
-                    .totalOrders(0)
-                    .totalSpent(java.math.BigDecimal.ZERO)
-                    .build();
-            customerProfileRepository.save(customerProfile);
         }
+        // Customer provisioning happens asynchronously via CustomerProvisioningListener
+        // which listens to UserRegisteredEvent published below.
 
         String verificationToken = generateSecureToken();
         verificationTokenRepository.save(VerificationToken.builder()

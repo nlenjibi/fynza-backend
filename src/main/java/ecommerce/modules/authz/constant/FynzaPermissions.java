@@ -51,4 +51,17 @@ public final class FynzaPermissions {
     // ── Inventory ─────────────────────────────────────────────────────────────
     public static final String INVENTORY_VIEW   = "inventory.view";
     public static final String INVENTORY_MANAGE = "inventory.manage";
+
+    // ── Customer ──────────────────────────────────────────────────────────────
+    public static final String CUSTOMER_READ_OWN    = "customer.read.own";
+    public static final String CUSTOMER_UPDATE_OWN  = "customer.update.own";
+    public static final String ADDRESS_READ_OWN     = "address.read.own";
+    public static final String ADDRESS_CREATE_OWN   = "address.create.own";
+    public static final String ADDRESS_UPDATE_OWN   = "address.update.own";
+    public static final String ADDRESS_DELETE_OWN   = "address.delete.own";
+    public static final String CUSTOMER_READ        = "customer.read";
+    public static final String CUSTOMER_MANAGE      = "customer.manage";
+    public static final String CUSTOMER_SUSPEND     = "customer.suspend";
+    public static final String CUSTOMER_ACTIVATE    = "customer.activate";
+    public static final String CUSTOMER_BLOCK       = "customer.block";
 }
