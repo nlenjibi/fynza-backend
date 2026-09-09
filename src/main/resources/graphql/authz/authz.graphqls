@@ -1,0 +1,89 @@
+enum ScopeType {
+    GLOBAL
+    STORE
+    OWN
+}
+
+type RoleType {
+    id: ID!
+    code: String!
+    displayName: String
+    description: String
+    systemDefined: Boolean!
+    active: Boolean!
+    permissions: [String!]!
+}
+
+type PermissionType {
+    id: ID!
+    code: String!
+    resource: String!
+    action: String!
+    description: String
+}
+
+type UserRoleType {
+    id: ID!
+    roleCode: String!
+    roleDisplayName: String
+    scopeType: ScopeType!
+    scopeId: ID
+    assignedBy: ID
+    assignedAt: String!
+    expiresAt: String
+    active: Boolean!
+}
+
+input CreateRoleInput {
+    code: String!
+    displayName: String
+    description: String
+}
+
+input UpdateRoleInput {
+    displayName: String
+    description: String
+    active: Boolean
+}
+
+input AssignRoleInput {
+    userId: ID!
+    roleCode: String!
+    scopeType: ScopeType!
+    scopeId: ID
+    expiresAt: String
+}
+
+input RevokeRoleInput {
+    userId: ID!
+    roleCode: String!
+    scopeType: ScopeType!
+    scopeId: ID
+}
+
+input GrantPermissionInput {
+    roleCode: String!
+    permissionCode: String!
+}
+
+input RevokePermissionInput {
+    roleCode: String!
+    permissionCode: String!
+}
+
+extend type Query {
+    roles: [RoleType!]!
+    role(id: ID!): RoleType
+    permissions: [PermissionType!]!
+    userRoles(userId: ID!): [UserRoleType!]!
+}
+
+extend type Mutation {
+    createRole(input: CreateRoleInput!): RoleType!
+    updateRole(id: ID!, input: UpdateRoleInput!): RoleType!
+    deleteRole(id: ID!): Boolean!
+    assignRole(input: AssignRoleInput!): UserRoleType!
+    revokeRole(input: RevokeRoleInput!): Boolean!
+    grantPermission(input: GrantPermissionInput!): RoleType!
+    revokePermission(input: RevokePermissionInput!): Boolean!
+}

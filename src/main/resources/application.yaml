@@ -41,11 +41,6 @@ spring:
           max-idle: ${REDIS_POOL_MAX_IDLE:8}
           min-idle: ${REDIS_POOL_MIN_IDLE:2}
           max-wait: "${REDIS_POOL_MAX_WAIT:-1ms}"
-  cache:
-    type: caffeine
-    caffeine:
-      spec: maximumSize=1000,expireAfterWrite=30m,recordStats
-    cache-names: products,categories,carts,users,reviews,orders
 
 fynza:
   notifications-enabled: ${NOTIFICATIONS_ENABLED:true}
