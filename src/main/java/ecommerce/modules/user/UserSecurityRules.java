@@ -20,17 +20,6 @@ public class UserSecurityRules implements SecurityRules {
                 // ── Admin user management ─────────────────────────────────────────────
                 .requestMatchers("/v1/admin/users/**").hasRole("ADMIN")
 
-                // ── Customer self-service ─────────────────────────────────────────────
-                .requestMatchers(HttpMethod.GET,    "/v1/customers/profile").hasRole("CUSTOMER")
-                .requestMatchers(HttpMethod.PUT,    "/v1/customers/profile").hasRole("CUSTOMER")
-                .requestMatchers(HttpMethod.GET,    "/v1/customers/dashboard").hasRole("CUSTOMER")
-                .requestMatchers(HttpMethod.GET,    "/v1/customers/loyalty/balance").hasRole("CUSTOMER")
-                .requestMatchers(HttpMethod.POST,   "/v1/customers/loyalty/redeem").hasRole("CUSTOMER")
-                .requestMatchers(HttpMethod.GET,    "/v1/customers/addresses").hasRole("CUSTOMER")
-                .requestMatchers(HttpMethod.POST,   "/v1/customers/addresses").hasRole("CUSTOMER")
-                .requestMatchers(HttpMethod.PUT,    "/v1/customers/addresses/{id}").hasRole("CUSTOMER")
-                .requestMatchers(HttpMethod.DELETE, "/v1/customers/addresses/{id}").hasRole("CUSTOMER")
-
                 // ── Legacy admin user CRUD (kept for backward compat) ─────────────────
                 .requestMatchers("/v1/users/**").hasRole("ADMIN");
     }

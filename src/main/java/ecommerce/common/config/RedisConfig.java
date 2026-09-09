@@ -5,7 +5,12 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import ecommerce.common.cache.CacheNames;
+import ecommerce.common.cache.CacheProperties;
+import ecommerce.common.cache.RedisCircuitBreaker;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.annotation.EnableCaching;
@@ -24,8 +29,6 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import java.time.Duration;
 import java.util.Map;
 
-import static ecommerce.common.config.CacheConfig.*;
-
 /**
  * Redis-backed cache configuration, active on non-test profiles.
  *
@@ -33,16 +36,15 @@ import static ecommerce.common.config.CacheConfig.*;
  * Uses {@link BasicPolymorphicTypeValidator} with an explicit package allowlist
  * instead of the unsafe {@code LaissezFaireSubTypeValidator}, which would permit
  * deserialization of arbitrary classes — a known RCE vector (CVE-2017-7525 family).
- *
- * <h3>Connection factory</h3>
- * Spring Boot auto-configures a {@code LettuceConnectionFactory} from
- * {@code spring.data.redis.*} properties (SSL, sentinel, cluster, pooling
- * all handled). We inject the auto-configured factory rather than creating one.
  */
 @Slf4j
 @Configuration
 @EnableCaching
+@RequiredArgsConstructor
+@EnableConfigurationProperties(CacheProperties.class)
 public class RedisConfig implements CachingConfigurer {
+
+    private final CacheProperties cacheProperties;
 
     @Override
     public CacheErrorHandler errorHandler() {
@@ -50,9 +52,6 @@ public class RedisConfig implements CachingConfigurer {
     }
 
     // ── Redis ObjectMapper ────────────────────────────────────────────────────
-    // Separate from the HTTP ObjectMapper. Default typing writes @class metadata
-    // so cached values round-trip to their original type (not LinkedHashMap).
-    // The validator restricts deserialization to known ecommerce packages only.
 
     private static ObjectMapper buildRedisObjectMapper() {
         BasicPolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
@@ -100,44 +99,98 @@ public class RedisConfig implements CachingConfigurer {
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         RedisCacheConfiguration base = baseConfig();
 
+        Duration defaultTtl = cacheProperties.getRedis().getDefaultTtl();
+
         Map<String, RedisCacheConfiguration> perCache = Map.ofEntries(
                 // Auth / Principals
-                entry(base, USER_PRINCIPALS_CACHE,      Duration.ofMinutes(5)),
+                entry(base, CacheNames.USER_PRINCIPALS,         Duration.ofMinutes(5)),
+                entry(base, CacheNames.USER_PROFILE,            Duration.ofMinutes(15)),
                 // Products
-                entry(base, PRODUCTS_CACHE,             Duration.ofMinutes(5)),
-                entry(base, PRODUCTS_PAGE_CACHE,        Duration.ofMinutes(5)),
-                entry(base, PRODUCTS_SEARCH_CACHE,      Duration.ofMinutes(5)),
-                entry(base, PRODUCTS_FEATURED_CACHE,    Duration.ofMinutes(30)),
-                entry(base, PRODUCTS_BESTSELLER_CACHE,  Duration.ofMinutes(30)),
-                entry(base, PRODUCTS_TRENDING_CACHE,    Duration.ofMinutes(10)),
+                entry(base, CacheNames.PRODUCTS,                Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_PAGE,           Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_SEARCH,         Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_PREDICATE,      Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_FILTER,         Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_CATEGORY,       Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_CATEGORY_NAME,  Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_PRICE_RANGE,    Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_STATUS,         Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_REORDER,        Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_DISCOUNTED,     Duration.ofMinutes(5)),
+                entry(base, CacheNames.PRODUCTS_FEATURED,       Duration.ofMinutes(30)),
+                entry(base, CacheNames.PRODUCTS_NEW,            Duration.ofMinutes(10)),
+                entry(base, CacheNames.PRODUCTS_BESTSELLER,     Duration.ofMinutes(10)),
+                entry(base, CacheNames.PRODUCTS_TOP_RATED,      Duration.ofMinutes(10)),
+                entry(base, CacheNames.PRODUCTS_TRENDING,       Duration.ofMinutes(5)),
                 // Categories
-                entry(base, CATEGORIES_CACHE,           Duration.ofHours(1)),
-                entry(base, CATEGORIES_LIST_CACHE,      Duration.ofHours(1)),
-                // Wishlists
-                entry(base, WISHLIST_CACHE,             Duration.ofMinutes(30)),
-                entry(base, WISHLIST_SUMMARY_CACHE,     Duration.ofMinutes(30)),
+                entry(base, CacheNames.CATEGORIES,              Duration.ofHours(1)),
+                entry(base, CacheNames.CATEGORIES_LIST,         Duration.ofHours(1)),
+                entry(base, CacheNames.CATEGORIES_PAGED,        Duration.ofHours(1)),
+                entry(base, CacheNames.CATEGORIES_SEARCH,       Duration.ofHours(1)),
+                entry(base, CacheNames.CATEGORIES_FILTER,       Duration.ofHours(1)),
+                entry(base, CacheNames.CATEGORIES_STATS,        Duration.ofHours(1)),
                 // Orders
-                entry(base, ORDER_CACHE,                Duration.ofMinutes(15)),
-                entry(base, ORDER_STATS_CACHE,          Duration.ofMinutes(15)),
-                // Reviews
-                entry(base, REVIEWS_CACHE,              Duration.ofMinutes(15)),
-                entry(base, REVIEW_STATS_CACHE,         Duration.ofMinutes(15)),
+                entry(base, CacheNames.ORDERS,                  Duration.ofMinutes(15)),
+                entry(base, CacheNames.ORDER,                   Duration.ofMinutes(15)),
+                entry(base, CacheNames.ORDER_EXISTS,            Duration.ofMinutes(15)),
+                entry(base, CacheNames.USER_ORDERS,             Duration.ofMinutes(15)),
+                entry(base, CacheNames.ORDER_STATS,             Duration.ofMinutes(15)),
+                entry(base, CacheNames.ORDER_COUNTS,            Duration.ofMinutes(15)),
+                entry(base, CacheNames.ORDERS_PREDICATE,        Duration.ofMinutes(15)),
+                entry(base, CacheNames.ORDERS_SEARCH,           Duration.ofMinutes(15)),
+                entry(base, CacheNames.ORDERS_FILTER,           Duration.ofMinutes(15)),
                 // Users
-                entry(base, USERS_CACHE,                Duration.ofMinutes(15)),
-                // Security / Tokens
-                entry(base, "tokenBlacklist",           Duration.ofHours(24)),
-                entry(base, "stockReservations",        Duration.ofMinutes(15)),
-                // Misc
-                entry(base, "faqs",                     Duration.ofHours(1)),
-                entry(base, "settings",                 Duration.ofHours(1)),
-                entry(base, DASHBOARD_CACHE,            Duration.ofMinutes(5))
+                entry(base, CacheNames.USERS,                   Duration.ofMinutes(15)),
+                entry(base, CacheNames.USERS_PAGE,              Duration.ofMinutes(15)),
+                entry(base, CacheNames.USERS_SEARCH,            Duration.ofMinutes(15)),
+                entry(base, CacheNames.USERS_ROLE,              Duration.ofMinutes(15)),
+                entry(base, CacheNames.USERS_ACTIVE,            Duration.ofMinutes(15)),
+                entry(base, CacheNames.USERS_PREDICATE,         Duration.ofMinutes(15)),
+                // Reviews
+                entry(base, CacheNames.REVIEWS,                 Duration.ofMinutes(15)),
+                entry(base, CacheNames.REVIEW,                  Duration.ofMinutes(15)),
+                entry(base, CacheNames.REVIEWS_PREDICATE,       Duration.ofMinutes(15)),
+                entry(base, CacheNames.REVIEW_STATS,            Duration.ofMinutes(15)),
+                entry(base, CacheNames.RATING_DISTRIBUTION,     Duration.ofMinutes(15)),
+                entry(base, CacheNames.REVIEW_TRENDS,           Duration.ofMinutes(15)),
+                entry(base, CacheNames.TOP_RATED_PRODUCTS,      Duration.ofMinutes(15)),
+                entry(base, CacheNames.MOST_REVIEWED_PRODUCTS,  Duration.ofMinutes(15)),
+                entry(base, CacheNames.USER_REVIEWS,            Duration.ofMinutes(15)),
+                entry(base, CacheNames.REVIEW_LISTS,            Duration.ofMinutes(15)),
+                entry(base, CacheNames.ADMIN_REVIEWS,           Duration.ofMinutes(15)),
+                // Wishlists
+                entry(base, CacheNames.WISHLIST,                Duration.ofMinutes(30)),
+                entry(base, CacheNames.WISHLIST_PAGINATED,      Duration.ofMinutes(30)),
+                entry(base, CacheNames.WISHLIST_SUMMARY,        Duration.ofMinutes(30)),
+                entry(base, CacheNames.WISHLIST_CHECK,          Duration.ofMinutes(30)),
+                entry(base, CacheNames.WISHLIST_DROPS,          Duration.ofMinutes(30)),
+                entry(base, CacheNames.WISHLIST_ANALYTICS,      Duration.ofMinutes(30)),
+                // Security-critical
+                entry(base, CacheNames.TOKEN_BLACKLIST,         cacheProperties.getRedis().getTokenBlacklistTtl()),
+                entry(base, CacheNames.STOCK_RESERVATIONS,      Duration.ofMinutes(15)),
+                // Admin / misc
+                entry(base, CacheNames.ADMIN_DASHBOARD,         Duration.ofMinutes(5)),
+                entry(base, CacheNames.ADMIN_ANALYTICS,         Duration.ofMinutes(10)),
+                entry(base, CacheNames.SELLER_DASHBOARD,        Duration.ofMinutes(10)),
+                entry(base, CacheNames.FAQS,                    Duration.ofHours(1)),
+                entry(base, CacheNames.SEARCH_FILTERS,          Duration.ofHours(1)),
+                entry(base, CacheNames.SETTINGS,                Duration.ofHours(1))
         );
 
-        log.info("Redis CacheManager configured with {} per-cache TTLs", perCache.size());
+        log.info("Redis CacheManager configured with {} per-cache TTLs (default={})", perCache.size(), defaultTtl);
         return RedisCacheManager.builder(connectionFactory)
-                .cacheDefaults(base.entryTtl(Duration.ofMinutes(15)))
+                .cacheDefaults(base.entryTtl(defaultTtl))
                 .withInitialCacheConfigurations(perCache)
                 .build();
+    }
+
+    @Bean
+    public RedisCircuitBreaker redisCircuitBreaker() {
+        CacheProperties.CircuitBreaker cb = cacheProperties.getCircuitBreaker();
+        return new RedisCircuitBreaker(
+                cb.getFailureThreshold(),
+                cb.getWaitDuration(),
+                cb.getHalfOpenRequests());
     }
 
     private static Map.Entry<String, RedisCacheConfiguration> entry(

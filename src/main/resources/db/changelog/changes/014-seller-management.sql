@@ -1,5 +1,5 @@
 --liquibase formatted sql
---changeset fynza:008-seller-management dbms:postgresql
+--changeset fynza:014-seller-management dbms:postgresql
 
 CREATE TABLE IF NOT EXISTS sellers (
     id              BIGSERIAL       PRIMARY KEY,
