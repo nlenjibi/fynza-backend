@@ -15,5 +15,7 @@
     <include file="changes/008-authz-roles.sql" relativeToChangelogFile="true"/>
     <include file="changes/009-authz-user-roles.sql" relativeToChangelogFile="true"/>
     <include file="changes/010-user-profile-columns.sql" relativeToChangelogFile="true"/>
+    <include file="changes/011-customer-module.sql"      relativeToChangelogFile="true"/>
+    <include file="changes/012-customer-permissions.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
