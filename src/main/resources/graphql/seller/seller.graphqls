@@ -1,0 +1,144 @@
+# =============================================================================
+# Seller GraphQL Schema
+# Covers: seller profile (reads), onboarding, verification, admin management
+# REST handles all mutations (PATCH /v1/sellers/me, POST /v1/admin/sellers/*)
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Enums
+# ─────────────────────────────────────────────────────────────────────────────
+
+enum SellerStatus {
+    DRAFT
+    PENDING_VERIFICATION
+    UNDER_REVIEW
+    ACTIVE
+    SUSPENDED
+    REJECTED
+    BLOCKED
+    CLOSED
+    PENDING
+}
+
+enum SellerType {
+    INDIVIDUAL
+    BUSINESS
+    ORGANIZATION
+}
+
+enum VerificationType {
+    IDENTITY
+    BUSINESS
+    CONTACT
+    PAYOUT
+}
+
+enum VerificationItemStatus {
+    NOT_STARTED
+    PENDING
+    IN_REVIEW
+    VERIFIED
+    REJECTED
+    EXPIRED
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Types
+# ─────────────────────────────────────────────────────────────────────────────
+
+type SellerBusiness {
+    publicId: ID!
+    legalName: String
+    businessName: String
+    businessType: String
+    registrationNumber: String
+    taxIdentifier: String
+    description: String
+    website: String
+    email: String
+    phone: String
+    country: String
+    region: String
+    city: String
+    address: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type SellerVerification {
+    publicId: ID!
+    verificationType: VerificationType!
+    status: VerificationItemStatus!
+    submittedAt: DateTime
+    reviewedAt: DateTime
+    rejectionReason: String
+    expiresAt: DateTime
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type SellerStatusHistoryEntry {
+    previousStatus: SellerStatus
+    newStatus: SellerStatus!
+    reason: String
+    changedBy: ID
+    expiresAt: DateTime
+    createdAt: DateTime!
+}
+
+type SellerProfile {
+    publicId: ID!
+    sellerNumber: String!
+    displayName: String
+    sellerType: SellerType!
+    status: SellerStatus!
+    business: SellerBusiness
+    verifications: [SellerVerification!]!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type SellerSummary {
+    publicId: ID!
+    sellerNumber: String!
+    displayName: String
+    sellerType: SellerType!
+    status: SellerStatus!
+    createdAt: DateTime!
+}
+
+type SellerPage {
+    content: [SellerSummary!]!
+    totalElements: Int!
+    totalPages: Int!
+    currentPage: Int!
+    hasNextPage: Boolean!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Inputs
+# ─────────────────────────────────────────────────────────────────────────────
+
+input SellerFilterInput {
+    query: String
+    status: SellerStatus
+    sellerType: SellerType
+    page: Int
+    size: Int
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Queries
+# ─────────────────────────────────────────────────────────────────────────────
+
+extend type Query {
+
+    # ── Self-service (SELLER role) ────────────────────────────────────────
+    mySeller: SellerProfile!
+
+    # ── Public / admin reads ──────────────────────────────────────────────
+    seller(id: ID!): SellerProfile!
+    sellers(filter: SellerFilterInput): SellerPage!
+
+    sellerStatusHistory(sellerId: ID!): [SellerStatusHistoryEntry!]!
+}
