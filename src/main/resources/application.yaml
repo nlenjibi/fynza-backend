@@ -156,15 +156,6 @@ springdoc:
     tags-sorter: alpha
     persist-authorization: true
 
-jwt:
-  cache:
-    max-size: 10000
-    expire-after-write-minutes: 10
-    expire-after-access-minutes: 5
-  bloom-filter:
-    expected-insertions: 50000
-    fpp: 0.001
-
 logging:
   file:
     name: ${LOG_FILE_NAME:}
