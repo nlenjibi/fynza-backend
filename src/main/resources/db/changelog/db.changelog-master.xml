@@ -19,5 +19,8 @@
     <include file="changes/012-customer-permissions.sql" relativeToChangelogFile="true"/>
     <include file="changes/013-customer-views.sql"       relativeToChangelogFile="true"/>
     <include file="changes/014-seller-management.sql"    relativeToChangelogFile="true"/>
+    <include file="changes/015-store-module.sql"         relativeToChangelogFile="true"/>
+    <include file="changes/016-store-permissions.sql"    relativeToChangelogFile="true"/>
+    <include file="changes/017-store-views.sql"          relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
