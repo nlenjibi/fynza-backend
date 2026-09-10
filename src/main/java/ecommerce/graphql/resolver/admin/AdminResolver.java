@@ -1,6 +1,5 @@
 package ecommerce.graphql.resolver.admin;
 
-import ecommerce.common.enums.ProductStatus;
 import ecommerce.common.response.PaginatedResponse;
 import ecommerce.graphql.dto.CustomerStats;
 import ecommerce.graphql.dto.SellerStats;
@@ -9,8 +8,6 @@ import ecommerce.graphql.input.*;
 import ecommerce.modules.analytics.dto.AdminDashboardDto;
 import ecommerce.modules.analytics.service.AdminService;
 import ecommerce.modules.order.service.OrderService;
-import ecommerce.modules.product.dto.ProductResponse;
-import ecommerce.modules.product.service.ProductService;
 import ecommerce.modules.user.dto.*;
 import ecommerce.modules.user.entity.User;
 import ecommerce.modules.user.spec.UserSpec;
@@ -39,7 +36,6 @@ public class AdminResolver {
 
     private final AdminService adminService;
     private final UserService userService;
-    private final ProductService productService;
     private final OrderService orderService;
 
     // =========================================================================
@@ -156,31 +152,6 @@ public class AdminResolver {
     }
 
     // =========================================================================
-    // PRODUCT MANAGEMENT QUERIES
-    // =========================================================================
-
-    @QueryMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ecommerce.graphql.dto.ProductDto adminProducts(@Argument PageInput pagination,
-                                                           @Argument AdminProductSearchInput filter) {
-        log.info("GQL adminProducts");
-        Pageable pageable = toPageable(pagination);
-        ProductStatus status = null;
-        String search = null;
-        if (filter != null) {
-            if (filter.getStatus() != null) {
-                status = ProductStatus.valueOf(filter.getStatus().toUpperCase());
-            }
-            search = filter.getSearch();
-        }
-        Page<ProductResponse> page = productService.findBySellerId(null, status, null, search, pageable);
-        return ecommerce.graphql.dto.ProductDto.builder()
-                .content(page.getContent())
-                .pageInfo(PaginatedResponse.from(page))
-                .build();
-    }
-
-    // =========================================================================
     // USER CRUD MUTATIONS
     // =========================================================================
 
@@ -252,20 +223,6 @@ public class AdminResolver {
                 .sendNotification(input.getSendNotification() != null ? input.getSendNotification() : true)
                 .build();
         return userService.bulkUpdateUsers(request);
-    }
-
-    // =========================================================================
-    // PRODUCT MANAGEMENT MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ProductResponse adminUpdateProductInventory(@Argument UUID id,
-                                                        @Argument Integer stock) {
-        log.info("GQL adminUpdateProductInventory(id={}, stock={})", id, stock);
-        var updateRequest = new ecommerce.modules.product.dto.UpdateProductRequest();
-        updateRequest.setStock(stock);
-        return productService.update(id, updateRequest);
     }
 
     // =========================================================================
