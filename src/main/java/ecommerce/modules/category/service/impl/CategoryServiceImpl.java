@@ -12,7 +12,6 @@ import ecommerce.modules.category.entity.Category;
 import ecommerce.modules.category.entity.CategorySummaryView;
 import ecommerce.modules.category.enums.CategoryStatus;
 import ecommerce.modules.category.enums.CategoryVisibility;
-import ecommerce.modules.category.exception.CategoryAlreadyExistsException;
 import ecommerce.modules.category.exception.CategoryNotFoundException;
 import ecommerce.modules.category.mapper.CategoryMapper;
 import ecommerce.modules.category.repository.AttributeDefinitionRepository;
