@@ -35,6 +35,7 @@ import java.util.UUID;
 public class CartServiceImpl implements CartService {
 
     private static final int RESERVATION_MINUTES = 15;
+    private static final int MAX_ITEM_QUANTITY = 9_999;
 
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
@@ -101,7 +102,8 @@ public class CartServiceImpl implements CartService {
         BigDecimal price = BigDecimal.ZERO;
 
         if (cartItem != null) {
-            cartItem.setQuantity(cartItem.getQuantity() + quantity);
+            int newQuantity = (int) Math.min((long) cartItem.getQuantity() + quantity, MAX_ITEM_QUANTITY);
+            cartItem.setQuantity(newQuantity);
             cartItem.setPrice(price);
             cartItem = cartItemRepository.save(cartItem);
         } else {
