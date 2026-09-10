@@ -1,6 +1,6 @@
 package ecommerce.modules.cart.dto;
 
-import ecommerce.modules.product.dto.ProductResponse;
+import ecommerce.modules.product.dto.response.ProductResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

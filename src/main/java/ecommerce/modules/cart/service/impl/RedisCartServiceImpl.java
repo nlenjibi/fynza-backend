@@ -7,7 +7,7 @@ import ecommerce.modules.cart.dto.CartItemData;
 import ecommerce.modules.cart.dto.CartItemResponse;
 import ecommerce.modules.cart.dto.CartResponse;
 import ecommerce.modules.cart.service.RedisCartService;
-import ecommerce.modules.product.dto.ProductResponse;
+import ecommerce.modules.product.dto.response.ProductResponse;
 import ecommerce.modules.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
