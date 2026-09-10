@@ -64,4 +64,17 @@ public final class FynzaPermissions {
     public static final String CUSTOMER_SUSPEND     = "customer.suspend";
     public static final String CUSTOMER_ACTIVATE    = "customer.activate";
     public static final String CUSTOMER_BLOCK       = "customer.block";
+
+    // ── Store ─────────────────────────────────────────────────────────────────
+    public static final String STORE_READ_OWN       = "store.read.own";
+    public static final String STORE_CREATE_OWN     = "store.create.own";
+    public static final String STORE_UPDATE_OWN     = "store.update.own";
+    public static final String STORE_DELETE_OWN     = "store.delete.own";
+    public static final String STORE_PUBLISH_OWN    = "store.publish.own";
+    public static final String STORE_PAUSE_OWN      = "store.pause.own";
+    public static final String STORE_MANAGE_OWN     = "store.manage.own";
+    public static final String STORE_READ           = "store.read";
+    public static final String STORE_SUSPEND        = "store.suspend";
+    public static final String STORE_ACTIVATE       = "store.activate";
+    public static final String STORE_CLOSE          = "store.close";
 }

@@ -20,8 +20,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/v1/sellers")
 @RequiredArgsConstructor
@@ -33,15 +31,6 @@ public class SellerMeController {
     private final SellerVerificationService verificationService;
 
     // ── Profile ───────────────────────────────────────────────────────────────
-
-    @GetMapping("/me")
-    @PreAuthorize("hasRole('SELLER')")
-    @Operation(summary = "Get my seller profile")
-    public ResponseEntity<ApiResponse<SellerDetailResponse>> getMySeller(
-            @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(ApiResponse.success("Seller profile retrieved",
-                sellerService.getMySeller(principal.getId())));
-    }
 
     @PatchMapping("/me")
     @PreAuthorize("hasRole('SELLER')")
@@ -85,15 +74,6 @@ public class SellerMeController {
     }
 
     // ── Verification ─────────────────────────────────────────────────────────
-
-    @GetMapping("/me/verification")
-    @PreAuthorize("hasRole('SELLER')")
-    @Operation(summary = "Get my verification status")
-    public ResponseEntity<ApiResponse<List<SellerVerificationResponse>>> getMyVerifications(
-            @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(ApiResponse.success("Verifications retrieved",
-                verificationService.getMyVerifications(principal.getId())));
-    }
 
     @PostMapping("/me/verification")
     @PreAuthorize("hasRole('SELLER')")
