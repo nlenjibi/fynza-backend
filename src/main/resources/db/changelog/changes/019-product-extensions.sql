@@ -87,7 +87,7 @@ SELECT
     st.created_at,
     st.updated_at,
     s.display_name                                              AS seller_display_name,
-    COUNT(DISTINCT p.id) FILTER (WHERE p.is_active = TRUE)     AS product_count,
+    COUNT(DISTINCT p.id) FILTER (WHERE p.is_active = TRUE)::INTEGER AS product_count,
     0.0                                                         AS avg_rating,
     0                                                           AS review_count,
     0                                                           AS order_count
