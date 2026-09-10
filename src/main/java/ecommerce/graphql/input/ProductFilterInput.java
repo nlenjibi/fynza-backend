@@ -1,6 +1,5 @@
 package ecommerce.graphql.input;
 
-import ecommerce.modules.product.dto.ProductFilterRequest;
 import ecommerce.common.enums.InventoryStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -122,49 +121,4 @@ public class ProductFilterInput {
                 minSales != null || popular != null || trending != null;
     }
 
-    /**
-     * Convert to ProductFilterRequest for service layer
-     */
-    public ProductFilterRequest toFilterRequest() {
-        return ProductFilterRequest.builder()
-                .categoryId(categoryId)
-                .categoryIds(categoryIds)
-                .categoryName(categoryName)
-                .categorySlug(categorySlug)
-                .minPrice(minPrice)
-                .maxPrice(maxPrice)
-                .hasDiscount(hasDiscount)
-                .minDiscountPercent(minDiscountPercent)
-                .maxDiscountPercent(maxDiscountPercent)
-                .keyword(keyword)
-                .name(name)
-                .sku(sku)
-                .slug(slug)
-                .featured(featured)
-                .isNew(isNew)
-                .isBestseller(isBestseller)
-                .inventoryStatus(inventoryStatus != null ? inventoryStatus.name() : null)
-                .inventoryStatuses(inventoryStatuses != null ? inventoryStatuses.stream()
-                        .map(ecommerce.common.enums.InventoryStatus::name).collect(java.util.stream.Collectors.toList()) : null)
-                .inStockOnly(inStockOnly)
-                .lowStockOnly(lowStockOnly)
-                .outOfStockOnly(outOfStockOnly)
-                .needsReorderOnly(needsReorderOnly)
-                .minStock(minStock)
-                .maxStock(maxStock)
-                .minAvailableQuantity(minAvailableQuantity)
-                .minRating(minRating)
-                .maxRating(maxRating)
-                .tags(tags)
-                .createdAfter(createdAfter)
-                .createdBefore(createdBefore)
-                .minViews(minViews)
-                .maxViews(maxViews)
-                .minSales(minSales)
-                .popular(popular)
-                .trending(trending)
-                .includeCategory(includeCategory)
-                .includeImages(includeImages)
-                .build();
-    }
 }
