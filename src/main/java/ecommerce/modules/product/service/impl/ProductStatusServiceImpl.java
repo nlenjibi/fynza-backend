@@ -112,9 +112,9 @@ public class ProductStatusServiceImpl implements ProductStatusService {
         auditLogService.log(AuditLogEntry.builder()
                 .action(auditAction)
                 .entityType("PRODUCT")
-                .entityId(product.getId().toString())
-                .actorId(actorId.toString())
-                .description(reason)
+                .entityPublicId(product.getId())
+                .actorPublicId(actorId)
+                .reason(reason)
                 .build());
 
         return mapper.toResponse(product);
