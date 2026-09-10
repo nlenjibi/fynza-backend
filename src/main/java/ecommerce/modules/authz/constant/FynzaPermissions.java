@@ -53,7 +53,13 @@ public final class FynzaPermissions {
     public static final String REPORT_EXPORT = "report.export";
 
     // ── Category ──────────────────────────────────────────────────────────────
-    public static final String CATEGORY_MANAGE = "category.manage";
+    public static final String CATEGORY_MANAGE              = "category.manage";
+    public static final String CATEGORY_READ                = "category.read";
+    public static final String CATEGORY_CREATE              = "category.create";
+    public static final String CATEGORY_UPDATE              = "category.update";
+    public static final String CATEGORY_DELETE              = "category.delete";
+    public static final String CATEGORY_PUBLISH             = "category.publish";
+    public static final String CATEGORY_SUGGESTION_CREATE   = "category.suggestion.create";
 
     // ── Inventory ─────────────────────────────────────────────────────────────
     public static final String INVENTORY_VIEW   = "inventory.view";

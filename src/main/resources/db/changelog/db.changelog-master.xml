@@ -25,5 +25,7 @@
     <include file="changes/018-products-refactor.sql"    relativeToChangelogFile="true"/>
     <include file="changes/019-product-extensions.sql"   relativeToChangelogFile="true"/>
     <include file="changes/020-product-permissions.sql"  relativeToChangelogFile="true"/>
+    <include file="changes/021-category-refactor.sql"    relativeToChangelogFile="true"/>
+    <include file="changes/022-category-permissions.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
