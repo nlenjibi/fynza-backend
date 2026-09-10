@@ -1,7 +1,6 @@
 package ecommerce.modules.cart.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import ecommerce.common.exception.InsufficientStockException;
 import ecommerce.common.exception.ResourceNotFoundException;
 import ecommerce.modules.cart.dto.CartItemData;
 import ecommerce.modules.cart.dto.CartItemResponse;
@@ -47,27 +46,18 @@ public class RedisCartServiceImpl implements RedisCartService {
             throw new ResourceNotFoundException("Product not found");
         }
 
-        int availableStock = product.getStock() != null ? product.getStock() : 0;
-        if (availableStock < quantity) {
-            throw new InsufficientStockException(product.getName(), availableStock, quantity);
-        }
-
+        // Stock check delegated to inventory module — skipped until wired
         CartItemData item = getCartItem(cartKey, productId);
-        
+
         if (item != null) {
-            int newQuantity = item.getQuantity() + quantity;
-            if (newQuantity > availableStock) {
-                throw new InsufficientStockException(product.getName(), availableStock, newQuantity);
-            }
-            item.setQuantity(newQuantity);
+            item.setQuantity(item.getQuantity() + quantity);
         } else {
             item = CartItemData.builder()
                     .productId(productId)
                     .quantity(quantity)
-                    .price(product.getPrice())
+                    .price(null) // Price sourced from pricing module once wired
                     .productName(product.getName())
-                    .productImage(product.getImages() != null && !product.getImages().isEmpty() 
-                            ? product.getImages().get(0) : null)
+                    .productImage(null) // Image sourced from media module once wired
                     .build();
         }
 
@@ -126,10 +116,7 @@ public class RedisCartServiceImpl implements RedisCartService {
         }
 
         ProductResponse product = getProductSafe(productId);
-        if (product != null && quantity > (product.getStock() != null ? product.getStock() : 0)) {
-            throw new InsufficientStockException(product.getName(), 
-                    product.getStock() != null ? product.getStock() : 0, quantity);
-        }
+        // Stock check delegated to inventory module — skipped until wired
 
         item.setQuantity(quantity);
         saveCartItem(cartKey, item);

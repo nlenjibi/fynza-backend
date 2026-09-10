@@ -10,9 +10,9 @@ public final class ReviewSpec {
 
     private ReviewSpec() {}
 
-    public static Specification<Review> hasProductPublicId(UUID productPublicId) {
-        return (root, query, cb) -> productPublicId == null ? null :
-            cb.equal(root.get("product").get("publicId"), productPublicId);
+    public static Specification<Review> hasProductPublicId(UUID productId) {
+        return (root, query, cb) -> productId == null ? null :
+            cb.equal(root.get("product").get("id"), productId);
     }
 
     public static Specification<Review> hasCustomerPublicId(UUID customerPublicId) {

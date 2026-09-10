@@ -92,9 +92,9 @@ public class ProductServiceImpl implements ProductService {
         auditLogService.log(AuditLogEntry.builder()
                 .action(AuditAction.PRODUCT_CREATED)
                 .entityType("PRODUCT")
-                .entityId(product.getId().toString())
-                .actorId(actorUserId.toString())
-                .description("Product created: " + product.getName())
+                .entityPublicId(product.getId())
+                .actorPublicId(actorUserId)
+                .reason("Product created: " + product.getName())
                 .build());
 
         log.info("Product created: {} ({})", product.getProductNumber(), product.getId());
@@ -119,9 +119,9 @@ public class ProductServiceImpl implements ProductService {
         auditLogService.log(AuditLogEntry.builder()
                 .action(AuditAction.PRODUCT_UPDATED)
                 .entityType("PRODUCT")
-                .entityId(productId.toString())
-                .actorId(actorUserId.toString())
-                .description("Product updated: " + product.getName())
+                .entityPublicId(productId)
+                .actorPublicId(actorUserId)
+                .reason("Product updated: " + product.getName())
                 .build());
 
         return mapper.toResponse(product);
@@ -142,9 +142,9 @@ public class ProductServiceImpl implements ProductService {
         auditLogService.log(AuditLogEntry.builder()
                 .action(AuditAction.PRODUCT_DELETED)
                 .entityType("PRODUCT")
-                .entityId(productId.toString())
-                .actorId(actorUserId.toString())
-                .description("Product archived: " + product.getName())
+                .entityPublicId(productId)
+                .actorPublicId(actorUserId)
+                .reason("Product archived: " + product.getName())
                 .build());
 
         return mapper.toResponse(product);
