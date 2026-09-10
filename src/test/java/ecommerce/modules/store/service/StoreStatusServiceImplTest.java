@@ -117,7 +117,7 @@ class StoreStatusServiceImplTest {
             when(historyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(mapper.toResponse(store)).thenReturn(StoreResponse.builder().status(StoreStatus.ACTIVE).build());
 
-            StoreResponse result = service.changeStatus(storePublicId, actorUserId, request);
+            service.changeStatus(storePublicId, actorUserId, request);
 
             assertThat(store.getStatus()).isEqualTo(StoreStatus.ACTIVE);
             verify(transitionValidator).validate(StoreStatus.PENDING_REVIEW, StoreStatus.ACTIVE);
