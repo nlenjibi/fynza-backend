@@ -3,6 +3,7 @@ package ecommerce.modules.wishlist.service;
 import ecommerce.common.exception.ResourceNotFoundException;
 import ecommerce.modules.cart.dto.AddToCartRequest;
 import ecommerce.modules.cart.service.CartService;
+import ecommerce.modules.product.entity.Product;
 import ecommerce.modules.product.repository.ProductRepository;
 import ecommerce.modules.user.entity.User;
 import ecommerce.modules.user.repository.UserRepository;
@@ -12,7 +13,6 @@ import ecommerce.modules.wishlist.dto.WishlistItemDto;
 import ecommerce.modules.wishlist.dto.WishlistSummaryDto;
 import ecommerce.modules.wishlist.entity.WishlistItem;
 import ecommerce.modules.wishlist.entity.WishlistPriority;
-import ecommerce.modules.wishlist.mapper.WishlistMapper;
 import ecommerce.modules.wishlist.repository.WishlistItemRepository;
 import ecommerce.modules.wishlist.service.impl.WishlistServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +25,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,27 +37,17 @@ import static org.mockito.Mockito.*;
 @DisplayName("WishlistServiceImpl Tests")
 class WishlistServiceImplTest {
 
-    @Mock
-    private WishlistItemRepository wishlistItemRepository;
-
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private ProductRepository productRepository;
-
-    @Mock
-    private WishlistMapper wishlistMapper;
-
-    @Mock
-    private CartService cartService;
+    @Mock private WishlistItemRepository wishlistItemRepository;
+    @Mock private UserRepository userRepository;
+    @Mock private ProductRepository productRepository;
+    @Mock private CartService cartService;
 
     @InjectMocks
     private WishlistServiceImpl wishlistService;
 
     private User testUser;
+    private Product testProduct;
     private WishlistItem testWishlistItem;
-    private WishlistItemDto testWishlistItemDto;
     private AddToWishlistRequest testAddRequest;
     private UUID userId;
     private UUID productId;
@@ -66,10 +55,10 @@ class WishlistServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        userId = UUID.randomUUID();
-        productId = UUID.randomUUID();
+        userId        = UUID.randomUUID();
+        productId     = UUID.randomUUID();
         wishlistItemId = UUID.randomUUID();
-        
+
         testUser = User.builder()
                 .id(userId)
                 .email("test@example.com")
@@ -77,30 +66,24 @@ class WishlistServiceImplTest {
                 .lastName("Doe")
                 .build();
 
-        testWishlistItem = WishlistItem.builder()
-                .publicId(wishlistItemId)
-                .user(testUser)
-                .priority(WishlistPriority.HIGH)
-                .notes("Test note")
-                .desiredQuantity(1)
-                .notifyOnPriceDrop(true)
-                .notifyOnStock(false)
+        testProduct = Product.builder()
+                .name("Test Product")
+                .slug("test-product")
+                .sku("SKU-001")
+                .isActive(true)
                 .build();
+        setField(testProduct, "id", productId);
 
-        testWishlistItemDto = WishlistItemDto.builder()
-                .id(wishlistItemId)
-                .userId(userId)
-                .product(WishlistItemDto.ProductSummary.builder()
-                        .id(productId)
-                        .name("Test Product")
-                        .price(BigDecimal.valueOf(99.99))
-                        .build())
+        testWishlistItem = WishlistItem.builder()
+                .user(testUser)
+                .product(testProduct)
                 .priority(WishlistPriority.HIGH)
                 .notes("Test note")
                 .desiredQuantity(1)
                 .notifyOnPriceDrop(true)
                 .notifyOnStock(false)
                 .build();
+        setField(testWishlistItem, "publicId", wishlistItemId);
 
         testAddRequest = AddToWishlistRequest.builder()
                 .productId(productId)
@@ -114,32 +97,33 @@ class WishlistServiceImplTest {
                 .build();
     }
 
+    // ── addToWishlist ─────────────────────────────────────────────────────────
+
     @Nested
     @DisplayName("addToWishlist")
     class AddToWishlistTests {
 
         @Test
-        @DisplayName("Should add item to wishlist successfully")
+        @DisplayName("Adds item when not already in wishlist")
         void addToWishlist_WhenValidRequest_AddsItem() {
-            when(wishlistItemRepository.existsByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(false);
-            when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
-            when(productRepository.findByPublicId(productId)).thenReturn(Optional.of(mock(ecommerce.modules.product.entity.Product.class)));
+            when(wishlistItemRepository.existsByUser_PublicIdAndProduct_Id(userId, productId)).thenReturn(false);
+            when(userRepository.findByPublicId(userId)).thenReturn(Optional.of(testUser));
+            when(productRepository.findById(productId)).thenReturn(Optional.of(testProduct));
             when(wishlistItemRepository.save(any(WishlistItem.class))).thenReturn(testWishlistItem);
-            when(wishlistMapper.toDto(any(WishlistItem.class))).thenReturn(testWishlistItemDto);
 
             WishlistItemDto result = wishlistService.addToWishlist(userId, testAddRequest);
 
             assertNotNull(result);
             assertEquals(wishlistItemId, result.getId());
-            verify(wishlistItemRepository, times(1)).save(any(WishlistItem.class));
+            verify(wishlistItemRepository).save(any(WishlistItem.class));
         }
 
         @Test
-        @DisplayName("Should return existing item when product already in wishlist")
+        @DisplayName("Returns existing item when product already in wishlist")
         void addToWishlist_WhenProductExists_ReturnsExisting() {
-            when(wishlistItemRepository.existsByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(true);
-            when(wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(Optional.of(testWishlistItem));
-            when(wishlistMapper.toDto(any(WishlistItem.class))).thenReturn(testWishlistItemDto);
+            when(wishlistItemRepository.existsByUser_PublicIdAndProduct_Id(userId, productId)).thenReturn(true);
+            when(wishlistItemRepository.findByUser_PublicIdAndProduct_Id(userId, productId))
+                    .thenReturn(Optional.of(testWishlistItem));
 
             WishlistItemDto result = wishlistService.addToWishlist(userId, testAddRequest);
 
@@ -148,37 +132,38 @@ class WishlistServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should throw exception when user not found")
+        @DisplayName("Throws exception when user not found")
         void addToWishlist_WhenUserNotFound_ThrowsException() {
-            when(wishlistItemRepository.existsByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(false);
-            when(userRepository.findById(userId)).thenReturn(Optional.empty());
+            when(wishlistItemRepository.existsByUser_PublicIdAndProduct_Id(userId, productId)).thenReturn(false);
+            when(userRepository.findByPublicId(userId)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class,
                     () -> wishlistService.addToWishlist(userId, testAddRequest));
         }
 
         @Test
-        @DisplayName("Should throw exception when product not found")
+        @DisplayName("Throws exception when product not found")
         void addToWishlist_WhenProductNotFound_ThrowsException() {
-            when(wishlistItemRepository.existsByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(false);
-            when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
-            when(productRepository.findByPublicId(productId)).thenReturn(Optional.empty());
+            when(wishlistItemRepository.existsByUser_PublicIdAndProduct_Id(userId, productId)).thenReturn(false);
+            when(userRepository.findByPublicId(userId)).thenReturn(Optional.of(testUser));
+            when(productRepository.findById(productId)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class,
                     () -> wishlistService.addToWishlist(userId, testAddRequest));
         }
     }
 
+    // ── getUserWishlist ───────────────────────────────────────────────────────
+
     @Nested
     @DisplayName("getUserWishlist")
     class GetUserWishlistTests {
 
         @Test
-        @DisplayName("Should return user wishlist")
+        @DisplayName("Returns user wishlist items")
         void getUserWishlist_ReturnsWishlist() {
-            List<WishlistItem> items = Arrays.asList(testWishlistItem);
-            when(wishlistItemRepository.findByUser_PublicIdOrderByCreatedAtDesc(userId)).thenReturn(items);
-            when(wishlistMapper.toDto(any(WishlistItem.class))).thenReturn(testWishlistItemDto);
+            when(wishlistItemRepository.findByUser_PublicIdOrderByCreatedAtDesc(userId))
+                    .thenReturn(List.of(testWishlistItem));
 
             List<WishlistItemDto> result = wishlistService.getUserWishlist(userId);
 
@@ -187,9 +172,10 @@ class WishlistServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should return empty list when wishlist is empty")
+        @DisplayName("Returns empty list when wishlist is empty")
         void getUserWishlist_WhenEmpty_ReturnsEmptyList() {
-            when(wishlistItemRepository.findByUser_PublicIdOrderByCreatedAtDesc(userId)).thenReturn(List.of());
+            when(wishlistItemRepository.findByUser_PublicIdOrderByCreatedAtDesc(userId))
+                    .thenReturn(List.of());
 
             List<WishlistItemDto> result = wishlistService.getUserWishlist(userId);
 
@@ -198,37 +184,43 @@ class WishlistServiceImplTest {
         }
     }
 
+    // ── removeFromWishlist ────────────────────────────────────────────────────
+
     @Nested
     @DisplayName("removeFromWishlist")
     class RemoveFromWishlistTests {
 
         @Test
-        @DisplayName("Should remove item from wishlist")
+        @DisplayName("Removes item when found")
         void removeFromWishlist_WhenItemExists_RemovesItem() {
-            when(wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(Optional.of(testWishlistItem));
+            when(wishlistItemRepository.findByUser_PublicIdAndProduct_Id(userId, productId))
+                    .thenReturn(Optional.of(testWishlistItem));
             doNothing().when(wishlistItemRepository).delete(testWishlistItem);
 
             wishlistService.removeFromWishlist(userId, productId);
 
-            verify(wishlistItemRepository, times(1)).delete(testWishlistItem);
+            verify(wishlistItemRepository).delete(testWishlistItem);
         }
 
         @Test
-        @DisplayName("Should throw exception when item not found")
+        @DisplayName("Throws exception when item not found")
         void removeFromWishlist_WhenItemNotFound_ThrowsException() {
-            when(wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(Optional.empty());
+            when(wishlistItemRepository.findByUser_PublicIdAndProduct_Id(userId, productId))
+                    .thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class,
                     () -> wishlistService.removeFromWishlist(userId, productId));
         }
     }
 
+    // ── updateWishlistItem ────────────────────────────────────────────────────
+
     @Nested
     @DisplayName("updateWishlistItem")
     class UpdateWishlistItemTests {
 
         @Test
-        @DisplayName("Should update wishlist item")
+        @DisplayName("Updates item fields and saves")
         void updateWishlistItem_WhenItemExists_UpdatesItem() {
             UpdateWishlistItemRequest updateRequest = UpdateWishlistItemRequest.builder()
                     .priority(WishlistPriority.LOW)
@@ -238,84 +230,96 @@ class WishlistServiceImplTest {
                     .notifyOnStock(true)
                     .build();
 
-            when(wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(Optional.of(testWishlistItem));
+            when(wishlistItemRepository.findByUser_PublicIdAndProduct_Id(userId, productId))
+                    .thenReturn(Optional.of(testWishlistItem));
             when(wishlistItemRepository.save(any(WishlistItem.class))).thenReturn(testWishlistItem);
-            when(wishlistMapper.toDto(any(WishlistItem.class))).thenReturn(testWishlistItemDto);
 
             WishlistItemDto result = wishlistService.updateWishlistItem(userId, productId, updateRequest);
 
             assertNotNull(result);
-            verify(wishlistItemRepository, times(1)).save(any(WishlistItem.class));
+            verify(wishlistItemRepository).save(any(WishlistItem.class));
         }
 
         @Test
-        @DisplayName("Should throw exception when item not found")
+        @DisplayName("Throws exception when item not found")
         void updateWishlistItem_WhenItemNotFound_ThrowsException() {
-            UpdateWishlistItemRequest updateRequest = UpdateWishlistItemRequest.builder()
-                    .priority(WishlistPriority.LOW)
-                    .build();
-
-            when(wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(Optional.empty());
+            when(wishlistItemRepository.findByUser_PublicIdAndProduct_Id(userId, productId))
+                    .thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class,
-                    () -> wishlistService.updateWishlistItem(userId, productId, updateRequest));
+                    () -> wishlistService.updateWishlistItem(userId, productId,
+                            UpdateWishlistItemRequest.builder().build()));
         }
     }
+
+    // ── moveToCart ────────────────────────────────────────────────────────────
 
     @Nested
     @DisplayName("moveToCart")
     class MoveToCartTests {
 
         @Test
-        @DisplayName("Should move item to cart")
+        @DisplayName("Moves item to cart and removes from wishlist")
         void moveToCart_WhenItemExists_MovesToCart() {
-            when(wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)).thenReturn(Optional.of(testWishlistItem));
+            when(wishlistItemRepository.findByUser_PublicIdAndProduct_Id(userId, productId))
+                    .thenReturn(Optional.of(testWishlistItem));
             doNothing().when(cartService).addItem(eq(userId), any(AddToCartRequest.class));
             doNothing().when(wishlistItemRepository).delete(testWishlistItem);
 
             wishlistService.moveToCart(userId, productId);
 
-            verify(wishlistItemRepository, times(1)).delete(testWishlistItem);
+            verify(wishlistItemRepository).delete(testWishlistItem);
         }
     }
+
+    // ── getWishlistSummary ────────────────────────────────────────────────────
 
     @Nested
     @DisplayName("getWishlistSummary")
     class GetWishlistSummaryTests {
 
         @Test
-        @DisplayName("Should return wishlist summary")
+        @DisplayName("Returns correct totals from repository stubs")
         void getWishlistSummary_ReturnsSummary() {
-            WishlistSummaryDto summary = WishlistSummaryDto.builder()
-                    .totalItems(5)
-                    .totalValue(BigDecimal.valueOf(499.95))
-                    .build();
-
             Object[] totals = new Object[]{BigDecimal.valueOf(499.95), BigDecimal.valueOf(20.00)};
-            when(wishlistItemRepository.countByUser_PublicId(userId)).thenReturn(5L);
+            when(wishlistItemRepository.findByUser_PublicIdOrderByCreatedAtDesc(userId)).thenReturn(List.of());
             when(wishlistItemRepository.findTotalValueAndSavings(userId)).thenReturn(totals);
 
             WishlistSummaryDto result = wishlistService.getWishlistSummary(userId);
 
             assertNotNull(result);
-            assertEquals(5, result.getTotalItems());
+            assertEquals(0, result.getTotalItems());
             assertEquals(BigDecimal.valueOf(499.95), result.getTotalValue());
             assertEquals(BigDecimal.valueOf(20.00), result.getTotalSavings());
         }
     }
+
+    // ── clearWishlist ─────────────────────────────────────────────────────────
 
     @Nested
     @DisplayName("clearWishlist")
     class ClearWishlistTests {
 
         @Test
-        @DisplayName("Should clear all wishlist items for user")
+        @DisplayName("Delegates deletion to repository")
         void clearWishlist_ClearsAllItems() {
             when(wishlistItemRepository.deleteByUser_PublicId(userId)).thenReturn(1);
 
             wishlistService.clearWishlist(userId);
 
-            verify(wishlistItemRepository, times(1)).deleteByUser_PublicId(userId);
+            verify(wishlistItemRepository).deleteByUser_PublicId(userId);
+        }
+    }
+
+    // ── helpers ───────────────────────────────────────────────────────────────
+
+    private static void setField(Object target, String fieldName, Object value) {
+        try {
+            var f = target.getClass().getDeclaredField(fieldName);
+            f.setAccessible(true);
+            f.set(target, value);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 }

@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,21 +20,21 @@ public interface ReviewRepository extends JpaRepository<Review, Long>, JpaSpecif
 
     Optional<Review> findByPublicId(UUID publicId);
 
-    boolean existsByCustomer_PublicIdAndProduct_PublicId(UUID customerPublicId, UUID productPublicId);
+    boolean existsByCustomer_PublicIdAndProduct_Id(UUID customerPublicId, UUID productId);
 
-    Page<Review> findByProduct_PublicIdAndApproved(UUID productPublicId, Boolean approved, Pageable pageable);
+    Page<Review> findByProduct_IdAndApproved(UUID productId, Boolean approved, Pageable pageable);
 
-    Page<Review> findByProduct_PublicIdAndVerifiedPurchase(UUID productPublicId, Boolean verifiedPurchase, Pageable pageable);
+    Page<Review> findByProduct_IdAndVerifiedPurchase(UUID productId, Boolean verifiedPurchase, Pageable pageable);
 
-    Page<Review> findByProduct_PublicIdAndRating(UUID productPublicId, Integer rating, Pageable pageable);
+    Page<Review> findByProduct_IdAndRating(UUID productId, Integer rating, Pageable pageable);
 
     Page<Review> findByCustomer_PublicId(UUID customerPublicId, Pageable pageable);
 
     @Query("SELECT r FROM Review r WHERE r.product.id = :productId AND r.deleted = false ORDER BY r.helpful DESC")
-    List<Review> findMostHelpfulReviews(@Param("productId") Long productId, @Param("limit") int limit);
+    List<Review> findMostHelpfulReviews(@Param("productId") UUID productId, @Param("limit") int limit);
 
     @Query("SELECT r FROM Review r WHERE r.product.id = :productId AND r.deleted = false ORDER BY r.createdAt DESC")
-    List<Review> findRecentReviews(@Param("productId") Long productId, @Param("limit") int limit);
+    List<Review> findRecentReviews(@Param("productId") UUID productId, @Param("limit") int limit);
 
     @Query("SELECT r FROM Review r WHERE r.hasImages = true AND r.deleted = false")
     Page<Review> findByHasImagesTrueAndIsActiveTrue(Pageable pageable);
@@ -42,16 +43,16 @@ public interface ReviewRepository extends JpaRepository<Review, Long>, JpaSpecif
     Optional<Review> findByPublicIdWithUserAndProduct(@Param("publicId") UUID publicId);
 
     @Query("SELECT COUNT(r), AVG(r.rating), SUM(CASE WHEN r.verifiedPurchase = true THEN 1 ELSE 0 END) FROM Review r WHERE r.product.id = :productId AND r.deleted = false")
-    Object[] getProductRatingStats(@Param("productId") Long productId);
+    Object[] getProductRatingStats(@Param("productId") UUID productId);
 
     @Query("SELECT r.rating, COUNT(r), (COUNT(r) * 100.0 / (SELECT COUNT(*) FROM Review r2 WHERE r2.product.id = :productId AND r2.deleted = false)) FROM Review r WHERE r.product.id = :productId AND r.deleted = false GROUP BY r.rating")
-    List<Object[]> getRatingDistributionWithPercentages(@Param("productId") Long productId);
+    List<Object[]> getRatingDistributionWithPercentages(@Param("productId") UUID productId);
 
     @Query("SELECT r.pros FROM Review r WHERE r.product.id = :productId AND r.pros IS NOT NULL AND r.deleted = false GROUP BY r.pros ORDER BY COUNT(r.pros) DESC")
-    List<String> getMostCommonPros(@Param("productId") Long productId, int limit);
+    List<String> getMostCommonPros(@Param("productId") UUID productId, int limit);
 
     @Query("SELECT r.cons FROM Review r WHERE r.product.id = :productId AND r.cons IS NOT NULL AND r.deleted = false GROUP BY r.cons ORDER BY COUNT(r.cons) DESC")
-    List<String> getMostCommonCons(@Param("productId") Long productId, int limit);
+    List<String> getMostCommonCons(@Param("productId") UUID productId, int limit);
 
     @Modifying
     @Query("UPDATE Review r SET r.approved = true WHERE r.publicId IN :publicIds")
@@ -73,12 +74,16 @@ public interface ReviewRepository extends JpaRepository<Review, Long>, JpaSpecif
     @Query("SELECT COUNT(r) FROM Review r WHERE r.deleted = false AND r.approved = false")
     long countRejectedReviews();
 
-    @Query("SELECT r.rating, COUNT(r) FROM Review r JOIN r.product p WHERE p.seller.id = :sellerId AND r.deleted = false GROUP BY r.rating")
-    List<Object[]> getSellerRatingDistribution(@Param("sellerId") UUID sellerId);
+    // Seller-product association delegated to seller module — returns zeros until wired
+    default List<Object[]> getSellerRatingDistribution(UUID sellerId) {
+        return Collections.emptyList();
+    }
 
-    @Query("SELECT COUNT(r), AVG(r.rating) FROM Review r JOIN r.product p WHERE p.seller.id = :sellerId AND r.deleted = false")
-    Object[] getSellerReviewStats(@Param("sellerId") UUID sellerId);
+    default Object[] getSellerReviewStats(UUID sellerId) {
+        return new Object[]{0L, 0.0};
+    }
 
-    @Query("SELECT COUNT(r) FROM Review r JOIN r.product p WHERE p.seller.id = :sellerId AND r.deleted = false AND r.approved = false")
-    long countPendingSellerReviews(@Param("sellerId") UUID sellerId);
+    default long countPendingSellerReviews(UUID sellerId) {
+        return 0L;
+    }
 }
