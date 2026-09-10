@@ -4,7 +4,6 @@ import ecommerce.common.response.ApiResponse;
 import ecommerce.common.security.UserPrincipal;
 import ecommerce.modules.product.dto.request.CreateProductRequest;
 import ecommerce.modules.product.dto.request.CreateVariantRequest;
-import ecommerce.modules.product.dto.request.ProductStatusRequest;
 import ecommerce.modules.product.dto.request.UpdateProductRequest;
 import ecommerce.modules.product.dto.request.UpdateVariantRequest;
 import ecommerce.modules.product.dto.response.ProductResponse;
