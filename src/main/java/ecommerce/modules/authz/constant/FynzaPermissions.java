@@ -8,11 +8,18 @@ public final class FynzaPermissions {
     private FynzaPermissions() {}
 
     // ── Product ───────────────────────────────────────────────────────────────
-    public static final String PRODUCT_CREATE  = "product.create";
-    public static final String PRODUCT_READ    = "product.read";
-    public static final String PRODUCT_UPDATE  = "product.update";
-    public static final String PRODUCT_DELETE  = "product.delete";
-    public static final String PRODUCT_APPROVE = "product.approve";
+    public static final String PRODUCT_READ_OWN    = "product.read.own";
+    public static final String PRODUCT_CREATE_OWN  = "product.create.own";
+    public static final String PRODUCT_UPDATE_OWN  = "product.update.own";
+    public static final String PRODUCT_DELETE_OWN  = "product.delete.own";
+    public static final String PRODUCT_PUBLISH_OWN = "product.publish.own";
+    public static final String PRODUCT_ARCHIVE_OWN = "product.archive.own";
+    public static final String PRODUCT_MANAGE_OWN  = "product.manage.own";
+    public static final String PRODUCT_READ        = "product.read";
+    public static final String PRODUCT_MANAGE      = "product.manage";
+    public static final String PRODUCT_REVIEW      = "product.review";
+    public static final String PRODUCT_SUSPEND     = "product.suspend";
+    public static final String PRODUCT_RESTORE     = "product.restore";
 
     // ── User ──────────────────────────────────────────────────────────────────
     public static final String USER_VIEW    = "user.view";

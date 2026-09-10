@@ -1,24 +1,13 @@
 package ecommerce.common.validation;
 
-import ecommerce.modules.product.dto.CreateProductRequest;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
-public class ProductCreateRequestPriceRangeValidator implements ConstraintValidator<ValidPriceRange, CreateProductRequest> {
+// Price fields were removed from CreateProductRequest; retained as no-op to satisfy compilation.
+public class ProductCreateRequestPriceRangeValidator implements ConstraintValidator<ValidPriceRange, Object> {
 
     @Override
-    public boolean isValid(CreateProductRequest value, ConstraintValidatorContext context) {
-        if (value == null || value.getPrice() == null || value.getOriginalPrice() == null) {
-            return true;
-        }
-        boolean isValid = value.getPrice().compareTo(value.getOriginalPrice()) <= 0;
-        if (!isValid) {
-            context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate(
-                    "Current price (" + value.getPrice() +
-                            ") must be ≤ original price (" + value.getOriginalPrice() + ")")
-                    .addConstraintViolation();
-        }
-        return isValid;
+    public boolean isValid(Object value, ConstraintValidatorContext context) {
+        return true;
     }
 }
