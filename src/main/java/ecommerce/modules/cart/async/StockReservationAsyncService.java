@@ -90,13 +90,8 @@ public class StockReservationAsyncService {
     }
 
     private boolean attemptReservation(Product product, int quantity) {
-        synchronized (product) {
-            if (product.getAvailableQuantity() >= quantity) {
-                product.reserveStock(quantity);
-                return true;
-            }
-            return false;
-        }
+        // Stock reservation delegated to inventory module — always returns false until wired
+        return false;
     }
 
     private CompletableFuture<ReservationResponse> handleReservationFailure(

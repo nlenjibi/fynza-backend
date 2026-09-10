@@ -1,7 +1,7 @@
 package ecommerce.graphql.dto;
 
 import ecommerce.common.response.PaginatedResponse;
-import ecommerce.modules.product.dto.ProductResponse;
+import ecommerce.modules.product.dto.response.ProductResponse;
 import lombok.*;
 
 import java.util.List;

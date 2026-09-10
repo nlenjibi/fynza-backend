@@ -64,7 +64,10 @@ public class RefundServiceImpl implements RefundService {
             throw new IllegalArgumentException("Refund amount cannot exceed order total");
         }
 
-        UUID sellerId = order.getOrderItems().isEmpty() ? null : order.getOrderItems().get(0).getProduct().getSeller().getPublicId();
+        // Seller association resolved from OrderItem.seller once wired
+        UUID sellerId = order.getOrderItems().isEmpty() ? null
+                : (order.getOrderItems().get(0).getSeller() != null
+                        ? order.getOrderItems().get(0).getSeller().getPublicId() : null);
 
         Refund refund = Refund.builder()
                 .refundNumber(Refund.generateRefundNumber())
