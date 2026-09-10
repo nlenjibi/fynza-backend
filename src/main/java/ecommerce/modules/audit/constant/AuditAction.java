@@ -147,4 +147,17 @@ public final class AuditAction {
     public static final String CUSTOMER_ADDRESS_UPDATED     = "CUSTOMER_ADDRESS_UPDATED";
     public static final String CUSTOMER_ADDRESS_DELETED     = "CUSTOMER_ADDRESS_DELETED";
     public static final String CUSTOMER_PREFERENCES_UPDATED = "CUSTOMER_PREFERENCES_UPDATED";
+
+    // ── Store Management (extended) ───────────────────────────────────────────
+    public static final String STORE_SUBMITTED_FOR_REVIEW   = "STORE_SUBMITTED_FOR_REVIEW";
+    public static final String STORE_ACTIVATED              = "STORE_ACTIVATED";
+    public static final String STORE_PAUSED                 = "STORE_PAUSED";
+    public static final String STORE_SUSPENDED              = "STORE_SUSPENDED";
+    public static final String STORE_CLOSED                 = "STORE_CLOSED";
+    public static final String STORE_ARCHIVED               = "STORE_ARCHIVED";
+    public static final String STORE_VISIBILITY_CHANGED     = "STORE_VISIBILITY_CHANGED";
+    public static final String STORE_SETTINGS_UPDATED       = "STORE_SETTINGS_UPDATED";
+    public static final String STORE_POLICY_CREATED         = "STORE_POLICY_CREATED";
+    public static final String STORE_POLICY_UPDATED         = "STORE_POLICY_UPDATED";
+    public static final String STORE_POLICY_DELETED         = "STORE_POLICY_DELETED";
 }
