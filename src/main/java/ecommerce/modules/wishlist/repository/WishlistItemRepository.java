@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,19 +18,23 @@ import java.util.UUID;
 @Repository
 public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long> {
 
-    Optional<WishlistItem> findByUser_PublicIdAndProduct_PublicId(UUID userPublicId, UUID productPublicId);
+    Optional<WishlistItem> findByUser_PublicIdAndProduct_Id(UUID userPublicId, UUID productId);
 
-    boolean existsByUser_PublicIdAndProduct_PublicId(UUID userPublicId, UUID productPublicId);
+    boolean existsByUser_PublicIdAndProduct_Id(UUID userPublicId, UUID productId);
 
     List<WishlistItem> findByUser_PublicIdOrderByCreatedAtDesc(UUID userPublicId);
 
     Page<WishlistItem> findByUser_PublicId(UUID userPublicId, Pageable pageable);
 
-    @Query("SELECT w FROM WishlistItem w WHERE w.user.publicId = :userPublicId AND w.product.price < w.targetPrice")
-    List<WishlistItem> findItemsWithPriceDrops(@Param("userPublicId") UUID userPublicId);
+    // Price-drop detection moved to pricing module — returns empty until wired
+    default List<WishlistItem> findItemsWithPriceDrops(UUID userPublicId) {
+        return Collections.emptyList();
+    }
 
-    @Query("SELECT COALESCE(SUM(w.product.price * w.desiredQuantity), 0), COALESCE(SUM((w.product.originalPrice - w.product.price) * w.desiredQuantity), 0) FROM WishlistItem w WHERE w.user.publicId = :userPublicId")
-    Object[] findTotalValueAndSavings(@Param("userPublicId") UUID userPublicId);
+    // Price/savings aggregation moved to pricing module — returns zeros until wired
+    default Object[] findTotalValueAndSavings(UUID userPublicId) {
+        return new Object[]{BigDecimal.ZERO, BigDecimal.ZERO};
+    }
 
     long countByUser_PublicId(UUID userPublicId);
 

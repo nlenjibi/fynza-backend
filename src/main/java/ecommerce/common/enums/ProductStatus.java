@@ -1,9 +1,11 @@
 package ecommerce.common.enums;
 
 public enum ProductStatus {
+    DRAFT,
+    PENDING_REVIEW,
     ACTIVE,
     INACTIVE,
-    DRAFT,
-    PENDING,
-    DISCONTINUED
+    SUSPENDED,
+    ARCHIVED,
+    DELETED
 }

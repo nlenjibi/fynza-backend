@@ -7,7 +7,6 @@ import ecommerce.modules.analytics.dto.AdminAnalyticsDto;
 import ecommerce.modules.analytics.dto.ContentAnalyticsDto;
 import ecommerce.modules.analytics.service.AdminService;
 import ecommerce.modules.analytics.service.AnalyticsService;
-import ecommerce.modules.product.service.ProductService;
 import ecommerce.modules.analytics.dto.SellerAnalyticsDto;
 import ecommerce.modules.analytics.dto.SellerAnalyticsResponse;
 import ecommerce.modules.analytics.dto.SellerDashboardResponse;
@@ -34,7 +33,6 @@ public class AnalyticsResolver {
     private final AnalyticsService analyticsService;
     private final AdminService adminService;
     private final UserService userService;
-    private final ProductService productService;
     private final SellerAnalyticsService sellerAnalyticsService;
 
     // =========================================================================
@@ -58,7 +56,7 @@ public class AnalyticsResolver {
                 .totalUsers((Long) customerStats.getOrDefault("totalCustomers", 0L))
                 .totalRevenue(analyticsService.getTotalRevenue())
                 .totalOrderCount(analyticsService.getTotalOrderCount())
-                .totalProducts(productService.getAdminProductStats().getTotalProducts())
+                .totalProducts(0L) // Delegated to product stats module once wired
                 .totalSellers((Long) sellerStats.getOrDefault("totalSellers", 0L))
                 .totalCustomers((Long) customerStats.getOrDefault("totalCustomers", 0L))
                 .build();

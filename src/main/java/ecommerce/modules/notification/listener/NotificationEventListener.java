@@ -9,8 +9,6 @@ import ecommerce.modules.order.event.OrderPlacedEvent;
 import ecommerce.modules.order.event.OrderStatusChangedEvent;
 import ecommerce.modules.payment.event.PaymentConfirmedEvent;
 import ecommerce.modules.payment.event.PaymentFailedEvent;
-import ecommerce.modules.product.event.ProductBackInStockEvent;
-import ecommerce.modules.product.event.ProductLowStockEvent;
 import ecommerce.modules.review.event.ProductReviewSubmittedEvent;
 import ecommerce.modules.user.event.UserRegisteredEvent;
 import lombok.RequiredArgsConstructor;
@@ -223,36 +221,4 @@ public class NotificationEventListener {
         );
     }
 
-    @Async("notificationTaskExecutor")
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onProductLowStock(ProductLowStockEvent event) {
-        log.debug("[NotificationEvent] SELLER_LOW_STOCK productId={}", event.productId());
-        notificationService.send(
-            NotificationType.SELLER_LOW_STOCK_ALERT,
-            event.sellerId(),
-            event.sellerId(),
-            Map.of(
-                "recipientEmail", event.sellerEmail(),
-                "productName", event.productName(),
-                "currentStock", String.valueOf(event.currentStock())
-            ),
-            "/seller/products/" + event.productId(),
-            new EntityRef("PRODUCT", event.productId())
-        );
-    }
-
-    @Async("notificationTaskExecutor")
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onProductBackInStock(ProductBackInStockEvent event) {
-        log.debug("[NotificationEvent] PRODUCT_BACK_IN_STOCK productId={}", event.productId());
-        notificationService.sendBroadcast(
-            NotificationType.PRODUCT_BACK_IN_STOCK,
-            event.productId(),
-            event.sellerId(),
-            Map.of(
-                "productName", event.productName(),
-                "newStock", String.valueOf(event.newStock())
-            )
-        );
-    }
 }

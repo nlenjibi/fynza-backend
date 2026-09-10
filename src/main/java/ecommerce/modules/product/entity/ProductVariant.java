@@ -3,29 +3,26 @@ package ecommerce.modules.product.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-@Table(name = "product_variants", uniqueConstraints = {
-    @UniqueConstraint(name = "uk_product_variant_sku", columnNames = "sku")
+@Table(name = "product_variants", indexes = {
+    @Index(name = "idx_product_variants_product_id", columnList = "product_id"),
+    @Index(name = "idx_product_variants_status",     columnList = "variant_status")
 })
 public class ProductVariant {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "id", nullable = false, updatable = false)
+    private UUID id;
 
-    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
-    private UUID publicId;
-
-    @Column(nullable = false)
+    @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
 
@@ -37,7 +34,7 @@ public class ProductVariant {
 
     @PrePersist
     protected void onCreate() {
-        publicId = UUID.randomUUID();
+        if (id == null) id = UUID.randomUUID();
         createdAt = Instant.now();
         updatedAt = Instant.now();
         if (isActive == null) isActive = true;
@@ -48,30 +45,25 @@ public class ProductVariant {
         updatedAt = Instant.now();
     }
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+    @Column(name = "product_id", nullable = false)
+    private UUID productId;
 
     @Column(nullable = false, unique = true)
     private String sku;
+
+    @Column(name = "barcode")
+    private String barcode;
+
+    @Column(name = "variant_name")
+    private String variantName;
+
+    @Column(name = "variant_status", nullable = false)
+    @Builder.Default
+    private String variantStatus = "ACTIVE";
 
     @Column(length = 50)
     private String size;
 
     @Column(length = 50)
     private String color;
-
-    @Column(name = "price_override", precision = 10, scale = 2)
-    private BigDecimal priceOverride;
-
-    @Column(nullable = false)
-    private Integer stock = 0;
-
-    public String getSize() {
-        return size;
-    }
-
-    public String getColor() {
-        return color;
-    }
 }

@@ -43,19 +43,19 @@ public class WishlistServiceImpl implements WishlistService {
         Product p = item.getProduct();
         WishlistItemDto.ProductSummary productSummary = null;
         if (p != null) {
-            String categoryName = p.getCategory() != null ? p.getCategory().getName() : null;
             productSummary = WishlistItemDto.ProductSummary.builder()
-                    .id(p.getPublicId())
+                    .id(p.getId())
                     .name(p.getName())
                     .slug(p.getSlug())
                     .sku(p.getSku())
-                    .price(p.getPrice())
-                    .discountPrice(p.getOriginalPrice())
-                    .imageUrl(p.getMainImageUrl())
-                    .categoryName(categoryName)
-                    .inStock(p.isInStock())
-                    .availableQuantity(p.getAvailableQuantity())
-                    .inventoryStatus(p.getInventoryStatus() != null ? p.getInventoryStatus().name() : null)
+                    // price/imageUrl/inventoryStatus served by pricing/inventory modules
+                    .price(null)
+                    .discountPrice(null)
+                    .imageUrl(null)
+                    .categoryName(null)
+                    .inStock(Boolean.TRUE.equals(p.getIsActive()))
+                    .availableQuantity(null)
+                    .inventoryStatus(null)
                     .build();
         }
         UUID userId = item.getUser() != null ? item.getUser().getPublicId() : null;
@@ -72,7 +72,7 @@ public class WishlistServiceImpl implements WishlistService {
                 .notifyOnStock(item.getNotifyOnStock())
                 .purchased(item.getPurchased())
                 .isPublic(item.getIsPublic())
-                .inStock(p != null && p.isInStock())
+                .inStock(p != null && Boolean.TRUE.equals(p.getIsActive()))
                 .addedAt(item.getAddedAt())
                 .purchasedAt(item.getPurchasedAt())
                 .build();
@@ -86,16 +86,16 @@ public class WishlistServiceImpl implements WishlistService {
     public WishlistItemDto addToWishlist(UUID userId, AddToWishlistRequest request) {
         log.debug("addToWishlist: userId={}, productId={}", userId, request.getProductId());
 
-        if (wishlistItemRepository.existsByUser_PublicIdAndProduct_PublicId(userId, request.getProductId())) {
+        if (wishlistItemRepository.existsByUser_PublicIdAndProduct_Id(userId, request.getProductId())) {
             return wishlistItemRepository
-                    .findByUser_PublicIdAndProduct_PublicId(userId, request.getProductId())
+                    .findByUser_PublicIdAndProduct_Id(userId, request.getProductId())
                     .map(this::toDto)
                     .orElseThrow();
         }
 
         var user = userRepository.findByPublicId(userId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("User", userId));
-        var product = productRepository.findByPublicId(request.getProductId())
+        var product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Product", request.getProductId()));
 
         WishlistItem item = WishlistItem.builder()
@@ -138,7 +138,7 @@ public class WishlistServiceImpl implements WishlistService {
         BigDecimal totalValue = totals[0] != null ? (BigDecimal) totals[0] : BigDecimal.ZERO;
         BigDecimal totalSavings = totals[1] != null ? (BigDecimal) totals[1] : BigDecimal.ZERO;
 
-        long inStock = items.stream().filter(i -> i.getProduct().isInStock()).count();
+        long inStock = items.stream().filter(i -> Boolean.TRUE.equals(i.getProduct().getIsActive())).count();
         long priceDrops = items.stream().filter(WishlistItem::isPriceDropped).count();
         long purchased = items.stream().filter(i -> Boolean.TRUE.equals(i.getPurchased())).count();
 
@@ -162,7 +162,7 @@ public class WishlistServiceImpl implements WishlistService {
     }, allEntries = true)
     public void removeFromWishlist(UUID userId, UUID productId) {
         log.debug("removeFromWishlist: userId={}, productId={}", userId, productId);
-        WishlistItem item = wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)
+        WishlistItem item = wishlistItemRepository.findByUser_PublicIdAndProduct_Id(userId, productId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("WishlistItem", productId));
         wishlistItemRepository.delete(item);
     }
@@ -175,7 +175,7 @@ public class WishlistServiceImpl implements WishlistService {
     }, allEntries = true)
     public WishlistItemDto updateWishlistItem(UUID userId, UUID productId, UpdateWishlistItemRequest request) {
         log.debug("updateWishlistItem: userId={}, productId={}", userId, productId);
-        WishlistItem item = wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)
+        WishlistItem item = wishlistItemRepository.findByUser_PublicIdAndProduct_Id(userId, productId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("WishlistItem", productId));
 
         if (request.getNotes() != null) {
@@ -206,7 +206,7 @@ public class WishlistServiceImpl implements WishlistService {
     @Override
     @Cacheable(value = "wishlists-check", key = "#userId + ':' + #productId")
     public boolean isInWishlist(UUID userId, UUID productId) {
-        return wishlistItemRepository.existsByUser_PublicIdAndProduct_PublicId(userId, productId);
+        return wishlistItemRepository.existsByUser_PublicIdAndProduct_Id(userId, productId);
     }
 
     @Override
@@ -233,7 +233,7 @@ public class WishlistServiceImpl implements WishlistService {
     @CachePut(value = "wishlists", key = "#userId")
     @CacheEvict(value = {"wishlists-summary", "wishlists-analytics"}, allEntries = true)
     public WishlistItemDto markAsPurchased(UUID userId, UUID productId) {
-        WishlistItem item = wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)
+        WishlistItem item = wishlistItemRepository.findByUser_PublicIdAndProduct_Id(userId, productId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("WishlistItem", productId));
         item.markAsPurchased();
         return toDto(wishlistItemRepository.save(item));
@@ -246,13 +246,13 @@ public class WishlistServiceImpl implements WishlistService {
             "wishlists-check", "wishlists-drops", "wishlists-analytics"
     }, allEntries = true)
     public void moveToCart(UUID userId, UUID productId) {
-        WishlistItem item = wishlistItemRepository.findByUser_PublicIdAndProduct_PublicId(userId, productId)
+        WishlistItem item = wishlistItemRepository.findByUser_PublicIdAndProduct_Id(userId, productId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("WishlistItem", productId));
 
         log.debug("moveToCart: productId={} for userId={}", productId, userId);
 
         AddToCartRequest cartRequest = AddToCartRequest.builder()
-                .productId(item.getProduct().getPublicId())
+                .productId(item.getProduct().getId())
                 .quantity(item.getDesiredQuantity() != null ? item.getDesiredQuantity() : 1)
                 .build();
 

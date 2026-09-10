@@ -49,17 +49,24 @@ public final class AuditAction {
     public static final String STORE_UPDATED                = "STORE_UPDATED";
 
     // ── Product Management ────────────────────────────────────────────────────
-    public static final String PRODUCT_CREATED          = "PRODUCT_CREATED";
-    public static final String PRODUCT_UPDATED          = "PRODUCT_UPDATED";
-    public static final String PRODUCT_DELETED          = "PRODUCT_DELETED";
-    public static final String PRODUCT_ACTIVATED        = "PRODUCT_ACTIVATED";
-    public static final String PRODUCT_DEACTIVATED      = "PRODUCT_DEACTIVATED";
-    public static final String PRODUCT_APPROVED         = "PRODUCT_APPROVED";
-    public static final String PRODUCT_REJECTED         = "PRODUCT_REJECTED";
-    public static final String PRODUCT_FEATURED         = "PRODUCT_FEATURED";
-    public static final String PRODUCT_UNFEATURED       = "PRODUCT_UNFEATURED";
-    public static final String PRODUCT_IMAGE_ADDED      = "PRODUCT_IMAGE_ADDED";
-    public static final String PRODUCT_IMAGE_REMOVED    = "PRODUCT_IMAGE_REMOVED";
+    public static final String PRODUCT_CREATED           = "PRODUCT_CREATED";
+    public static final String PRODUCT_UPDATED           = "PRODUCT_UPDATED";
+    public static final String PRODUCT_DELETED           = "PRODUCT_DELETED";
+    public static final String PRODUCT_ACTIVATED         = "PRODUCT_ACTIVATED";
+    public static final String PRODUCT_DEACTIVATED       = "PRODUCT_DEACTIVATED";
+    public static final String PRODUCT_APPROVED          = "PRODUCT_APPROVED";
+    public static final String PRODUCT_REJECTED          = "PRODUCT_REJECTED";
+    public static final String PRODUCT_SUSPENDED         = "PRODUCT_SUSPENDED";
+    public static final String PRODUCT_RESTORED          = "PRODUCT_RESTORED";
+    public static final String PRODUCT_ARCHIVED          = "PRODUCT_ARCHIVED";
+    public static final String PRODUCT_PUBLISHED         = "PRODUCT_PUBLISHED";
+    public static final String PRODUCT_SUBMITTED_REVIEW  = "PRODUCT_SUBMITTED_REVIEW";
+    public static final String PRODUCT_VARIANT_CREATED   = "PRODUCT_VARIANT_CREATED";
+    public static final String PRODUCT_VARIANT_UPDATED   = "PRODUCT_VARIANT_UPDATED";
+    public static final String PRODUCT_VARIANT_DELETED   = "PRODUCT_VARIANT_DELETED";
+    public static final String PRODUCT_MEDIA_ADDED       = "PRODUCT_MEDIA_ADDED";
+    public static final String PRODUCT_MEDIA_REMOVED     = "PRODUCT_MEDIA_REMOVED";
+    public static final String PRODUCT_CATEGORY_CHANGED  = "PRODUCT_CATEGORY_CHANGED";
 
     // ── Inventory ─────────────────────────────────────────────────────────────
     public static final String STOCK_ADDED              = "STOCK_ADDED";
