@@ -35,4 +35,12 @@ public final class CacheKey {
     public static String userPrincipal(UUID userId) {
         return of("user-principal", userId.toString());
     }
+
+    public static String store(String slug) {
+        return of("store-slug", slug);
+    }
+
+    public static String storeById(UUID publicId) {
+        return of("store", publicId.toString());
+    }
 }
