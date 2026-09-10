@@ -2,32 +2,21 @@ package ecommerce.modules.seller.controller;
 
 import ecommerce.common.response.ApiResponse;
 import ecommerce.common.security.UserPrincipal;
-import ecommerce.modules.seller.dto.request.SellerSearchRequest;
 import ecommerce.modules.seller.dto.request.SellerStatusRequest;
-import ecommerce.modules.seller.dto.response.SellerDetailResponse;
 import ecommerce.modules.seller.dto.response.SellerResponse;
-import ecommerce.modules.seller.dto.response.SellerStatusHistoryResponse;
-import ecommerce.modules.seller.dto.response.SellerSummaryResponse;
 import ecommerce.modules.seller.dto.response.SellerVerificationResponse;
 import ecommerce.modules.seller.enums.VerificationType;
-import ecommerce.modules.seller.service.SellerService;
 import ecommerce.modules.seller.service.SellerStatusService;
 import ecommerce.modules.seller.service.SellerVerificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -36,35 +25,8 @@ import java.util.UUID;
 @Tag(name = "Admin — Seller Management", description = "Admin operations for managing sellers")
 public class AdminSellerController {
 
-    private final SellerService            sellerService;
-    private final SellerStatusService      statusService;
+    private final SellerStatusService       statusService;
     private final SellerVerificationService verificationService;
-
-    @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Search sellers")
-    public ResponseEntity<ApiResponse<Page<SellerSummaryResponse>>> searchSellers(
-            @ParameterObject SellerSearchRequest params,
-            @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(ApiResponse.success("Sellers retrieved",
-                sellerService.searchSellers(params, pageable)));
-    }
-
-    @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Get seller by public ID")
-    public ResponseEntity<ApiResponse<SellerDetailResponse>> getSeller(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.success("Seller retrieved",
-                sellerService.getSellerByPublicId(id)));
-    }
-
-    @GetMapping("/{id}/status-history")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Get seller status history")
-    public ResponseEntity<ApiResponse<List<SellerStatusHistoryResponse>>> getStatusHistory(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.success("Status history retrieved",
-                sellerService.getStatusHistory(id)));
-    }
 
     @PostMapping("/{id}/approve")
     @PreAuthorize("hasRole('ADMIN')")
