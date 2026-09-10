@@ -210,7 +210,7 @@ class StorePolicyServiceImplTest {
             when(policyRepository.save(policy)).thenReturn(policy);
             when(mapper.toPolicyResponse(policy)).thenReturn(expected);
 
-            StorePolicyResponse result = service.updatePolicy(userId, policyPublicId, request);
+            service.updatePolicy(userId, policyPublicId, request);
 
             assertThat(policy.getTitle()).isEqualTo("Updated Return Policy");
             assertThat(policy.getContent()).isEqualTo("Updated content.");
