@@ -40,8 +40,8 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     @EntityGraph(attributePaths = {"customer", "orderItems", "orderItems.product", "shippingAddress", "billingAddress"})
     Page<Order> findByStatus(OrderStatus status, Pageable pageable);
 
-    @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM Order o JOIN o.orderItems oi WHERE o.customer.id = :customerId AND oi.product.id = :productId AND o.isActive = true")
-    boolean existsByCustomerIdAndProductId(@Param("customerId") UUID customerId, @Param("productId") Long productId);
+    @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM Order o JOIN o.orderItems oi WHERE o.customer.publicId = :customerPublicId AND oi.product.id = :productId AND o.isActive = true")
+    boolean existsByCustomerIdAndProductId(@Param("customerPublicId") UUID customerPublicId, @Param("productId") UUID productId);
 
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.orderItems oi LEFT JOIN FETCH oi.product WHERE o.customer.id IN :customerIds")
     List<Order> findByCustomerIdIn(@Param("customerIds") List<UUID> customerIds);

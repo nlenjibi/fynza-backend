@@ -1,6 +1,5 @@
 package ecommerce.modules.analytics.service.impl;
 
-import ecommerce.common.enums.InventoryStatus;
 import ecommerce.common.enums.OrderStatus;
 import ecommerce.common.enums.Role;
 import ecommerce.modules.analytics.service.AnalyticsService;
@@ -86,7 +85,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
             long orders = orderItemRepository.countByProductSellerId(seller.getId());
             BigDecimal revenue = orderItemRepository.sumRevenueBySellerId(seller.getId());
             double cancellationRate = calculateCancellationRate(seller.getId());
-            long lowStock = productRepository.countByInventoryStatusAndIsActiveTrue(InventoryStatus.LOW_STOCK);
+            long lowStock = 0L; // Inventory status delegated to inventory module once wired
             metrics.add(new SellerMetrics(
                     seller.getId(), resolveSellerName(seller),
                     orders, revenue != null ? revenue : BigDecimal.ZERO,
@@ -158,7 +157,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     public long getLowStockCount(UUID sellerId) {
-        return productRepository.countByInventoryStatusAndIsActiveTrue(InventoryStatus.LOW_STOCK);
+        return 0L; // Inventory status delegated to inventory module once wired
     }
 
     @Override

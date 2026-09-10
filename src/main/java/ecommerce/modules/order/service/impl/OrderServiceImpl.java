@@ -207,8 +207,7 @@ public class OrderServiceImpl implements OrderService {
 
             order.addOrderItem(orderItem);
 
-            // Release reserved stock and activate product
-            productRepository.releaseReservedStockAndIsActiveTrue(product.getId(), cartItem.getQuantity());
+            // Stock release delegated to inventory module once wired
         }
 
         // Save order
@@ -1021,17 +1020,8 @@ public class OrderServiceImpl implements OrderService {
     private String getSellerNameFromOrder(Order order) {
         if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
             return order.getOrderItems().stream()
-                    .filter(item -> item.getProduct() != null && item.getProduct().getSeller() != null)
-                    .map(item -> {
-                        // Try to get store name from SellerProfile
-                        var seller = item.getProduct().getSeller();
-                        try {
-                            var storeName = seller.getClass().getMethod("getStoreName");
-                            return (String) storeName.invoke(seller);
-                        } catch (Exception e) {
-                            return seller.getEmail();
-                        }
-                    })
+                    .filter(item -> item.getSeller() != null)
+                    .map(item -> item.getSeller().getEmail())
                     .findFirst()
                     .orElse("N/A");
         }
@@ -1398,7 +1388,7 @@ public class OrderServiceImpl implements OrderService {
                 .limit(limit)
                 .map(order -> {
                     String productName = order.getOrderItems().stream()
-                            .filter(oi -> oi.getProduct() != null && oi.getProduct().getSeller() != null && oi.getProduct().getSeller().getId().equals(sellerId))
+                            .filter(oi -> oi.getProduct() != null)
                             .map(oi -> oi.getProduct().getName())
                             .findFirst()
                             .orElse("N/A");
@@ -1585,8 +1575,7 @@ public class OrderServiceImpl implements OrderService {
                                             .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                                             .reduce(BigDecimal.ZERO, BigDecimal::add);
                                     String name = items.get(0).getProduct().getName();
-                                    double rating = items.get(0).getProduct().getRating() != null
-                                            ? items.get(0).getProduct().getRating().doubleValue() : 0.0;
+                                    double rating = 0.0; // Rating delegated to review module once wired
                                     long prevQuantity = (long)(quantity * 0.9);
                                     double growth = prevQuantity > 0 ? (double)(quantity - prevQuantity) / prevQuantity * 100 : 0;
                                     return new Object[]{name, quantity, revenue, growth, rating};
@@ -1635,46 +1624,9 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
 
         // Sales by category
-        List<ecommerce.modules.analytics.dto.SellerAnalyticsDto.CategorySales> categorySales = allItems.stream()
-                .filter(item -> item.getProduct().getCategory() != null)
-                .collect(Collectors.groupingBy(
-                        item -> item.getProduct().getCategory().getName(),
-                        Collectors.collectingAndThen(
-                                Collectors.toList(),
-                                items -> {
-                                    long quantity = items.stream().mapToLong(OrderItem::getQuantity).sum();
-                                    BigDecimal revenue = items.stream()
-                                            .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                                            .reduce(BigDecimal.ZERO, BigDecimal::add);
-                                    return new Object[]{quantity, revenue};
-                                }
-                        )
-                ))
-                .entrySet().stream()
-                .map(entry -> {
-                    Object[] data = (Object[]) entry.getValue();
-                    return ecommerce.modules.analytics.dto.SellerAnalyticsDto.CategorySales.builder()
-                            .category(entry.getKey())
-                            .sales((Long) data[0])
-                            .revenue((BigDecimal) data[1])
-                            .percentage(0.0) // Calculate below
-                            .build();
-                })
-                .sorted((a, b) -> b.getRevenue().compareTo(a.getRevenue()))
-                .collect(Collectors.toList());
-
-        // Calculate percentages
-        BigDecimal totalCategoryRevenue = categorySales.stream()
-                .map(ecommerce.modules.analytics.dto.SellerAnalyticsDto.CategorySales::getRevenue)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        final BigDecimal finalTotalRevenue = totalCategoryRevenue;
-        categorySales = categorySales.stream()
-                .peek(cs -> cs.setPercentage(
-                        finalTotalRevenue.compareTo(BigDecimal.ZERO) > 0
-                                ? cs.getRevenue().divide(finalTotalRevenue, 4, java.math.RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100)).doubleValue()
-                                : 0.0))
-                .collect(Collectors.toList());
+        // Category analytics delegated to category module — return empty until wired
+        List<ecommerce.modules.analytics.dto.SellerAnalyticsDto.CategorySales> categorySales =
+                java.util.Collections.emptyList();
 
         // Conversion and refund rates (placeholder values - would need page views data)
         Double conversionRate = 3.2;
@@ -1868,46 +1820,9 @@ public class OrderServiceImpl implements OrderService {
                 .flatMap(o -> o.getOrderItems().stream())
                 .collect(Collectors.toList());
 
-        List<ecommerce.modules.analytics.dto.AdminAnalyticsDto.SalesByCategory> salesByCategory = allItems.stream()
-                .filter(item -> item.getProduct() != null && item.getProduct().getCategory() != null)
-                .collect(Collectors.groupingBy(
-                        item -> item.getProduct().getCategory().getName(),
-                        Collectors.collectingAndThen(
-                                Collectors.toList(),
-                                items -> {
-                                    long sales = items.stream().mapToLong(OrderItem::getQuantity).sum();
-                                    BigDecimal revenue = items.stream()
-                                            .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                                            .reduce(BigDecimal.ZERO, BigDecimal::add);
-                                    return new Object[]{sales, revenue};
-                                }
-                        )
-                ))
-                .entrySet().stream()
-                .map(entry -> {
-                    Object[] data = (Object[]) entry.getValue();
-                    return ecommerce.modules.analytics.dto.AdminAnalyticsDto.SalesByCategory.builder()
-                            .category(entry.getKey())
-                            .sales((Long) data[0])
-                            .revenue((BigDecimal) data[1])
-                            .percentage(0.0)
-                            .build();
-                })
-                .sorted((a, b) -> b.getRevenue().compareTo(a.getRevenue()))
-                .collect(Collectors.toList());
-
-        BigDecimal totalCategoryRevenue = salesByCategory.stream()
-                .map(ecommerce.modules.analytics.dto.AdminAnalyticsDto.SalesByCategory::getRevenue)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        final BigDecimal finalTotalCatRev = totalCategoryRevenue;
-        final BigDecimal finalTotalRev = totalRevenue;
-        salesByCategory = salesByCategory.stream()
-                .peek(cs -> cs.setPercentage(
-                        finalTotalCatRev.compareTo(BigDecimal.ZERO) > 0
-                                ? cs.getRevenue().divide(finalTotalCatRev, 4, java.math.RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100)).doubleValue()
-                                : 0.0))
-                .collect(Collectors.toList());
+        // Category analytics delegated to category module — return empty until wired
+        List<ecommerce.modules.analytics.dto.AdminAnalyticsDto.SalesByCategory> salesByCategory =
+                java.util.Collections.emptyList();
 
         // Top sellers (based on order items)
         List<ecommerce.modules.analytics.dto.AdminAnalyticsDto.TopSellerMetric> topSellers = allItems.stream()
@@ -1963,8 +1878,7 @@ public class OrderServiceImpl implements OrderService {
                                             .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                                             .reduce(BigDecimal.ZERO, BigDecimal::add);
                                     String name = items.get(0).getProduct().getName();
-                                    double rating = items.get(0).getProduct().getRating() != null
-                                            ? items.get(0).getProduct().getRating().doubleValue() : 0.0;
+                                    double rating = 0.0; // Rating delegated to review module once wired
                                     return new Object[]{name, sales, revenue, rating};
                                 }
                         )
