@@ -50,7 +50,6 @@ public class SellerProductController {
     @PatchMapping("/{productId}")
     @Operation(summary = "Update product information")
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
-            @PathVariable UUID storeId,
             @PathVariable UUID productId,
             @Valid @RequestBody UpdateProductRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -61,7 +60,6 @@ public class SellerProductController {
     @PostMapping("/{productId}/submit")
     @Operation(summary = "Submit product for admin review")
     public ResponseEntity<ApiResponse<ProductResponse>> submitForReview(
-            @PathVariable UUID storeId,
             @PathVariable UUID productId,
             @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(ApiResponse.success("Product submitted for review",
@@ -71,7 +69,6 @@ public class SellerProductController {
     @PostMapping("/{productId}/publish")
     @Operation(summary = "Publish a reviewed product (make it ACTIVE)")
     public ResponseEntity<ApiResponse<ProductResponse>> publish(
-            @PathVariable UUID storeId,
             @PathVariable UUID productId,
             @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(ApiResponse.success("Product published",
@@ -81,7 +78,6 @@ public class SellerProductController {
     @PostMapping("/{productId}/deactivate")
     @Operation(summary = "Deactivate a product (ACTIVE → INACTIVE)")
     public ResponseEntity<ApiResponse<ProductResponse>> deactivate(
-            @PathVariable UUID storeId,
             @PathVariable UUID productId,
             @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(ApiResponse.success("Product deactivated",
@@ -91,7 +87,6 @@ public class SellerProductController {
     @PostMapping("/{productId}/archive")
     @Operation(summary = "Archive a product")
     public ResponseEntity<ApiResponse<ProductResponse>> archive(
-            @PathVariable UUID storeId,
             @PathVariable UUID productId,
             @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(ApiResponse.success("Product archived",
@@ -101,7 +96,6 @@ public class SellerProductController {
     @DeleteMapping("/{productId}")
     @Operation(summary = "Soft-delete a product")
     public ResponseEntity<ApiResponse<Void>> delete(
-            @PathVariable UUID storeId,
             @PathVariable UUID productId,
             @AuthenticationPrincipal UserPrincipal principal) {
         productService.deleteProduct(principal.getId(), productId);
@@ -113,7 +107,6 @@ public class SellerProductController {
     @PostMapping("/{productId}/variants")
     @Operation(summary = "Add a variant to a product")
     public ResponseEntity<ApiResponse<ProductVariantResponse>> createVariant(
-            @PathVariable UUID storeId,
             @PathVariable UUID productId,
             @Valid @RequestBody CreateVariantRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -125,7 +118,6 @@ public class SellerProductController {
     @PatchMapping("/{productId}/variants/{variantId}")
     @Operation(summary = "Update a product variant")
     public ResponseEntity<ApiResponse<ProductVariantResponse>> updateVariant(
-            @PathVariable UUID storeId,
             @PathVariable UUID productId,
             @PathVariable UUID variantId,
             @Valid @RequestBody UpdateVariantRequest request,
@@ -137,7 +129,6 @@ public class SellerProductController {
     @DeleteMapping("/{productId}/variants/{variantId}")
     @Operation(summary = "Delete a product variant")
     public ResponseEntity<ApiResponse<Void>> deleteVariant(
-            @PathVariable UUID storeId,
             @PathVariable UUID productId,
             @PathVariable UUID variantId,
             @AuthenticationPrincipal UserPrincipal principal) {
