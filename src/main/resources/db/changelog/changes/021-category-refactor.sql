@@ -41,7 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_categories_sort_order  ON categories (sort_order)
 CREATE TABLE category_status_history (
     id               BIGSERIAL    PRIMARY KEY,
     public_id        UUID         NOT NULL UNIQUE,
-    category_id      BIGINT       NOT NULL REFERENCES categories(id),
+    category_id      UUID         NOT NULL REFERENCES categories(id),
     previous_status  VARCHAR(30),
     new_status       VARCHAR(30)  NOT NULL,
     reason           TEXT,
@@ -56,7 +56,7 @@ CREATE INDEX idx_cat_status_hist_created   ON category_status_history (created_a
 CREATE TABLE attribute_definitions (
     id                BIGSERIAL    PRIMARY KEY,
     public_id         UUID         NOT NULL UNIQUE,
-    category_id       BIGINT       NOT NULL REFERENCES categories(id),
+    category_id       UUID         NOT NULL REFERENCES categories(id),
     name              VARCHAR(100) NOT NULL,
     code              VARCHAR(100) NOT NULL,
     data_type         VARCHAR(30)  NOT NULL,
@@ -98,7 +98,7 @@ CREATE TABLE category_suggestions (
     requested_by       UUID         NOT NULL,
     name               VARCHAR(100) NOT NULL,
     description        TEXT,
-    parent_category_id BIGINT       REFERENCES categories(id),
+    parent_category_id UUID         REFERENCES categories(id),
     reason             TEXT,
     status             VARCHAR(30)  NOT NULL DEFAULT 'PENDING',
     reviewed_by        UUID,
