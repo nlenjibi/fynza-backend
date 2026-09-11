@@ -75,9 +75,19 @@ public final class AuditAction {
     public static final String STOCK_RELEASED           = "STOCK_RELEASED";
 
     // ── Category & Taxonomy ───────────────────────────────────────────────────
-    public static final String CATEGORY_CREATED         = "CATEGORY_CREATED";
-    public static final String CATEGORY_UPDATED         = "CATEGORY_UPDATED";
-    public static final String CATEGORY_DELETED         = "CATEGORY_DELETED";
+    public static final String CATEGORY_CREATED              = "CATEGORY_CREATED";
+    public static final String CATEGORY_UPDATED              = "CATEGORY_UPDATED";
+    public static final String CATEGORY_DELETED              = "CATEGORY_DELETED";
+    public static final String CATEGORY_MOVED                = "CATEGORY_MOVED";
+    public static final String CATEGORY_ACTIVATED            = "CATEGORY_ACTIVATED";
+    public static final String CATEGORY_DEACTIVATED          = "CATEGORY_DEACTIVATED";
+    public static final String CATEGORY_ARCHIVED             = "CATEGORY_ARCHIVED";
+    public static final String CATEGORY_ATTRIBUTE_CREATED    = "CATEGORY_ATTRIBUTE_CREATED";
+    public static final String CATEGORY_ATTRIBUTE_UPDATED    = "CATEGORY_ATTRIBUTE_UPDATED";
+    public static final String CATEGORY_ATTRIBUTE_DELETED    = "CATEGORY_ATTRIBUTE_DELETED";
+    public static final String CATEGORY_SUGGESTION_CREATED   = "CATEGORY_SUGGESTION_CREATED";
+    public static final String CATEGORY_SUGGESTION_APPROVED  = "CATEGORY_SUGGESTION_APPROVED";
+    public static final String CATEGORY_SUGGESTION_REJECTED  = "CATEGORY_SUGGESTION_REJECTED";
     public static final String TAG_CREATED              = "TAG_CREATED";
     public static final String TAG_UPDATED              = "TAG_UPDATED";
     public static final String TAG_DELETED              = "TAG_DELETED";

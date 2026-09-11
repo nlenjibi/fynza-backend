@@ -1,18 +1,17 @@
-package ecommerce.modules.category.dto;
+package ecommerce.modules.category.dto.request;
 
+import ecommerce.modules.category.enums.CategoryVisibility;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CategoryUpdateRequest {
+public class UpdateCategoryRequest {
 
     @Size(min = 2, max = 100, message = "Category name must be between 2 and 100 characters")
     private String name;
@@ -20,11 +19,9 @@ public class CategoryUpdateRequest {
     @Size(max = 500, message = "Description must not exceed 500 characters")
     private String description;
 
-    @Size(max = 500, message = "Image URL must not exceed 500 characters")
-    private String image;
+    private CategoryVisibility visibility;
 
-    private Boolean featured;
+    private Integer sortOrder;
 
-    private UUID parentCategoryId;
-
+    private String mediaId;
 }
