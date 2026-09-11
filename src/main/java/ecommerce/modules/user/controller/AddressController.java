@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/v1/users/addresses")
+@RequestMapping("/v1/users/addresses")
 @RequiredArgsConstructor
 @Tag(name = "Address Management", description = "User address management endpoints")
 public class AddressController {

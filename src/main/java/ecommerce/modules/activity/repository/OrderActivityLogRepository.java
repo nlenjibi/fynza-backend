@@ -17,7 +17,7 @@ import java.util.UUID;
  * Provides data access operations for order-specific activity logs.
  */
 @Repository
-public interface OrderActivityLogRepository extends JpaRepository<OrderActivityLog, UUID> {
+public interface OrderActivityLogRepository extends JpaRepository<OrderActivityLog, Long> {
 
     /**
      * Find all activities for a specific order, ordered by creation date descending.

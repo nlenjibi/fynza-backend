@@ -1,9 +1,7 @@
 package ecommerce.common.exception;
 
-/**
- * Exception thrown when user doesn't have required role
- */
-public class AuthorizationException extends RuntimeException {
+public class AuthorizationException extends ForbiddenException {
+
     public AuthorizationException(String message) {
         super(message);
     }

@@ -94,29 +94,9 @@ extend type Query {
     sellerOrderStats: SellerOrderStats!
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Mutations
-# ─────────────────────────────────────────────────────────────────────────────
-
-extend type Mutation {
-
-    # ── Customer Mutations (AUTHENTICATED) ───────────────────────────────
-
-    createOrder(input: OrderCreateInput!): Order!
-    cancelOrder(id: ID!, reason: String): Order!
-    requestOrderRefund(orderId: ID!, input: RefundOrderInput): Order!
-
-    # ── Admin Mutations (ADMIN) ──────────────────────────────────────────
-
-    adminUpdateOrderStatus(id: ID!, input: OrderStatusUpdateInput!): Order!
-    adminCancelOrder(id: ID!, reason: String): Order!
-    confirmOrder(id: ID!): Order!
-    processOrder(id: ID!): Order!
-    shipOrder(id: ID!, trackingNumber: String!, carrier: String): Order!
-    deliverOrder(id: ID!): Order!
-    refundOrder(id: ID!, amount: BigDecimal!, reason: String!): Order!
-
-    # ── Seller Mutations (SELLER) ────────────────────────────────────────
-
-    sellerUpdateOrderStatus(orderId: ID!, input: OrderStatusUpdateInput!): Order!
-}
+# Order mutations (createOrder, cancelOrder, refund, status updates) are handled
+# exclusively by the REST API per PRD §19 & §86:
+#   POST /v1/checkout           — create order
+#   POST /v1/orders/{id}/cancel — cancel order
+#   POST /v1/orders/{id}/refund — request refund
+#   PATCH /v1/admin/orders/{id} — admin status updates

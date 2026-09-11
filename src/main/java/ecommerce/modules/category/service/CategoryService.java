@@ -1,38 +1,37 @@
 package ecommerce.modules.category.service;
 
-import ecommerce.modules.category.dto.CategoryCreateRequest;
-import ecommerce.modules.category.dto.CategoryResponse;
-import ecommerce.modules.category.entity.Category;
+import ecommerce.modules.category.dto.request.CategorySearchRequest;
+import ecommerce.modules.category.dto.request.CreateCategoryRequest;
+import ecommerce.modules.category.dto.request.MoveCategoryRequest;
+import ecommerce.modules.category.dto.request.UpdateCategoryRequest;
+import ecommerce.modules.category.dto.response.CategoryDetailResponse;
+import ecommerce.modules.category.dto.response.CategorySummaryResponse;
+import ecommerce.modules.category.dto.response.CategoryTreeResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public interface CategoryService {
 
-    List<CategoryResponse> findAll();
+    CategoryDetailResponse createCategory(CreateCategoryRequest request, UUID actorUserId);
 
-    List<CategoryResponse> findActiveCategories();
+    CategoryDetailResponse updateCategory(UUID categoryPublicId, UpdateCategoryRequest request, UUID actorUserId);
 
-    CategoryResponse findById(UUID id);
+    void moveCategory(UUID categoryPublicId, MoveCategoryRequest request, UUID actorUserId);
 
-    List<CategoryResponse> findTree();
+    void deleteCategory(UUID categoryPublicId, UUID actorUserId);
 
-    CategoryResponse create(CategoryCreateRequest request);
+    CategoryDetailResponse getCategoryByPublicId(UUID publicId);
 
-    CategoryResponse update(UUID id, CategoryCreateRequest request);
+    CategoryDetailResponse getCategoryBySlug(String slug);
 
-    void delete(UUID id);
+    List<CategorySummaryResponse> getRootCategories(Long taxonomyId);
 
-    CategoryResponse updateStatus(UUID id, Boolean isActive);
+    List<CategorySummaryResponse> getChildren(UUID parentPublicId);
 
-    Map<String, Object> getCategoryStats();
+    List<CategoryTreeResponse> getCategoryTree(Long taxonomyId);
 
-    CategoryResponse mapToResponse(Category category);
-
-    Page<CategoryResponse> getAllCategories(Pageable pageable);
-
-    CategoryResponse getCategoryById(UUID id);
+    Page<CategorySummaryResponse> searchCategories(CategorySearchRequest request, Pageable pageable);
 }

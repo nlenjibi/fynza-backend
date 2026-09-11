@@ -1,15 +1,21 @@
 package ecommerce.graphql.resolver.review;
 
 import ecommerce.common.response.PaginatedResponse;
+import ecommerce.common.security.UserPrincipal;
 import ecommerce.graphql.dto.ReviewPage;
-import ecommerce.graphql.input.AdminResponseInput;
 import ecommerce.graphql.input.PageInput;
-import ecommerce.graphql.input.ReviewCreateInput;
 import ecommerce.graphql.input.ReviewFilterInput;
-import ecommerce.graphql.input.ReviewUpdateInput;
 import ecommerce.graphql.input.SortDirection;
-import ecommerce.modules.review.dto.*;
+import ecommerce.modules.review.dto.ReviewFilterRequest;
+import ecommerce.modules.review.dto.ReviewResponse;
+import ecommerce.modules.review.dto.ReviewStatsResponse;
+import ecommerce.modules.review.dto.ReviewSummaryResponse;
+import ecommerce.modules.review.entity.Review;
 import ecommerce.modules.review.service.ReviewService;
+import ecommerce.modules.review.spec.ReviewSpec;
+import org.springframework.data.jpa.domain.Specification;
+
+import java.time.ZoneOffset;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -17,10 +23,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.ContextValue;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
@@ -45,19 +51,15 @@ public class ReviewResolver {
 
     @QueryMapping
     public ReviewPage productReviews(@Argument UUID productId,
-                                      @Argument PageInput pagination,
-                                      @Argument ReviewFilterInput filter) {
+                                     @Argument PageInput pagination,
+                                     @Argument ReviewFilterInput filter) {
         log.info("GQL productReviews(productId={})", productId);
         Pageable pageable = toPageable(pagination);
-
         if (filter != null) {
-            ReviewFilterRequest filterRequest = toFilterRequest(filter);
-            Page<ReviewResponse> page = reviewService.getProductReviewsWithFilters(productId, filterRequest, pageable);
+            Page<ReviewResponse> page = reviewService.getProductReviewsWithFilters(productId, toFilterRequest(filter), pageable);
             return toPage(page);
         }
-
-        Page<ReviewResponse> page = reviewService.getProductReviews(productId, pageable);
-        return toPage(page);
+        return toPage(reviewService.getProductReviews(productId, pageable));
     }
 
     @QueryMapping
@@ -67,45 +69,35 @@ public class ReviewResolver {
     }
 
     @QueryMapping
-    public List<ReviewResponse> mostHelpfulReviews(@Argument UUID productId,
-                                                     @Argument int limit) {
+    public List<ReviewResponse> mostHelpfulReviews(@Argument UUID productId, @Argument int limit) {
         log.info("GQL mostHelpfulReviews(productId={})", productId);
         return reviewService.getMostHelpfulReviews(productId, limit);
     }
 
     @QueryMapping
-    public List<ReviewResponse> recentReviews(@Argument UUID productId,
-                                                @Argument int limit) {
+    public List<ReviewResponse> recentReviews(@Argument UUID productId, @Argument int limit) {
         log.info("GQL recentReviews(productId={})", productId);
         return reviewService.getRecentReviews(productId, limit);
     }
 
     @QueryMapping
-    public ReviewPage reviewsWithImages(@Argument UUID productId,
-                                         @Argument PageInput pagination) {
+    public ReviewPage reviewsWithImages(@Argument UUID productId, @Argument PageInput pagination) {
         log.info("GQL reviewsWithImages(productId={})", productId);
-        Pageable pageable = toPageable(pagination);
-        Page<ReviewResponse> page = reviewService.getReviewsWithImages(productId, pageable);
-        return toPage(page);
+        return toPage(reviewService.getReviewsWithImages(productId, toPageable(pagination)));
     }
 
     @QueryMapping
-    public ReviewPage verifiedReviews(@Argument UUID productId,
-                                       @Argument PageInput pagination) {
+    public ReviewPage verifiedReviews(@Argument UUID productId, @Argument PageInput pagination) {
         log.info("GQL verifiedReviews(productId={})", productId);
-        Pageable pageable = toPageable(pagination);
-        Page<ReviewResponse> page = reviewService.getVerifiedReviews(productId, pageable);
-        return toPage(page);
+        return toPage(reviewService.getVerifiedReviews(productId, toPageable(pagination)));
     }
 
     @QueryMapping
     public ReviewPage reviewsByRating(@Argument UUID productId,
-                                       @Argument Integer rating,
-                                       @Argument PageInput pagination) {
+                                      @Argument Integer rating,
+                                      @Argument PageInput pagination) {
         log.info("GQL reviewsByRating(productId={}, rating={})", productId, rating);
-        Pageable pageable = toPageable(pagination);
-        Page<ReviewResponse> page = reviewService.getReviewsByRating(productId, rating, pageable);
-        return toPage(page);
+        return toPage(reviewService.getReviewsByRating(productId, rating, toPageable(pagination)));
     }
 
     // =========================================================================
@@ -115,11 +107,9 @@ public class ReviewResolver {
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
     public ReviewPage myReviews(@Argument PageInput pagination,
-                                 @ContextValue UUID userId) {
-        log.info("GQL myReviews(user={})", userId);
-        Pageable pageable = toPageable(pagination);
-        Page<ReviewResponse> page = reviewService.getUserReviews(userId, pageable);
-        return toPage(page);
+                                @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL myReviews(user={})", principal.getId());
+        return toPage(reviewService.getUserReviews(principal.getId(), toPageable(pagination)));
     }
 
     // =========================================================================
@@ -128,19 +118,11 @@ public class ReviewResolver {
 
     @QueryMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ReviewPage adminReviews(@Argument PageInput pagination,
-                                    @Argument ReviewFilterInput filter) {
+    public ReviewPage adminReviews(@Argument PageInput pagination, @Argument ReviewFilterInput filter) {
         log.info("GQL adminReviews");
         Pageable pageable = toPageable(pagination);
-
-        if (filter != null) {
-            com.querydsl.core.types.Predicate predicate = buildPredicate(filter);
-            Page<ReviewResponse> page = reviewService.findReviewsWithPredicate(predicate, pageable);
-            return toPage(page);
-        }
-
-        Page<ReviewResponse> page = reviewService.findReviewsWithPredicate(null, pageable);
-        return toPage(page);
+        Specification<Review> spec = filter != null ? buildPredicate(filter) : ReviewSpec.isActive();
+        return toPage(reviewService.findReviewsWithPredicate(spec, pageable));
     }
 
     @QueryMapping
@@ -151,120 +133,34 @@ public class ReviewResolver {
     }
 
     // =========================================================================
-    // AUTHENTICATED MUTATIONS
+    // SELLER QUERIES
+    // =========================================================================
+
+    @QueryMapping
+    @PreAuthorize("hasRole('SELLER')")
+    public ReviewPage sellerReviews(@Argument PageInput pagination,
+                                    @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerReviews(seller={})", principal.getId());
+        return toPage(reviewService.getSellerReviews(principal.getId(), toPageable(pagination)));
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasRole('SELLER')")
+    public ReviewStatsResponse sellerReviewStats(@AuthenticationPrincipal UserPrincipal principal) {
+        log.info("GQL sellerReviewStats(seller={})", principal.getId());
+        return reviewService.getSellerReviewStats(principal.getId());
+    }
+
+    // =========================================================================
+    // UX STATE MUTATIONS
     // =========================================================================
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
-    public ReviewResponse createReview(@Argument ReviewCreateInput input,
-                                        @ContextValue UUID userId) {
-        log.info("GQL createReview(user={})", userId);
-        ReviewCreateRequest request = ReviewCreateRequest.builder()
-                .productId(input.getProductId())
-                .rating(input.getRating())
-                .title(input.getTitle())
-                .comment(input.getComment())
-                .pros(input.getPros())
-                .cons(input.getCons())
-                .images(input.getImages())
-                .build();
-        return reviewService.createReview(request, userId);
-    }
-
-    @MutationMapping
-    @PreAuthorize("isAuthenticated()")
-    public ReviewResponse updateReview(@Argument UUID id,
-                                        @Argument ReviewUpdateInput input,
-                                        @ContextValue UUID userId) {
-        log.info("GQL updateReview(id={}, user={})", id, userId);
-        ReviewUpdateRequest request = ReviewUpdateRequest.builder()
-                .rating(input.getRating())
-                .title(input.getTitle())
-                .comment(input.getComment())
-                .pros(input.getPros())
-                .cons(input.getCons())
-                .build();
-        return reviewService.updateReview(id, request, userId);
-    }
-
-    @MutationMapping
-    @PreAuthorize("isAuthenticated()")
-    public boolean deleteReview(@Argument UUID id, @ContextValue UUID userId) {
-        log.info("GQL deleteReview(id={}, user={})", id, userId);
-        reviewService.deleteReview(id, userId);
-        return true;
-    }
-
-    @MutationMapping
-    @PreAuthorize("isAuthenticated()")
-    public ReviewResponse restoreReview(@Argument UUID id, @ContextValue UUID userId) {
-        log.info("GQL restoreReview(id={}, user={})", id, userId);
-        return reviewService.restoreReview(id, userId);
-    }
-
-    @MutationMapping
     public ReviewResponse markReviewHelpful(@Argument UUID id) {
         log.info("GQL markReviewHelpful(id={})", id);
         reviewService.markHelpful(id);
         return reviewService.getReview(id);
-    }
-
-    // =========================================================================
-    // ADMIN MUTATIONS
-    // =========================================================================
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ReviewResponse approveReview(@Argument UUID id) {
-        log.info("GQL approveReview(id={})", id);
-        return reviewService.approveReview(id);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ReviewResponse rejectReview(@Argument UUID id, @Argument String reason) {
-        log.info("GQL rejectReview(id={})", id);
-        return reviewService.rejectReview(id, reason);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ReviewResponse addAdminResponse(@Argument UUID id,
-                                            @Argument AdminResponseInput input) {
-        log.info("GQL addAdminResponse(id={})", id);
-        ecommerce.modules.review.dto.AdminResponseRequest request =
-                ecommerce.modules.review.dto.AdminResponseRequest.builder()
-                        .response(input.getResponse())
-                        .build();
-        return reviewService.addAdminResponse(id, request);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ReviewResponse removeAdminResponse(@Argument UUID id) {
-        log.info("GQL removeAdminResponse(id={})", id);
-        return reviewService.removeAdminResponse(id);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public int bulkApproveReviews(@Argument List<UUID> ids) {
-        log.info("GQL bulkApproveReviews(ids={})", ids);
-        return reviewService.bulkApproveReviews(ids);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public int bulkRejectReviews(@Argument List<UUID> ids, @Argument String reason) {
-        log.info("GQL bulkRejectReviews(ids={})", ids);
-        return reviewService.bulkRejectReviews(ids, reason);
-    }
-
-    @MutationMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public int bulkDeleteReviews(@Argument List<UUID> ids) {
-        log.info("GQL bulkDeleteReviews(ids={})", ids);
-        return reviewService.bulkDeleteReviews(ids);
     }
 
     // =========================================================================
@@ -299,23 +195,20 @@ public class ReviewResolver {
                 .build();
     }
 
-    private com.querydsl.core.types.Predicate buildPredicate(ReviewFilterInput f) {
-        ecommerce.modules.review.entity.ReviewPredicates p =
-                ecommerce.modules.review.entity.ReviewPredicates.builder()
-                .withProductId(f.getProductId())
-                .withUserId(f.getCustomerId())
-                .withRating(f.getRating())
-                .withMinRating(f.getMinRating())
-                .withMaxRating(f.getMaxRating())
-                .withVerifiedPurchase(f.getVerifiedPurchase())
-                .withApproved(f.getApproved())
-                .withImages(f.getWithImages())
-                .withTextContaining(f.getSearchText())
-                .withCreatedAfter(f.getDateFrom())
-                .withCreatedBefore(f.getDateTo());
-        if (Boolean.TRUE.equals(f.getPositiveOnly())) p.withPositiveRating();
-        if (Boolean.TRUE.equals(f.getNegativeOnly())) p.withNegativeRating();
-        if (Boolean.TRUE.equals(f.getNeedsAttention())) p.withNeedsAttention();
-        return p.buildActiveOnly();
+    private Specification<Review> buildPredicate(ReviewFilterInput f) {
+        Specification<Review> spec = Specification.where(ReviewSpec.hasProductPublicId(f.getProductId()))
+                .and(ReviewSpec.hasCustomerPublicId(f.getCustomerId()))
+                .and(f.getRating() != null ? ReviewSpec.hasRating(f.getRating()) : ReviewSpec.ratingBetween(f.getMinRating(), f.getMaxRating()))
+                .and(ReviewSpec.isVerifiedPurchase(f.getVerifiedPurchase()))
+                .and(ReviewSpec.isApproved(f.getApproved()))
+                .and(ReviewSpec.withImages(f.getWithImages()))
+                .and(ReviewSpec.textContains(f.getSearchText()))
+                .and(f.getDateFrom() != null ? ReviewSpec.createdAfter(f.getDateFrom().toInstant(ZoneOffset.UTC)) : null)
+                .and(f.getDateTo() != null ? ReviewSpec.createdBefore(f.getDateTo().toInstant(ZoneOffset.UTC)) : null)
+                .and(ReviewSpec.isActive());
+        if (Boolean.TRUE.equals(f.getPositiveOnly()))   spec = spec.and(ReviewSpec.ratingBetween(4, 5));
+        if (Boolean.TRUE.equals(f.getNegativeOnly()))   spec = spec.and(ReviewSpec.ratingBetween(1, 2));
+        if (Boolean.TRUE.equals(f.getNeedsAttention())) spec = spec.and(ReviewSpec.isApproved(false));
+        return spec;
     }
 }

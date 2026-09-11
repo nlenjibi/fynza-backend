@@ -82,31 +82,22 @@ type ReviewPage {
     pageInfo: PageInfo!
 }
 
+type SellerReviewStats {
+    totalReviews: Long!
+    pendingReviews: Long!
+    approvedReviews: Long!
+    rejectedReviews: Long!
+    averageRating: Float
+    fiveStarReviews: Long!
+    fourStarReviews: Long!
+    threeStarReviews: Long!
+    twoStarReviews: Long!
+    oneStarReviews: Long!
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Inputs
 # ─────────────────────────────────────────────────────────────────────────────
-
-input ReviewCreateInput {
-    productId: ID!
-    rating: Int!
-    title: String
-    comment: String!
-    pros: [String!]
-    cons: [String!]
-    images: [String!]
-}
-
-input ReviewUpdateInput {
-    rating: Int
-    title: String
-    comment: String
-    pros: [String!]
-    cons: [String!]
-}
-
-input AdminResponseInput {
-    response: String!
-}
 
 input ReviewFilterInput {
     productId: ID
@@ -147,6 +138,10 @@ extend type Query {
     # ── Admin Review Queries (ADMIN) ─────────────────────────────────────
     adminReviews(pagination: PageInput, filter: ReviewFilterInput): ReviewPage!
     adminReviewStats: ReviewStats!
+
+    # ── Seller Review Queries (SELLER) ───────────────────────────────────
+    sellerReviews(pagination: PageInput): ReviewPage!
+    sellerReviewStats: SellerReviewStats!
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -155,19 +150,6 @@ extend type Query {
 
 extend type Mutation {
 
-    # ── Authenticated Review Mutations ───────────────────────────────────
-    createReview(input: ReviewCreateInput!): Review!
-    updateReview(id: ID!, input: ReviewUpdateInput!): Review!
-    deleteReview(id: ID!): Boolean!
-    restoreReview(id: ID!): Review!
+    # ── UX State (AUTHENTICATED) ─────────────────────────────────────────
     markReviewHelpful(id: ID!): Review!
-
-    # ── Admin Review Mutations (ADMIN) ───────────────────────────────────
-    approveReview(id: ID!): Review!
-    rejectReview(id: ID!, reason: String!): Review!
-    addAdminResponse(id: ID!, input: AdminResponseInput!): Review!
-    removeAdminResponse(id: ID!): Review!
-    bulkApproveReviews(ids: [ID!]!): Int!
-    bulkRejectReviews(ids: [ID!]!, reason: String!): Int!
-    bulkDeleteReviews(ids: [ID!]!): Int!
 }

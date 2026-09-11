@@ -1,24 +1,34 @@
 package ecommerce.modules.category.service.impl;
 
-import ecommerce.common.exception.ResourceNotFoundException;
-import ecommerce.modules.category.dto.CategoryCreateRequest;
-import ecommerce.modules.category.dto.CategoryResponse;
+import ecommerce.modules.audit.constant.AuditAction;
+import ecommerce.modules.audit.dto.AuditLogEntry;
+import ecommerce.modules.audit.service.AuditLogService;
+import ecommerce.modules.category.dto.request.CategorySearchRequest;
+import ecommerce.modules.category.dto.request.CreateCategoryRequest;
+import ecommerce.modules.category.dto.request.MoveCategoryRequest;
+import ecommerce.modules.category.dto.request.UpdateCategoryRequest;
+import ecommerce.modules.category.dto.response.*;
 import ecommerce.modules.category.entity.Category;
+import ecommerce.modules.category.entity.CategorySummaryView;
+import ecommerce.modules.category.enums.CategoryStatus;
+import ecommerce.modules.category.enums.CategoryVisibility;
+import ecommerce.modules.category.exception.CategoryNotFoundException;
 import ecommerce.modules.category.mapper.CategoryMapper;
+import ecommerce.modules.category.repository.AttributeDefinitionRepository;
+import ecommerce.modules.category.repository.AttributeOptionRepository;
 import ecommerce.modules.category.repository.CategoryRepository;
+import ecommerce.modules.category.repository.CategorySummaryViewRepository;
 import ecommerce.modules.category.service.CategoryService;
+import ecommerce.modules.category.spec.CategorySummarySpec;
+import ecommerce.modules.category.validation.CategoryHierarchyValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -27,96 +37,210 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class CategoryServiceImpl implements CategoryService {
 
-    private final CategoryRepository categoryRepository;
-    private final CategoryMapper categoryMapper;
-
-    @Override
-    @Cacheable(value = "categories", key = "'all'")
-    public List<CategoryResponse> findAll() {
-        log.debug("Fetching all categories");
-        return categoryRepository.findAll().stream()
-                .map(categoryMapper::toSimpleResponse)
-                .toList();
-    }
-
-    @Override
-    @Cacheable(value = "categories", key = "#id")
-    public CategoryResponse findById(UUID id) {
-        log.debug("Fetching category by ID: {}", id);
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found with ID: " + id));
-        return categoryMapper.toSimpleResponse(category);
-    }
-
-    @Override
-    @Cacheable(value = "categories", key = "'tree'")
-    public List<CategoryResponse> findTree() {
-        log.debug("Fetching category tree");
-        List<Category> rootCategories = categoryRepository.findRootCategories();
-        return rootCategories.stream()
-                .map(this::buildTree)
-                .toList();
-    }
+    private final CategoryRepository               categoryRepository;
+    private final CategorySummaryViewRepository    summaryViewRepository;
+    private final AttributeDefinitionRepository    attributeDefinitionRepository;
+    private final AttributeOptionRepository        attributeOptionRepository;
+    private final CategoryMapper                   mapper;
+    private final CategoryHierarchyValidator       hierarchyValidator;
+    private final AuditLogService                  auditLogService;
 
     @Override
     @Transactional
-    @CacheEvict(value = "categories", allEntries = true)
-    public CategoryResponse create(CategoryCreateRequest request) {
-        log.info("Creating new category: {}", request.getName());
+    public CategoryDetailResponse createCategory(CreateCategoryRequest request, UUID actorUserId) {
+        String slug = resolveSlug(request.getSlug(), request.getName(), request.getTaxonomyId());
 
-        String slug = generateSlug(request.getName());
-        if (categoryRepository.existsBySlug(slug)) {
-            slug = generateUniqueSlug(slug);
+        Category.CategoryBuilder builder = Category.builder()
+                .name(request.getName())
+                .slug(slug)
+                .description(request.getDescription())
+                .taxonomyId(request.getTaxonomyId())
+                .visibility(request.getVisibility() != null ? request.getVisibility() : CategoryVisibility.PUBLIC)
+                .sortOrder(request.getSortOrder() != null ? request.getSortOrder() : 0)
+                .mediaId(request.getMediaId())
+                .status(CategoryStatus.DRAFT)
+                .isActive(true);
+
+        if (request.getParentCategoryPublicId() != null) {
+            Category parent = resolveCategory(request.getParentCategoryPublicId());
+            hierarchyValidator.validateDepth(parent);
+            builder.parentCategory(parent);
         }
 
-        Category category = categoryMapper.toEntityFromRequest(request);
-        category.setSlug(slug);
+        Category saved = categoryRepository.save(builder.build());
 
-        Category savedCategory = categoryRepository.save(category);
-        log.info("Category created successfully with ID: {}", savedCategory.getId());
+        auditLogService.log(AuditLogEntry.builder()
+                .action(AuditAction.CATEGORY_CREATED)
+                .entityType("CATEGORY")
+                .entityPublicId(saved.getPublicId())
+                .actorPublicId(actorUserId)
+                .status(AuditLogEntry.STATUS_SUCCESS)
+                .build());
 
-        return categoryMapper.toSimpleResponse(savedCategory);
+        log.info("Category created: slug={}", saved.getSlug());
+        return buildDetail(saved);
     }
 
     @Override
     @Transactional
-    @CacheEvict(value = "categories", allEntries = true)
-    public CategoryResponse update(UUID id, CategoryCreateRequest request) {
-        log.info("Updating category with ID: {}", id);
-
-        Category category = findCategoryById(id);
+    public CategoryDetailResponse updateCategory(UUID categoryPublicId, UpdateCategoryRequest request, UUID actorUserId) {
+        Category category = resolveCategory(categoryPublicId);
 
         if (request.getName() != null && !request.getName().equals(category.getName())) {
             String newSlug = generateSlug(request.getName());
-            if (!newSlug.equals(category.getSlug()) &&
-                    categoryRepository.existsBySlug(newSlug)) {
-                newSlug = generateUniqueSlug(newSlug);
+            if (!newSlug.equals(category.getSlug())
+                    && slugExists(newSlug, category.getTaxonomyId())) {
+                newSlug = generateUniqueSlug(newSlug, category.getTaxonomyId());
             }
+            category.setName(request.getName());
             category.setSlug(newSlug);
         }
+        if (request.getDescription() != null) category.setDescription(request.getDescription());
+        if (request.getVisibility() != null)  category.setVisibility(request.getVisibility());
+        if (request.getSortOrder() != null)   category.setSortOrder(request.getSortOrder());
+        if (request.getMediaId() != null)     category.setMediaId(request.getMediaId());
 
-        categoryMapper.updateEntityFromRequest(request, category);
+        categoryRepository.save(category);
 
-        Category updatedCategory = categoryRepository.save(category);
-        log.info("Category updated successfully: {}", updatedCategory.getId());
+        auditLogService.log(AuditLogEntry.builder()
+                .action(AuditAction.CATEGORY_UPDATED)
+                .entityType("CATEGORY")
+                .entityPublicId(category.getPublicId())
+                .actorPublicId(actorUserId)
+                .status(AuditLogEntry.STATUS_SUCCESS)
+                .build());
 
-        return categoryMapper.toSimpleResponse(updatedCategory);
+        log.info("Category updated: publicId={}", categoryPublicId);
+        return buildDetail(category);
     }
 
     @Override
     @Transactional
-    @CacheEvict(value = "categories", allEntries = true)
-    public void delete(UUID id) {
-        log.info("Deleting category with ID: {}", id);
+    public void moveCategory(UUID categoryPublicId, MoveCategoryRequest request, UUID actorUserId) {
+        Category category = resolveCategory(categoryPublicId);
+        Category newParent = request.getNewParentPublicId() != null
+                ? resolveCategory(request.getNewParentPublicId()) : null;
 
-        Category category = findCategoryById(id);
-        categoryRepository.delete(category);
-        log.info("Category deleted successfully: {}", id);
+        hierarchyValidator.validateMove(category, newParent);
+        category.setParentCategory(newParent);
+        categoryRepository.save(category);
+
+        auditLogService.log(AuditLogEntry.builder()
+                .action(AuditAction.CATEGORY_MOVED)
+                .entityType("CATEGORY")
+                .entityPublicId(category.getPublicId())
+                .actorPublicId(actorUserId)
+                .status(AuditLogEntry.STATUS_SUCCESS)
+                .build());
+
+        log.info("Category moved: publicId={}, newParent={}", categoryPublicId, request.getNewParentPublicId());
     }
 
-    private Category findCategoryById(UUID id) {
-        return categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found with ID: " + id));
+    @Override
+    @Transactional
+    public void deleteCategory(UUID categoryPublicId, UUID actorUserId) {
+        Category category = resolveCategory(categoryPublicId);
+        category.setStatus(CategoryStatus.DELETED);
+        category.setIsActive(false);
+        categoryRepository.save(category);
+
+        auditLogService.log(AuditLogEntry.builder()
+                .action(AuditAction.CATEGORY_DELETED)
+                .entityType("CATEGORY")
+                .entityPublicId(category.getPublicId())
+                .actorPublicId(actorUserId)
+                .status(AuditLogEntry.STATUS_SUCCESS)
+                .build());
+
+        log.info("Category soft-deleted: publicId={}", categoryPublicId);
+    }
+
+    @Override
+    public CategoryDetailResponse getCategoryByPublicId(UUID publicId) {
+        Category category = resolveCategory(publicId);
+        return buildDetail(category);
+    }
+
+    @Override
+    public CategoryDetailResponse getCategoryBySlug(String slug) {
+        Category category = categoryRepository.findBySlug(slug)
+                .orElseThrow(() -> new CategoryNotFoundException(slug));
+        return buildDetail(category);
+    }
+
+    @Override
+    public List<CategorySummaryResponse> getRootCategories(Long taxonomyId) {
+        List<CategorySummaryView> views = taxonomyId != null
+                ? summaryViewRepository.findByTaxonomyIdAndParentIdIsNullOrderBySortOrderAsc(taxonomyId)
+                : summaryViewRepository.findByParentIdIsNullAndIsActiveTrueOrderBySortOrderAsc();
+        return views.stream().map(mapper::toSummaryResponse).toList();
+    }
+
+    @Override
+    public List<CategorySummaryResponse> getChildren(UUID parentPublicId) {
+        Category parent = resolveCategory(parentPublicId);
+        return summaryViewRepository.findByParentIdOrderBySortOrderAsc(parent.getId())
+                .stream().map(mapper::toSummaryResponse).toList();
+    }
+
+    @Override
+    public List<CategoryTreeResponse> getCategoryTree(Long taxonomyId) {
+        List<Category> roots = taxonomyId != null
+                ? categoryRepository.findByTaxonomyIdAndParentCategoryIsNullOrderBySortOrderAsc(taxonomyId)
+                : categoryRepository.findByParentCategoryIsNullOrderBySortOrderAsc();
+        return roots.stream().map(this::buildTree).toList();
+    }
+
+    @Override
+    public Page<CategorySummaryResponse> searchCategories(CategorySearchRequest request, Pageable pageable) {
+        return summaryViewRepository.findAll(CategorySummarySpec.from(request), pageable)
+                .map(mapper::toSummaryResponse);
+    }
+
+    // ── private helpers ───────────────────────────────────────────────────────
+
+    private Category resolveCategory(UUID publicId) {
+        return categoryRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new CategoryNotFoundException(publicId));
+    }
+
+    private CategoryTreeResponse buildTree(Category category) {
+        List<Category> children = categoryRepository.findByParentCategory_IdOrderBySortOrderAsc(category.getId());
+        List<CategoryTreeResponse> childResponses = children.stream().map(this::buildTree).toList();
+        return mapper.toTreeResponse(category, childResponses);
+    }
+
+    private CategoryDetailResponse buildDetail(Category category) {
+        List<AttributeDefinitionResponse> attributes = attributeDefinitionRepository
+                .findByCategoryIdAndIsActiveTrueOrderBySortOrderAsc(category.getId())
+                .stream()
+                .map(def -> {
+                    var options = attributeOptionRepository
+                            .findByAttributeDefinitionIdAndIsActiveTrueOrderBySortOrderAsc(def.getId())
+                            .stream().map(mapper::toAttributeOptionResponse).toList();
+                    return mapper.toAttributeDefinitionResponse(def, options);
+                })
+                .toList();
+
+        List<CategorySummaryResponse> children = summaryViewRepository
+                .findByParentIdOrderBySortOrderAsc(category.getId())
+                .stream().map(mapper::toSummaryResponse).toList();
+
+        return mapper.toDetailResponse(category, attributes, children);
+    }
+
+    private String resolveSlug(String requested, String name, Long taxonomyId) {
+        String base = (requested != null && !requested.isBlank()) ? requested : generateSlug(name);
+        if (slugExists(base, taxonomyId)) {
+            return generateUniqueSlug(base, taxonomyId);
+        }
+        return base;
+    }
+
+    private boolean slugExists(String slug, Long taxonomyId) {
+        return taxonomyId != null
+                ? categoryRepository.existsBySlugAndTaxonomyId(slug, taxonomyId)
+                : categoryRepository.existsBySlug(slug);
     }
 
     private String generateSlug(String name) {
@@ -127,104 +251,12 @@ public class CategoryServiceImpl implements CategoryService {
                 .trim();
     }
 
-    private String generateUniqueSlug(String baseSlug) {
-        String uniqueSlug = baseSlug;
-        int counter = 1;
-
-        while (categoryRepository.existsBySlug(uniqueSlug)) {
-            uniqueSlug = baseSlug + "-" + counter;
-            counter++;
+    private String generateUniqueSlug(String base, Long taxonomyId) {
+        String candidate = base;
+        int counter = 2;
+        while (slugExists(candidate, taxonomyId)) {
+            candidate = base + "-" + counter++;
         }
-
-        return uniqueSlug;
-    }
-
-    private CategoryResponse buildTree(Category category) {
-        CategoryResponse response = categoryMapper.toSimpleResponse(category);
-        List<CategoryResponse> children = category.getSubcategories().stream()
-                .map(this::buildTree)
-                .toList();
-        response.setChildren(children);
-        return response;
-    }
-
-    // ==================== GraphQL Resolver Methods ====================
-
-    @Override
-    public CategoryResponse mapToResponse(Category category) {
-        return categoryMapper.toSimpleResponse(category);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<CategoryResponse> getAllCategories(Pageable pageable) {
-        return categoryRepository.findAll(pageable)
-                .map(categoryMapper::toSimpleResponse);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public CategoryResponse getCategoryById(UUID id) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found with ID: " + id));
-        return categoryMapper.toSimpleResponse(category);
-    }
-
-    @Transactional
-    public CategoryResponse createCategory(CategoryCreateRequest request) {
-        log.info("Creating new category via GraphQL: {}", request.getName());
-
-        String slug = generateSlug(request.getName());
-        if (categoryRepository.existsBySlug(slug)) {
-            slug = generateUniqueSlug(slug);
-        }
-
-        Category category = categoryMapper.toEntityFromRequest(request);
-        category.setSlug(slug);
-
-        Category savedCategory = categoryRepository.save(category);
-        log.info("Category created successfully with ID: {}", savedCategory.getId());
-
-        return categoryMapper.toSimpleResponse(savedCategory);
-    }
-
-    @Override
-    @Cacheable(value = "categories", key = "'active'")
-    public List<CategoryResponse> findActiveCategories() {
-        log.debug("Fetching active categories");
-        return categoryRepository.findByIsActive(true).stream()
-                .map(categoryMapper::toSimpleResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional
-    @CacheEvict(value = "categories", allEntries = true)
-    public CategoryResponse updateStatus(UUID id, Boolean isActive) {
-        log.info("Updating category {} status to: {}", id, isActive);
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found with ID: " + id));
-        category.setIsActive(isActive);
-        Category saved = categoryRepository.save(category);
-        log.info("Category {} status updated to: {}", id, isActive);
-        return categoryMapper.toSimpleResponse(saved);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Map<String, Object> getCategoryStats() {
-        log.debug("Fetching category statistics");
-        long total = categoryRepository.count();
-        long active = categoryRepository.countActiveCategories();
-        long subcategories = categoryRepository.countSubcategories();
-        long parentCategories = categoryRepository.countParentCategories();
-
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("totalCategories", total);
-        stats.put("activeCategories", active);
-        stats.put("subcategories", subcategories);
-        stats.put("parentCategories", parentCategories);
-
-        return stats;
+        return candidate;
     }
 }

@@ -65,73 +65,43 @@ public class TokenValidationService {
             return ValidationResult.noToken();
         }
 
-        // Check token validation cache first (fastest path)
-        CachedAuthentication cached = tokenValidationCache.getIfPresent(jwt);
-        if (cached != null) {
-            log.debug("Token cache hit for user {}", cached.username());
-            return ValidationResult.valid(new UsernamePasswordAuthenticationToken(
-                    cached.authentication().getPrincipal(),
-                    null,
-                    cached.authentication().getAuthorities()));
-        }
-
         // ── 1. Signature / expiry (CPU, no I/O) ───────────────────────────────
         if (!jwtTokenProvider.validateToken(jwt)) {
             return ValidationResult.invalid();
         }
 
-        // ── 2. Blacklist check (Caffeine + Bloom Filter in-memory) ───────────
+        // ── 2. Blacklist check (unconditional) ────────────────────────────────
         if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
-            log.warn("Blacklisted token attempted: {}", jwt.substring(0, Math.min(20, jwt.length())));
+            log.warn("Blacklisted token attempted");
             return ValidationResult.reject(
                     new BadCredentialsException("Token has been revoked. Please login again."));
         }
 
+        // ── 3. Token-version check (unconditional) ────────────────────────────
         UUID userId = jwtTokenProvider.getUserIdFromToken(jwt);
-
-        // ── 3. Token-version check (Caffeine in-memory) ───────────────────────
-        Long userTokenVersion = tokenBlacklistService.getUserTokenVersion(userId);
-        if (userTokenVersion != null
-                && !tokenBlacklistService.isUserTokenVersionValid(userId, userTokenVersion)) {
+        long issuedAt = jwtTokenProvider.getIssuedAtMillis(jwt);
+        if (!tokenBlacklistService.isUserTokenVersionValid(userId, issuedAt)) {
             log.warn("Token version invalid for user: {}", userId);
             return ValidationResult.reject(
                     new InsufficientAuthenticationException(
                             "Session has been invalidated. Please login again."));
         }
 
-        // ── 4. Load UserPrincipal – single DB call, result is cached ──────────
+        // ── 4. Load principal — @Cacheable("userPrincipals") handles DB caching;
+        //       evicted on password change, lock/unlock, role update via evictPrincipal()
         UserPrincipal principal = loadPrincipal(userId);
 
-        // ── 5. Account-lock (from cached principal, no extra I/O) ─────────────
+        // ── 5. Account-lock check ─────────────────────────────────────────────
         if (principal.isAccountLocked()) {
             log.warn("Locked account attempted: {}", userId);
             return ValidationResult.reject(
                     new LockedException("Account is locked. Please contact support."));
         }
 
-        // ── 6. Password-change timestamp check (requires passwordChanged claim in token) ──────────────
-        // Note: This check requires passwordChanged claim to be added to JWT token
-        // Currently disabled - can be enabled once token includes passwordChanged claim
-        // Long tokenPasswordChangedAt   = jwtTokenProvider.getPasswordChangedAtFromToken(jwt);
-        // Long principalPasswordChanged = principal.getLastPasswordChangeEpoch();
-        // if (tokenPasswordChangedAt != null && principalPasswordChanged != null
-        //         && tokenPasswordChangedAt < principalPasswordChanged) {
-        //     log.warn("Token predates password change for user: {}", userId);
-        //     return ValidationResult.reject(
-        //             new CredentialsExpiredException(
-        //                     "Password has been changed. Please login again."));
-        // }
-
-        // ── All checks passed – build the Authentication object ───────────────
-        Authentication auth = new UsernamePasswordAuthenticationToken(
-                principal, null, principal.getAuthorities());
-        
-        // Cache the successful validation result
-        String username = principal.getUsername();
-        tokenValidationCache.put(jwt, CachedAuthentication.create(auth, userId, username));
-        
-        log.debug("JWT validated and cached for user {}", userId);
-        return ValidationResult.valid(auth);
+        // ── All checks passed ─────────────────────────────────────────────────
+        log.debug("JWT validated for user {}", userId);
+        return ValidationResult.valid(
+                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
     }
 
     /**
@@ -153,7 +123,7 @@ public class TokenValidationService {
     /**
      * Evicts the cached {@link UserPrincipal} for {@code userId}.
      * Call this after any operation that changes the user's security-relevant
-c     * state: password change, lock/unlock, role update, logout-all.
+     * state: password change, lock/unlock, role update, logout-all.
      *
      * @param userId The user's unique identifier (UUID)
      */

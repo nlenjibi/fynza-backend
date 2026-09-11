@@ -1,28 +1,52 @@
 package ecommerce.common.security;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
+import ecommerce.common.cache.CacheProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @DisplayName("TokenBlacklistService Tests")
+@ExtendWith(MockitoExtension.class)
 class TokenBlacklistServiceTest {
 
-    private TokenBlacklistService tokenBlacklistService;
-    private BloomFilterService bloomFilterService;
+    @Mock private RedisTemplate<String, Object> redisTemplate;
+    @Mock private ValueOperations<String, Object> valueOps;
+    @Mock private BloomFilterService bloomFilterService;
+    @Mock private CacheProperties cacheProperties;
+    @Mock private CacheProperties.Redis redisProps;
+
+    private TokenBlacklistService service;
+    private final Map<String, Object> redisStore = new HashMap<>();
 
     @BeforeEach
     void setUp() {
-        bloomFilterService = mock(BloomFilterService.class);
-        tokenBlacklistService = new TokenBlacklistService(10000, 24, bloomFilterService);
+        when(cacheProperties.getRedis()).thenReturn(redisProps);
+        when(redisProps.getTokenBlacklistTtl()).thenReturn(Duration.ofHours(24));
+        when(redisProps.getUserTokenVersionTtl()).thenReturn(Duration.ofHours(24));
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+
+        redisStore.clear();
+        doAnswer(inv -> { redisStore.put(inv.getArgument(0), inv.getArgument(1)); return null; })
+                .when(valueOps).set(anyString(), any(), any(Duration.class));
+        doAnswer(inv -> redisStore.get(inv.<String>getArgument(0)))
+                .when(valueOps).get(anyString());
+
+        service = new TokenBlacklistService(redisTemplate, bloomFilterService, cacheProperties);
     }
 
     @Nested
@@ -33,54 +57,56 @@ class TokenBlacklistServiceTest {
         @DisplayName("Should add token to blacklist")
         void blacklistToken_ValidToken_AddsSuccessfully() {
             String token = "test-jwt-token-123";
-            long expirationTime = System.currentTimeMillis() + 3600000;
-
-            tokenBlacklistService.blacklistToken(token, expirationTime);
-
-            assertTrue(tokenBlacklistService.isTokenBlacklisted(token));
-            verify(bloomFilterService).add(anyString());
-        }
-
-        @Test
-        @DisplayName("Should check if token is blacklisted")
-        void isTokenBlacklisted_BlacklistedToken_ReturnsTrue() {
-            String token = "another-test-token";
-            long expirationTime = System.currentTimeMillis() + 3600000;
-            tokenBlacklistService.blacklistToken(token, expirationTime);
-
+            long expiry = System.currentTimeMillis() + 3_600_000;
             when(bloomFilterService.mightContain(anyString())).thenReturn(true);
 
-            boolean isBlacklisted = tokenBlacklistService.isTokenBlacklisted(token);
+            service.blacklistToken(token, expiry);
 
-            assertTrue(isBlacklisted);
+            verify(bloomFilterService).add(anyString());
+            verify(valueOps).set(anyString(), eq(Boolean.TRUE), any(Duration.class));
+            assertTrue(service.isTokenBlacklisted(token));
         }
 
         @Test
-        @DisplayName("Should return false for non-blacklisted token")
+        @DisplayName("Should return true for blacklisted token")
+        void isTokenBlacklisted_BlacklistedToken_ReturnsTrue() {
+            String token = "blacklisted-token";
+            long expiry = System.currentTimeMillis() + 3_600_000;
+            when(bloomFilterService.mightContain(anyString())).thenReturn(true);
+
+            service.blacklistToken(token, expiry);
+
+            assertTrue(service.isTokenBlacklisted(token));
+        }
+
+        @Test
+        @DisplayName("Should return false when bloom filter clears token")
         void isTokenBlacklisted_NonBlacklistedToken_ReturnsFalse() {
-            String token = "non-blacklisted-token";
-
             when(bloomFilterService.mightContain(anyString())).thenReturn(false);
-
-            boolean isBlacklisted = tokenBlacklistService.isTokenBlacklisted(token);
-
-            assertFalse(isBlacklisted);
+            assertFalse(service.isTokenBlacklisted("non-blacklisted-token"));
+            verifyNoInteractions(valueOps);
         }
 
         @Test
         @DisplayName("Should return false for null token")
         void isTokenBlacklisted_NullToken_ReturnsFalse() {
-            boolean isBlacklisted = tokenBlacklistService.isTokenBlacklisted(null);
-
-            assertFalse(isBlacklisted);
+            assertFalse(service.isTokenBlacklisted(null));
+            verifyNoInteractions(bloomFilterService, valueOps);
         }
 
         @Test
-        @DisplayName("Should handle empty token")
+        @DisplayName("Should return false for empty token")
         void isTokenBlacklisted_EmptyToken_ReturnsFalse() {
-            boolean isBlacklisted = tokenBlacklistService.isTokenBlacklisted("");
+            assertFalse(service.isTokenBlacklisted(""));
+            verifyNoInteractions(bloomFilterService, valueOps);
+        }
 
-            assertFalse(isBlacklisted);
+        @Test
+        @DisplayName("Should fail-closed when Redis is unavailable")
+        void isTokenBlacklisted_RedisUnavailable_ReturnsTrue() {
+            when(bloomFilterService.mightContain(anyString())).thenReturn(true);
+            doThrow(new RuntimeException("Redis down")).when(valueOps).get(anyString());
+            assertTrue(service.isTokenBlacklisted("any-token"));
         }
     }
 
@@ -89,35 +115,33 @@ class TokenBlacklistServiceTest {
     class TokenVersionTests {
 
         @Test
-        @DisplayName("Should invalidate user tokens by version")
-        void invalidateUserTokens_InvalidatesAllTokens() {
+        @DisplayName("Should make pre-invalidation tokens invalid")
+        void invalidateUserTokens_MakesOldTokensInvalid() {
             UUID userId = UUID.randomUUID();
+            long issuedBefore = System.currentTimeMillis() - 1000;
 
-            tokenBlacklistService.invalidateUserTokens(userId);
+            service.invalidateUserTokens(userId);
 
-            Long currentVersion = tokenBlacklistService.getUserTokenVersion(userId);
-            assertNotNull(currentVersion);
+            assertFalse(service.isUserTokenVersionValid(userId, issuedBefore));
         }
 
         @Test
-        @DisplayName("Should get token version for user")
-        void getUserTokenVersion_ReturnsCurrentVersion() {
+        @DisplayName("Should keep post-invalidation tokens valid")
+        void invalidateUserTokens_KeepsNewTokensValid() throws InterruptedException {
             UUID userId = UUID.randomUUID();
-            tokenBlacklistService.invalidateUserTokens(userId);
+            service.invalidateUserTokens(userId);
+            Thread.sleep(1);
+            long issuedAfter = System.currentTimeMillis();
 
-            Long retrievedVersion = tokenBlacklistService.getUserTokenVersion(userId);
-
-            assertNotNull(retrievedVersion);
+            assertTrue(service.isUserTokenVersionValid(userId, issuedAfter));
         }
 
         @Test
-        @DisplayName("Should return null for non-existent user version")
-        void getUserTokenVersion_NonExistentUser_ReturnsNull() {
+        @DisplayName("Should return true when no invalidation exists")
+        void noInvalidation_AnyTokenIsValid() {
             UUID userId = UUID.randomUUID();
-
-            Long version = tokenBlacklistService.getUserTokenVersion(userId);
-
-            assertNull(version);
+            assertTrue(service.isUserTokenVersionValid(userId, 0L));
+            assertTrue(service.isUserTokenVersionValid(userId, System.currentTimeMillis()));
         }
     }
 
@@ -128,24 +152,22 @@ class TokenBlacklistServiceTest {
         @Test
         @DisplayName("Should add multiple tokens to blacklist")
         void blacklistMultipleTokens_AddsAllTokens() {
-            String[] tokens = {"token1", "token2", "token3"};
-            long expirationTime = System.currentTimeMillis() + 3600000;
-
-            for (String token : tokens) {
-                tokenBlacklistService.blacklistToken(token, expirationTime);
-            }
-
+            long expiry = System.currentTimeMillis() + 3_600_000;
             when(bloomFilterService.mightContain(anyString())).thenReturn(true);
 
-            assertTrue(tokenBlacklistService.isTokenBlacklisted("token1"));
-            assertTrue(tokenBlacklistService.isTokenBlacklisted("token2"));
-            assertTrue(tokenBlacklistService.isTokenBlacklisted("token3"));
+            service.blacklistToken("token1", expiry);
+            service.blacklistToken("token2", expiry);
+            service.blacklistToken("token3", expiry);
+
+            assertTrue(service.isTokenBlacklisted("token1"));
+            assertTrue(service.isTokenBlacklisted("token2"));
+            assertTrue(service.isTokenBlacklisted("token3"));
         }
 
         @Test
-        @DisplayName("Should clear expired tokens")
-        void clearExpiredTokens_RemovesExpiredTokens() {
-            tokenBlacklistService.clearExpiredTokens();
+        @DisplayName("clearExpiredTokens should complete without error")
+        void clearExpiredTokens_IsNoOp() {
+            assertDoesNotThrow(() -> service.clearExpiredTokens());
         }
     }
 
@@ -154,49 +176,60 @@ class TokenBlacklistServiceTest {
     class TokenVersionValidationTests {
 
         @Test
-        @DisplayName("Should validate token version")
-        void isUserTokenVersionValid_ValidVersion_ReturnsTrue() {
+        @DisplayName("Token issued after invalidation should be valid")
+        void isUserTokenVersionValid_TokenAfterInvalidation_ReturnsTrue() throws InterruptedException {
             UUID userId = UUID.randomUUID();
-            tokenBlacklistService.invalidateUserTokens(userId);
-            Long currentVersion = tokenBlacklistService.getUserTokenVersion(userId);
+            service.invalidateUserTokens(userId);
+            Thread.sleep(1);
+            long issuedAt = System.currentTimeMillis();
 
-            boolean isValid = tokenBlacklistService.isUserTokenVersionValid(userId, currentVersion);
-
-            assertTrue(isValid);
+            assertTrue(service.isUserTokenVersionValid(userId, issuedAt));
         }
 
         @Test
-        @DisplayName("Should invalidate old token version")
-        void isUserTokenVersionValid_OldVersion_ReturnsFalse() {
+        @DisplayName("Token issued before invalidation should be invalid")
+        void isUserTokenVersionValid_TokenBeforeInvalidation_ReturnsFalse() {
             UUID userId = UUID.randomUUID();
-            tokenBlacklistService.invalidateUserTokens(userId);
-            Long oldVersion = tokenBlacklistService.getUserTokenVersion(userId);
-            
-            tokenBlacklistService.invalidateUserTokens(userId);
+            long issuedAt = System.currentTimeMillis() - 5000;
 
-            boolean isValid = tokenBlacklistService.isUserTokenVersionValid(userId, oldVersion);
+            service.invalidateUserTokens(userId);
 
-            assertFalse(isValid);
+            assertFalse(service.isUserTokenVersionValid(userId, issuedAt));
         }
 
         @Test
-        @DisplayName("Should return true for null version on new user")
-        void isUserTokenVersionValid_NullVersion_NewUser_ReturnsTrue() {
+        @DisplayName("Token issued before re-invalidation should be invalid")
+        void isUserTokenVersionValid_TokenBeforeReInvalidation_ReturnsFalse() throws InterruptedException {
             UUID userId = UUID.randomUUID();
+            service.invalidateUserTokens(userId);
+            Thread.sleep(1);
+            long issuedBetween = System.currentTimeMillis();
+            Thread.sleep(1);
+            service.invalidateUserTokens(userId);
 
-            boolean isValid = tokenBlacklistService.isUserTokenVersionValid(userId, null);
-
-            assertTrue(isValid);
+            assertFalse(service.isUserTokenVersionValid(userId, issuedBetween));
         }
 
         @Test
-        @DisplayName("Should return false for non-existent user with version")
-        void isUserTokenVersionValid_NonExistentUser_WithVersion_ReturnsTrue() {
+        @DisplayName("Should return true for any token when no invalidation exists")
+        void isUserTokenVersionValid_NoInvalidationStored_ReturnsTrue() {
             UUID userId = UUID.randomUUID();
+            assertTrue(service.isUserTokenVersionValid(userId, 12345L));
+            assertTrue(service.isUserTokenVersionValid(userId, 0L));
+        }
+    }
 
-            boolean isValid = tokenBlacklistService.isUserTokenVersionValid(userId, 12345L);
+    @Nested
+    @DisplayName("Stats")
+    class StatsTests {
 
-            assertTrue(isValid);
+        @Test
+        @DisplayName("getStats should return non-null stats with zero size when Redis returns null keys")
+        void getStats_RedisReturnsNull_SizeIsZero() {
+            when(redisTemplate.keys(anyString())).thenReturn(null);
+            var stats = service.getStats();
+            assertNotNull(stats);
+            assertEquals(0L, stats.currentSize());
         }
     }
 }

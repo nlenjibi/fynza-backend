@@ -16,7 +16,6 @@ import ecommerce.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -47,7 +45,7 @@ public class RefundServiceImpl implements RefundService {
     @Override
     @Transactional
     public RefundResponse createRefund(RefundRequest request, UUID customerId) {
-        Order order = orderRepository.findById(request.getOrderId())
+        Order order = orderRepository.findByPublicId(request.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         if (!order.getCustomer().getId().equals(customerId)) {
@@ -66,7 +64,10 @@ public class RefundServiceImpl implements RefundService {
             throw new IllegalArgumentException("Refund amount cannot exceed order total");
         }
 
-        UUID sellerId = order.getOrderItems().isEmpty() ? null : order.getOrderItems().get(0).getProduct().getSeller().getId();
+        // Seller association resolved from OrderItem.seller once wired
+        UUID sellerId = order.getOrderItems().isEmpty() ? null
+                : (order.getOrderItems().get(0).getSeller() != null
+                        ? order.getOrderItems().get(0).getSeller().getPublicId() : null);
 
         Refund refund = Refund.builder()
                 .refundNumber(Refund.generateRefundNumber())
@@ -90,14 +91,14 @@ public class RefundServiceImpl implements RefundService {
 
     @Override
     public RefundResponse getRefundById(UUID refundId) {
-        Refund refund = refundRepository.findById(refundId)
+        Refund refund = refundRepository.findByPublicId(refundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Refund not found"));
         return mapToResponse(refund);
     }
 
     @Override
     public RefundResponse getRefundByOrderId(UUID orderId) {
-        Refund refund = refundRepository.findByOrderId(orderId)
+        Refund refund = refundRepository.findByOrder_PublicId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Refund not found for this order"));
         return mapToResponse(refund);
     }
@@ -145,7 +146,7 @@ public class RefundServiceImpl implements RefundService {
     @Override
     @Transactional
     public RefundResponse approveRefund(UUID refundId, UUID adminId, String adminNote) {
-        Refund refund = refundRepository.findById(refundId)
+        Refund refund = refundRepository.findByPublicId(refundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Refund not found"));
 
         if (refund.getStatus() != RefundStatus.PENDING) {
@@ -170,7 +171,7 @@ public class RefundServiceImpl implements RefundService {
     @Override
     @Transactional
     public RefundResponse rejectRefund(UUID refundId, UUID adminId, String rejectionReason) {
-        Refund refund = refundRepository.findById(refundId)
+        Refund refund = refundRepository.findByPublicId(refundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Refund not found"));
 
         if (refund.getStatus() != RefundStatus.PENDING) {
@@ -198,7 +199,7 @@ public class RefundServiceImpl implements RefundService {
     @Override
     @Transactional
     public RefundResponse completeRefund(UUID refundId, String transactionId) {
-        Refund refund = refundRepository.findById(refundId)
+        Refund refund = refundRepository.findByPublicId(refundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Refund not found"));
 
         if (refund.getStatus() != RefundStatus.APPROVED) {
@@ -210,7 +211,7 @@ public class RefundServiceImpl implements RefundService {
         refund.setCompletedAt(LocalDateTime.now());
 
         Refund saved = refundRepository.save(refund);
-        log.info("Refund completed: {} with transaction: {}", saved.getRefundNumber(), transactionId);
+        log.info("Refund completed: {} with transaction: {}", saved.getRefundNumber(), transactionId != null ? transactionId.replace('\n', '_').replace('\r', '_') : null);
 
         return mapToResponse(saved);
     }
@@ -318,9 +319,9 @@ public class RefundServiceImpl implements RefundService {
         }
 
         return RefundResponse.builder()
-                .id(refund.getId())
+                .id(refund.getPublicId())
                 .refundNumber(refund.getRefundNumber())
-                .orderId(order.getId())
+                .orderId(order.getPublicId())
                 .orderNumber(order.getOrderNumber())
                 .customerId(refund.getCustomerId())
                 .customerName(customerName)
@@ -338,8 +339,8 @@ public class RefundServiceImpl implements RefundService {
                 .reviewedBy(refund.getReviewedBy())
                 .completedAt(refund.getCompletedAt())
                 .transactionId(refund.getTransactionId())
-                .createdAt(refund.getCreatedAt())
-                .updatedAt(refund.getUpdatedAt())
+                .createdAt(refund.getCreatedAt() != null ? refund.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
+                .updatedAt(refund.getUpdatedAt() != null ? refund.getUpdatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 }

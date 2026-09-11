@@ -1,20 +1,46 @@
 package ecommerce.modules.product.mapper;
 
-import ecommerce.modules.product.dto.ProductResponse;
+import ecommerce.modules.product.dto.response.ProductResponse;
+import ecommerce.modules.product.dto.response.ProductVariantResponse;
 import ecommerce.modules.product.entity.Product;
-import org.mapstruct.*;
+import ecommerce.modules.product.entity.ProductVariant;
+import org.springframework.stereotype.Component;
 
-import java.util.List;
+@Component
+public class ProductMapper {
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface ProductMapper {
-
-    ProductResponse toResponse(Product product);
-
-
-    default List<String> mapImagesToUrls(List<ecommerce.modules.product.entity.ProductImage> images) {
-        if (images == null) return null;
-        return images.stream().map(ecommerce.modules.product.entity.ProductImage::getImageUrl).toList();
+    public ProductResponse toResponse(Product p) {
+        return ProductResponse.builder()
+                .id(p.getId())
+                .productNumber(p.getProductNumber())
+                .storeId(p.getStoreId())
+                .sellerId(p.getSellerId())
+                .name(p.getName())
+                .slug(p.getSlug())
+                .brand(p.getBrand())
+                .sku(p.getSku())
+                .description(p.getDescription())
+                .productType(p.getProductType())
+                .status(p.getStatus())
+                .visibility(p.getVisibility())
+                .createdAt(p.getCreatedAt())
+                .updatedAt(p.getUpdatedAt())
+                .build();
     }
 
+    public ProductVariantResponse toVariantResponse(ProductVariant v) {
+        return ProductVariantResponse.builder()
+                .id(v.getId())
+                .productId(v.getProductId())
+                .sku(v.getSku())
+                .barcode(v.getBarcode())
+                .variantName(v.getVariantName())
+                .variantStatus(v.getVariantStatus())
+                .size(v.getSize())
+                .color(v.getColor())
+                .isActive(v.getIsActive())
+                .createdAt(v.getCreatedAt())
+                .updatedAt(v.getUpdatedAt())
+                .build();
+    }
 }

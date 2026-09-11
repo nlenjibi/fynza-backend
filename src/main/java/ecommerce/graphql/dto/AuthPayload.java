@@ -10,9 +10,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AuthPayload {
-    private String accessToken;
-    private String refreshToken;
-    private String tokenType;
-    private Long   expiresIn;
+    private String   accessToken;
+    private String   refreshToken;
+    private String   tokenType;
+    private Long     expiresIn;
     private AuthUser user;
+    @Builder.Default
+    private boolean  mfaRequired = false;
+    private String   mfaChallengeToken;
 }

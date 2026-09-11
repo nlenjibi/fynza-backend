@@ -7,5 +7,25 @@
 
     <include file="changes/001-initial-schema.sql" relativeToChangelogFile="true"/>
     <include file="changes/002-seed-data.sql" relativeToChangelogFile="true"/>
+    <include file="changes/003-verification-tokens.sql" relativeToChangelogFile="true"/>
+    <include file="changes/004-mfa-columns.sql" relativeToChangelogFile="true"/>
+    <include file="changes/005-linked-identities.sql" relativeToChangelogFile="true"/>
+    <include file="changes/006-seller-notification-settings.sql" relativeToChangelogFile="true"/>
+    <include file="changes/007-authz-permissions.sql" relativeToChangelogFile="true"/>
+    <include file="changes/008-authz-roles.sql" relativeToChangelogFile="true"/>
+    <include file="changes/009-authz-user-roles.sql" relativeToChangelogFile="true"/>
+    <include file="changes/010-user-profile-columns.sql" relativeToChangelogFile="true"/>
+    <include file="changes/011-customer-module.sql"      relativeToChangelogFile="true"/>
+    <include file="changes/012-customer-permissions.sql" relativeToChangelogFile="true"/>
+    <include file="changes/013-customer-views.sql"       relativeToChangelogFile="true"/>
+    <include file="changes/014-seller-management.sql"    relativeToChangelogFile="true"/>
+    <include file="changes/015-store-module.sql"         relativeToChangelogFile="true"/>
+    <include file="changes/016-store-permissions.sql"    relativeToChangelogFile="true"/>
+    <include file="changes/017-store-views.sql"          relativeToChangelogFile="true"/>
+    <include file="changes/018-products-refactor.sql"    relativeToChangelogFile="true"/>
+    <include file="changes/019-product-extensions.sql"   relativeToChangelogFile="true"/>
+    <include file="changes/020-product-permissions.sql"  relativeToChangelogFile="true"/>
+    <include file="changes/021-category-refactor.sql"    relativeToChangelogFile="true"/>
+    <include file="changes/022-category-permissions.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

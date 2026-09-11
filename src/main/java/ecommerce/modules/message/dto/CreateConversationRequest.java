@@ -2,7 +2,6 @@ package ecommerce.modules.message.dto;
 
 import ecommerce.common.enums.ConversationCategory;
 import ecommerce.common.enums.MessagePriority;
-import ecommerce.common.enums.MessageStatus;
 import ecommerce.common.enums.MessageType;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
