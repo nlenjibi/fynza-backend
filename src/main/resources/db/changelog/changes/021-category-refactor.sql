@@ -22,11 +22,15 @@ VALUES (gen_random_uuid(), 'Fynza Marketplace', 'fynza-marketplace', 'Default Fy
 --changeset fynza:021-02 labels:category
 -- Add new columns to categories
 ALTER TABLE categories
-    ADD COLUMN IF NOT EXISTS taxonomy_id  BIGINT      REFERENCES taxonomies(id),
+    ADD COLUMN IF NOT EXISTS public_id    UUID         DEFAULT gen_random_uuid() UNIQUE,
+    ADD COLUMN IF NOT EXISTS taxonomy_id  BIGINT       REFERENCES taxonomies(id),
     ADD COLUMN IF NOT EXISTS status       VARCHAR(30)  NOT NULL DEFAULT 'ACTIVE',
     ADD COLUMN IF NOT EXISTS visibility   VARCHAR(30)  NOT NULL DEFAULT 'PUBLIC',
     ADD COLUMN IF NOT EXISTS sort_order   INT          NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS media_id     VARCHAR(255);
+
+-- Ensure public_id is populated for any existing rows (back-fill)
+UPDATE categories SET public_id = gen_random_uuid() WHERE public_id IS NULL;
 
 -- Back-fill taxonomy_id for existing rows
 UPDATE categories SET taxonomy_id = (SELECT id FROM taxonomies WHERE code = 'fynza-marketplace' LIMIT 1)
