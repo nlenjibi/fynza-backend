@@ -1,6 +1,8 @@
 package ecommerce.modules.category.repository;
 
 import ecommerce.modules.category.entity.Category;
+import ecommerce.modules.category.enums.CategoryStatus;
+import ecommerce.modules.category.enums.CategoryVisibility;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -20,20 +22,28 @@ public interface CategoryRepository extends JpaRepository<Category, Long>, JpaSp
 
     boolean existsBySlug(String slug);
 
-    List<Category> findByParentCategoryId(Long parentCategoryId);
+    boolean existsBySlugAndTaxonomyId(String slug, Long taxonomyId);
 
-    @Query("SELECT c FROM Category c WHERE c.parentCategory IS NULL")
-    List<Category> findRootCategories();
+    List<Category> findByParentCategoryIsNullAndStatusAndVisibilityOrderBySortOrderAsc(
+            CategoryStatus status, CategoryVisibility visibility);
 
-    @Query("SELECT c FROM Category c WHERE c.isActive = :isActive")
-    List<Category> findByIsActive(@Param("isActive") Boolean isActive);
+    List<Category> findByParentCategoryIsNullOrderBySortOrderAsc();
+
+    List<Category> findByParentCategory_IdOrderBySortOrderAsc(Long parentId);
+
+    List<Category> findByTaxonomyIdAndParentCategoryIsNullOrderBySortOrderAsc(Long taxonomyId);
+
+    long countByParentCategory_Id(Long parentId);
 
     @Query("SELECT COUNT(c) FROM Category c WHERE c.isActive = true")
     long countActiveCategories();
 
-    @Query("SELECT COUNT(c) FROM Category c WHERE c.parentCategory IS NOT NULL")
-    long countSubcategories();
-
     @Query("SELECT COUNT(c) FROM Category c WHERE c.parentCategory IS NULL")
-    long countParentCategories();
+    long countRootCategories();
+
+    @Query("SELECT c FROM Category c WHERE c.isActive = :isActive")
+    List<Category> findByIsActive(@Param("isActive") Boolean isActive);
+
+    @Query("SELECT c FROM Category c WHERE c.parentCategory IS NULL AND c.status = 'ACTIVE' ORDER BY c.sortOrder ASC")
+    List<Category> findActiveRootCategories();
 }
