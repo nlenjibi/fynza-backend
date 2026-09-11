@@ -1,70 +1,169 @@
 # =============================================================================
-# Category GraphQL Schema
-# Covers: Public category browsing, Admin/Seller category management
+# Category GraphQL Schema  —  READS ONLY (all writes go through REST)
 # =============================================================================
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Types
-# ─────────────────────────────────────────────────────────────────────────────
+# ─── Enums ───────────────────────────────────────────────────────────────────
 
-type Category {
-    id: ID!
+enum CategoryStatus {
+    DRAFT
+    ACTIVE
+    INACTIVE
+    ARCHIVED
+    DELETED
+}
+
+enum CategoryVisibility {
+    PUBLIC
+    PRIVATE
+    UNLISTED
+}
+
+enum AttributeDataType {
+    TEXT
+    NUMBER
+    DECIMAL
+    BOOLEAN
+    DATE
+    ENUM
+    MULTI_SELECT
+}
+
+enum CategorySuggestionStatus {
+    PENDING
+    APPROVED
+    REJECTED
+}
+
+# ─── Types ───────────────────────────────────────────────────────────────────
+
+type CategorySummary {
+    publicId: ID!
+    taxonomyId: Long
     name: String!
     slug: String!
     description: String
-    parentCategoryId: ID
-    image: String
-    featured: Boolean!
+    status: CategoryStatus!
+    visibility: CategoryVisibility!
+    sortOrder: Int!
+    mediaId: String
     isActive: Boolean!
-    children: [Category!]!
-    createdAt: DateTime!
-    updatedAt: DateTime!
+    productCount: Long!
+    activeProductCount: Long!
+    childCategoryCount: Long!
+    createdAt: String!
+    updatedAt: String!
 }
 
-type CategoryPage {
-    content: [Category!]!
+type CategoryTree {
+    publicId: ID!
+    name: String!
+    slug: String!
+    mediaId: String
+    status: CategoryStatus!
+    visibility: CategoryVisibility!
+    sortOrder: Int!
+    children: [CategoryTree!]!
+}
+
+type AttributeOption {
+    publicId: ID!
+    value: String!
+    label: String!
+    sortOrder: Int!
+    isActive: Boolean!
+}
+
+type AttributeDefinition {
+    publicId: ID!
+    name: String!
+    code: String!
+    dataType: AttributeDataType!
+    unit: String
+    required: Boolean!
+    filterable: Boolean!
+    searchable: Boolean!
+    variantDefining: Boolean!
+    sortOrder: Int!
+    isActive: Boolean!
+    options: [AttributeOption!]!
+}
+
+type CategoryDetail {
+    publicId: ID!
+    taxonomyId: Long
+    parentCategoryPublicId: ID
+    name: String!
+    slug: String!
+    description: String
+    status: CategoryStatus!
+    visibility: CategoryVisibility!
+    sortOrder: Int!
+    mediaId: String
+    isActive: Boolean!
+    createdAt: String!
+    updatedAt: String!
+    attributes: [AttributeDefinition!]!
+    children: [CategorySummary!]!
+}
+
+type CategoryStatusHistoryEntry {
+    publicId: ID!
+    previousStatus: CategoryStatus
+    newStatus: CategoryStatus!
+    reason: String
+    changedBy: ID
+    createdAt: String!
+}
+
+type CategorySuggestion {
+    publicId: ID!
+    name: String!
+    description: String
+    parentCategoryId: Long
+    reason: String
+    status: CategorySuggestionStatus!
+    requestedBy: ID!
+    reviewedBy: ID
+    reviewedAt: String
+    createdAt: String!
+}
+
+type CategorySummaryPage {
+    content: [CategorySummary!]!
     pageInfo: PageInfo!
 }
 
-type CategoryStats {
-    totalCategories: Long!
-    activeCategories: Long!
-    featuredCategories: Long!
-    rootCategories: Long!
+type CategorySuggestionPage {
+    content: [CategorySuggestion!]!
+    pageInfo: PageInfo!
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Inputs
-# ─────────────────────────────────────────────────────────────────────────────
-
-input CategoryFilterInput {
-    name: String
-    description: String
-    isActive: Boolean
-    featured: Boolean
-    hasProducts: Boolean
-    minOrder: Int
-    maxOrder: Int
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Queries
-# ─────────────────────────────────────────────────────────────────────────────
+# ─── Queries ─────────────────────────────────────────────────────────────────
 
 extend type Query {
 
-    # ── Public Category Queries ──────────────────────────────────────────
-    category(id: ID!): Category
-    categories(pagination: PageInput): CategoryPage!
-    activeCategories: [Category!]!
-    categoryTree: [Category!]!
-    featuredCategories: [Category!]!
+    # Public
+    category(publicId: ID!): CategoryDetail
+    categoryBySlug(slug: String!): CategoryDetail
+    rootCategories(taxonomyId: Long): [CategorySummary!]!
+    categoryChildren(parentPublicId: ID!): [CategorySummary!]!
+    categoryTree(taxonomyId: Long): [CategoryTree!]!
+    categories(
+        query: String
+        status: CategoryStatus
+        visibility: CategoryVisibility
+        taxonomyId: Long
+        isActive: Boolean
+        page: PageInput
+    ): CategorySummaryPage!
 
-    # ── Filtered Category Queries ────────────────────────────────────────
-    filteredCategories(filter: CategoryFilterInput, pagination: PageInput): CategoryPage!
-    rootCategories(featured: Boolean, pagination: PageInput): CategoryPage!
+    # Attributes (public — for product listing)
+    categoryAttributes(categoryPublicId: ID!): [AttributeDefinition!]!
 
-    # ── Admin Queries (ADMIN) ────────────────────────────────────────────
-    categoryStats: CategoryStats!
+    # Admin
+    categoryStatusHistory(categoryPublicId: ID!): [CategoryStatusHistoryEntry!]!
+    categorySuggestions(status: CategorySuggestionStatus, page: PageInput): CategorySuggestionPage!
+
+    # Seller / authenticated
+    myCategorySuggestions(page: PageInput): CategorySuggestionPage!
 }
-
