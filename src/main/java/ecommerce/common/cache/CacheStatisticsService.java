@@ -1,8 +1,7 @@
-package ecommerce.common.config;
+package ecommerce.common.cache;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.core.Cursor;
@@ -19,16 +18,15 @@ import java.util.Properties;
  * Provides per-cache key counts (via non-blocking Redis SCAN) and
  * global hit/miss metrics (via Redis INFO stats).
  *
- * Active only when cache.level=redis so the StringRedisTemplate is connected
- * to the same Redis instance backing the cache manager.
+ * Redis INFO keyspace_hits / keyspace_misses are server-wide totals —
+ * Redis does not expose per-prefix stats natively.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "cache.level", havingValue = "redis")
 public class CacheStatisticsService {
 
-    private final CacheManager      cacheManager;
+    private final CacheManager cacheManager;
     private final StringRedisTemplate redis;
 
     public Map<String, CacheStats> getAllCacheStatistics() {
@@ -40,6 +38,7 @@ public class CacheStatisticsService {
     }
 
     public CacheStats getCacheStats(Cache cache) {
+        if (cache == null) return null;
         return buildStats(cache.getName(), fetchGlobalStats());
     }
 
@@ -72,25 +71,26 @@ public class CacheStatisticsService {
 
     /**
      * Non-blocking SCAN to count keys in a single cache region.
-     * Spring's default Redis cache key format is "{cacheName}::*".
+     * Spring RedisCacheManager key format with prefix "fynza:" is: fynza:{cacheName}::{key}
      */
     private long countKeys(String cacheName) {
-        String pattern = cacheName + "::*";
+        String pattern = "fynza:" + cacheName + "::*";
         try {
-            return redis.execute((RedisCallback<Long>) connection -> {
-                long count = 0;
+            Long count = redis.execute((RedisCallback<Long>) connection -> {
+                long c = 0;
                 ScanOptions opts = ScanOptions.scanOptions()
                         .match(pattern).count(100).build();
                 try (Cursor<byte[]> cursor = connection.keyCommands().scan(opts)) {
                     while (cursor.hasNext()) {
                         cursor.next();
-                        count++;
+                        c++;
                     }
                 } catch (Exception e) {
                     log.warn("SCAN interrupted for cache '{}': {}", cacheName, e.getMessage());
                 }
-                return count;
+                return c;
             });
+            return count != null ? count : 0L;
         } catch (Exception e) {
             log.warn("Could not count keys for cache '{}': {}", cacheName, e.getMessage());
             return 0L;
@@ -99,7 +99,6 @@ public class CacheStatisticsService {
 
     /**
      * Reads global keyspace_hits / keyspace_misses / evicted_keys from Redis INFO.
-     * These are server-wide totals — Redis does not expose per-prefix stats.
      */
     private GlobalRedisStats fetchGlobalStats() {
         try {

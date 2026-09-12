@@ -1,7 +1,7 @@
 package ecommerce.common.monitoring;
 
 import ecommerce.common.response.ApiResponse;
-import ecommerce.common.util.CacheStatisticsService;
+import ecommerce.common.cache.CacheStatisticsService;
 import ecommerce.common.util.DatabaseMetricsService;
 import ecommerce.common.util.MetricsService;
 import ecommerce.common.util.SecurityEventService;
