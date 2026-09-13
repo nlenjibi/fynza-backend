@@ -6,7 +6,6 @@ import ecommerce.modules.inventory.dto.response.InventoryLocationResponse;
 import ecommerce.modules.inventory.dto.response.InventoryResponse;
 import ecommerce.modules.inventory.dto.response.InventoryTransferResponse;
 import ecommerce.modules.inventory.dto.response.StockMovementResponse;
-import ecommerce.modules.inventory.repository.InventoryRepository;
 import ecommerce.modules.inventory.repository.StockMovementRepository;
 import ecommerce.modules.inventory.service.InventoryLocationService;
 import ecommerce.modules.inventory.service.InventoryService;
