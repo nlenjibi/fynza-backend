@@ -88,4 +88,7 @@ public final class CacheNames {
     public static final String FAQS             = "faqs";
     public static final String SEARCH_FILTERS   = "searchFilters";
     public static final String SETTINGS         = "settings";
+
+    // Inventory
+    public static final String INVENTORY_AVAILABILITY = "inventory-availability";
 }

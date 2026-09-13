@@ -62,8 +62,21 @@ public final class FynzaPermissions {
     public static final String CATEGORY_SUGGESTION_CREATE   = "category.suggestion.create";
 
     // ── Inventory ─────────────────────────────────────────────────────────────
-    public static final String INVENTORY_VIEW   = "inventory.view";
-    public static final String INVENTORY_MANAGE = "inventory.manage";
+    public static final String INVENTORY_READ            = "inventory.read";
+    public static final String INVENTORY_CREATE          = "inventory.create";
+    public static final String INVENTORY_UPDATE          = "inventory.update";
+    public static final String INVENTORY_ADJUST          = "inventory.adjust";
+    public static final String INVENTORY_RESERVE         = "inventory.reserve";
+    public static final String INVENTORY_RELEASE         = "inventory.release";
+    public static final String INVENTORY_HISTORY_READ    = "inventory.history.read";
+    public static final String INVENTORY_LOCATION_READ   = "inventory.location.read";
+    public static final String INVENTORY_LOCATION_CREATE = "inventory.location.create";
+    public static final String INVENTORY_LOCATION_UPDATE = "inventory.location.update";
+    public static final String INVENTORY_LOCATION_DELETE = "inventory.location.delete";
+    public static final String INVENTORY_TRANSFER_CREATE = "inventory.transfer.create";
+    public static final String INVENTORY_TRANSFER_APPROVE= "inventory.transfer.approve";
+    public static final String INVENTORY_TRANSFER_RECEIVE= "inventory.transfer.receive";
+    public static final String INVENTORY_TRANSFER_CANCEL = "inventory.transfer.cancel";
 
     // ── Customer ──────────────────────────────────────────────────────────────
     public static final String CUSTOMER_READ_OWN    = "customer.read.own";
