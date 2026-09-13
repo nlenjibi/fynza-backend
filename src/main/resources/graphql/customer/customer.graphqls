@@ -1,0 +1,90 @@
+enum CustomerStatus {
+    PROSPECT
+    ACTIVE
+    INACTIVE
+    SUSPENDED
+    BLOCKED
+    DELETED
+}
+
+enum CustomerAddressType {
+    HOME
+    OFFICE
+    OTHER
+}
+
+type CustomerProfile {
+    id: ID!
+    customerNumber: String!
+    status: CustomerStatus!
+    firstName: String!
+    lastName: String!
+    email: String!
+    phone: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    preferences: CustomerPreferences
+    addresses: [CustomerAddress!]!
+}
+
+type CustomerPreferences {
+    id: ID!
+    language: String!
+    currency: String!
+    marketingOptIn: Boolean!
+    emailNotifications: Boolean!
+    smsNotifications: Boolean!
+    pushNotifications: Boolean!
+    updatedAt: DateTime!
+}
+
+type CustomerAddress {
+    id: ID!
+    recipientName: String!
+    phoneNumber: String
+    addressLine1: String!
+    addressLine2: String
+    city: String!
+    region: String
+    country: String!
+    postalCode: String
+    latitude: Float
+    longitude: Float
+    addressType: CustomerAddressType!
+    isDefault: Boolean!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type CustomerStatusHistory {
+    id: ID!
+    previousStatus: CustomerStatus
+    newStatus: CustomerStatus!
+    reason: String
+    changedBy: ID
+    createdAt: DateTime!
+    expiresAt: DateTime
+}
+
+type CustomerPage {
+    content: [CustomerProfile!]!
+    pageInfo: PageInfo!
+}
+
+input CustomerFilterInput {
+    query: String
+    status: CustomerStatus
+    customerNumber: String
+}
+
+extend type Query {
+    # ── Self-service reads ────────────────────────────────────────────────────
+    meCustomer: CustomerProfile
+    myCustomerAddresses: [CustomerAddress!]!
+    myCustomerPreferences: CustomerPreferences
+
+    # ── Admin reads ───────────────────────────────────────────────────────────
+    customer(id: ID!): CustomerProfile
+    customers(pagination: PageInput, filter: CustomerFilterInput): CustomerPage!
+    customerStatusHistory(id: ID!): [CustomerStatusHistory!]!
+}

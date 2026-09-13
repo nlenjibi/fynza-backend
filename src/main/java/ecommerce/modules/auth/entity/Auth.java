@@ -1,12 +1,12 @@
 package ecommerce.modules.auth.entity;
 
-import ecommerce.common.base.BaseEntity;
 import ecommerce.modules.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "auth_sessions", indexes = {
@@ -19,8 +19,22 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@SuperBuilder
-public class Auth extends BaseEntity {
+@Builder
+public class Auth {
+
+    @Id
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -54,14 +68,26 @@ public class Auth extends BaseEntity {
     @Column(name = "last_activity_at")
     private LocalDateTime lastActivityAt;
 
+    @PrePersist
+    protected void onCreate() {
+        if (id == null) id = UUID.randomUUID();
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
+        if (isActive == null) isActive = true;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
+
+    public UUID getPublicId() { return id; }
+
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(expiresAt);
     }
 
     public boolean isValid() {
-        return isActive && !isExpired();
+        return Boolean.TRUE.equals(isActive) && !isExpired();
     }
-
-
-
 }

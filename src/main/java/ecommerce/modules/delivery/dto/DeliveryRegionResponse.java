@@ -24,13 +24,13 @@ public class DeliveryRegionResponse {
 
     public static DeliveryRegionResponse from(DeliveryRegion region) {
         return DeliveryRegionResponse.builder()
-                .id(region.getId())
+                .id(region.getPublicId())
                 .name(region.getName())
                 .code(region.getCode())
                 .country(region.getCountry())
                 .isActive(region.getIsActive())
-                .createdAt(region.getCreatedAt())
-                .updatedAt(region.getUpdatedAt())
+                .createdAt(region.getCreatedAt() != null ? region.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
+                .updatedAt(region.getUpdatedAt() != null ? region.getUpdatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null)
                 .build();
     }
 }

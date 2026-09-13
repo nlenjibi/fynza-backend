@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.UUID;
 
 @Repository
-public interface CouponActivityRepository extends JpaRepository<CouponActivity, UUID> {
+public interface CouponActivityRepository extends JpaRepository<CouponActivity, Long> {
 
     Page<CouponActivity> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 

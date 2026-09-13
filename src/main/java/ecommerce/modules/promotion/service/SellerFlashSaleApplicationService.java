@@ -27,7 +27,7 @@ public class SellerFlashSaleApplicationService {
 
     @Transactional
     public SellerFlashSaleApplication applyToFlashSale(UUID flashSaleId, UUID sellerId) {
-        AdminFlashSale flashSale = adminFlashSaleRepository.findById(flashSaleId)
+        AdminFlashSale flashSale = adminFlashSaleRepository.findByPublicId(flashSaleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Flash sale not found"));
 
         if (flashSale.getStatus() != AdminFlashSale.Status.ACTIVE && 
@@ -51,7 +51,7 @@ public class SellerFlashSaleApplicationService {
 
     @Transactional
     public SellerFlashSaleApplication approveApplication(UUID applicationId, UUID reviewedBy, String note) {
-        SellerFlashSaleApplication application = applicationRepository.findById(applicationId)
+        SellerFlashSaleApplication application = applicationRepository.findByPublicId(applicationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
 
         application.setStatus(Status.APPROVED);
@@ -59,7 +59,7 @@ public class SellerFlashSaleApplicationService {
         application.setReviewedAt(LocalDateTime.now());
         application.setReviewNote(note);
 
-        adminFlashSaleRepository.incrementProductCount(application.getFlashSaleId(), 1);
+        adminFlashSaleRepository.incrementProductCountByPublicId(application.getFlashSaleId(), 1);
 
         log.info("Application {} approved", applicationId);
         return applicationRepository.save(application);
@@ -67,7 +67,7 @@ public class SellerFlashSaleApplicationService {
 
     @Transactional
     public SellerFlashSaleApplication rejectApplication(UUID applicationId, UUID reviewedBy, String note) {
-        SellerFlashSaleApplication application = applicationRepository.findById(applicationId)
+        SellerFlashSaleApplication application = applicationRepository.findByPublicId(applicationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
 
         application.setStatus(Status.REJECTED);

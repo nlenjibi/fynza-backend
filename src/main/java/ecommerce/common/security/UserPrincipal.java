@@ -1,49 +1,52 @@
 package ecommerce.common.security;
 
-import ecommerce.common.enums.PaymentMethod;
 import ecommerce.common.enums.Role;
 import ecommerce.modules.user.entity.User;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 public class UserPrincipal implements UserDetails {
 
     @Getter
-    private final UUID id;
+    private final UUID id;          // UUID — the only identifier exposed in API and audit logs
+
     @Getter
     private final String email;
+
     private final String password;
     private final Boolean isActive;
     private final Boolean isLocked;
+
     @Getter
     private final Long lastPasswordChangeEpoch;
+
     @Getter
-    @Enumerated(value = EnumType.STRING)
     private final Role role;
+
     private final Collection<? extends GrantedAuthority> authorities;
 
     public UserPrincipal(User user) {
-        this.id = user.getId();
-        this.email = user.getEmail();
+        this.id       = user.getId();
+        this.email    = user.getEmail();
         this.password = user.getPassword();
         this.isActive = user.getIsActive();
         this.isLocked = user.getIsLocked();
         this.lastPasswordChangeEpoch = user.getLastPasswordChange() != null
                 ? user.getLastPasswordChange()
-                .atZone(ZoneId.systemDefault())
-                .toInstant()
-                .toEpochMilli()
+                        .atZone(ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli()
                 : null;
-        this.role = user.getRole();
+        this.role        = user.getRole();
         this.authorities = Collections.singletonList(
                 new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
         );
@@ -53,62 +56,40 @@ public class UserPrincipal implements UserDetails {
         return new UserPrincipal(user);
     }
 
-    /**
-     * Returns true if the account is locked (cannot authenticate).
-     */
+    public UserPrincipal(User user, Collection<String> permissionCodes) {
+        this.id       = user.getId();
+        this.email    = user.getEmail();
+        this.password = user.getPassword();
+        this.isActive = user.getIsActive();
+        this.isLocked = user.getIsLocked();
+        this.lastPasswordChangeEpoch = user.getLastPasswordChange() != null
+                ? user.getLastPasswordChange()
+                        .atZone(ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli()
+                : null;
+        this.role = user.getRole();
+        List<GrantedAuthority> merged = new ArrayList<>();
+        merged.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+        permissionCodes.forEach(code -> merged.add(new SimpleGrantedAuthority(code)));
+        this.authorities = Collections.unmodifiableList(merged);
+    }
+
+    public static UserPrincipal create(User user, Collection<String> permissionCodes) {
+        return new UserPrincipal(user, permissionCodes);
+    }
+
     public boolean isAccountLocked() {
         return Boolean.TRUE.equals(isLocked);
     }
 
-    public Role getRole() {
-        return role;
-    }
-
-    public Boolean getIsActive() {
-        return isActive;
-    }
-
-    public Boolean getIsLocked() {
-        return isLocked;
-    }
-
-
-
     // ── UserDetails ────────────────────────────────────────────────────────────
 
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return authorities;
-    }
-
-    @Override
-    public String getPassword() {
-        return password;
-    }
-
-    @Override
-    public String getUsername() {
-        return email;
-    }
-
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
-
-    /** Delegates to the stored isLocked flag so Spring Security honours it. */
-    @Override
-    public boolean isAccountNonLocked() {
-        return !Boolean.TRUE.equals(isLocked);
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return Boolean.TRUE.equals(isActive);
-    }
+    @Override public Collection<? extends GrantedAuthority> getAuthorities() { return authorities; }
+    @Override public String  getPassword()              { return password; }
+    @Override public String  getUsername()              { return email; }
+    @Override public boolean isAccountNonExpired()      { return true; }
+    @Override public boolean isAccountNonLocked()       { return !Boolean.TRUE.equals(isLocked); }
+    @Override public boolean isCredentialsNonExpired()  { return true; }
+    @Override public boolean isEnabled()                { return Boolean.TRUE.equals(isActive); }
 }

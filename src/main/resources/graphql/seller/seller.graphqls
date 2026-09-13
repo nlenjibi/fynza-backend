@@ -1,333 +1,130 @@
 # =============================================================================
 # Seller GraphQL Schema
-# Covers: Dashboard, Products, Orders, Reviews, Store, Settings, Analytics
+# Covers: seller profile (reads), onboarding, verification, admin management
+# REST handles all mutations (PATCH /v1/sellers/me, POST /v1/admin/sellers/*)
 # =============================================================================
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Enums
 # ─────────────────────────────────────────────────────────────────────────────
 
-enum DeliveryMethod {
-    DIRECT_ADDRESS
-    BUS_STATION
-    SHIPPING
+enum SellerStatus {
+    DRAFT
+    PENDING_VERIFICATION
+    UNDER_REVIEW
+    ACTIVE
+    SUSPENDED
+    REJECTED
+    BLOCKED
+    CLOSED
+    PENDING
+}
+
+enum SellerType {
+    INDIVIDUAL
+    BUSINESS
+    ORGANIZATION
+}
+
+enum VerificationType {
+    IDENTITY
+    BUSINESS
+    CONTACT
+    PAYOUT
+}
+
+enum VerificationItemStatus {
+    NOT_STARTED
+    PENDING
+    IN_REVIEW
+    VERIFIED
+    REJECTED
+    EXPIRED
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Dashboard Types
+# Types
 # ─────────────────────────────────────────────────────────────────────────────
 
-type SellerDashboard {
-    totalProducts: Long!
-    activeProducts: Long!
-    totalOrders: Long!
-    ordersThisMonth: Long!
-    pendingOrders: Long!
-    completedOrders: Long!
-    totalRevenue: BigDecimal!
-    monthlyRevenue: BigDecimal!
-    revenueGrowth: Float
-    averageRating: Float
-    totalCustomers: Long!
-    storeVisits: Long!
-    visitGrowth: Float
-    recentOrders: [SellerRecentOrder!]!
-    topProducts: [SellerTopProduct!]!
-}
-
-type SellerRecentOrder {
-    orderId: String!
-    orderNumber: String!
-    customerName: String
-    productName: String
-    amount: BigDecimal!
-    status: String!
-    timeAgo: String
-}
-
-type SellerTopProduct {
-    productName: String!
-    salesCount: Long!
-    revenue: BigDecimal!
-    growth: Float
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Analytics Types
-# ─────────────────────────────────────────────────────────────────────────────
-
-type SellerAnalytics {
-    totalRevenue: BigDecimal!
-    revenueGrowth: Float
-    totalOrders: Long!
-    ordersGrowth: Float
-    totalCustomers: Long!
-    customersGrowth: Float
-    averageOrderValue: BigDecimal!
-    avgOrderValueGrowth: Float
-    conversionRate: Float
-    conversionRateGrowth: Float
-    refundRate: Float
-    refundRateGrowth: Float
-    dailyOrders: [SellerDailyMetric!]!
-    monthlyRevenue: [SellerMonthlyMetric!]!
-    salesByCategory: [SellerCategorySales!]!
-    topProducts: [SellerTopProductMetric!]!
-    topCustomers: [SellerTopCustomerMetric!]!
-}
-
-type SellerDailyMetric {
-    day: String!
-    orders: Long!
-    revenue: BigDecimal!
-    customers: Long!
-}
-
-type SellerMonthlyMetric {
-    month: String!
-    revenue: BigDecimal!
-    orders: Long!
-}
-
-type SellerCategorySales {
-    category: String!
-    sales: Long!
-    revenue: BigDecimal!
-    percentage: Float
-}
-
-type SellerTopProductMetric {
-    productId: String!
-    productName: String!
-    salesCount: Long!
-    revenue: BigDecimal!
-    growth: Float
-    rating: Float
-}
-
-type SellerTopCustomerMetric {
-    customerId: String!
-    customerName: String!
-    totalOrders: Long!
-    totalSpent: BigDecimal!
-    lastOrder: String
-}
-
-type SellerSalesAnalytics {
-    totalSales: BigDecimal!
-    averageOrderValue: BigDecimal!
-    totalOrders: Long!
-    totalProductsSold: Long!
-    conversionRate: Float
-    dailySales: [SellerDailySales!]!
-    topProducts: [SellerSalesProduct!]!
-}
-
-type SellerDailySales {
-    date: String!
-    sales: BigDecimal!
-    orders: Long!
-}
-
-type SellerSalesProduct {
-    productId: String!
-    productName: String!
-    quantitySold: Long!
-    revenue: BigDecimal!
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Store Types
-# ─────────────────────────────────────────────────────────────────────────────
-
-type SellerStore {
-    id: ID!
-    storeName: String!
-    storeDescription: String
-    storeWebsite: String
-    storeLogo: String
-    storeBanner: String
+type SellerBusiness {
+    publicId: ID!
+    legalName: String
+    businessName: String
+    businessType: String
+    registrationNumber: String
+    taxIdentifier: String
+    description: String
+    website: String
     email: String
     phone: String
+    country: String
     region: String
     city: String
-    businessAddress: String
-    workingHours: String
-    facebookUrl: String
-    instagramUrl: String
-    twitterUrl: String
-    rating: BigDecimal
-    totalReviews: Int
-    totalProducts: Int
-    totalSales: Int
-    totalRevenue: BigDecimal
-    verificationStatus: String
-    businessRegistration: String
-    bankName: String
+    address: String
+    createdAt: DateTime!
+    updatedAt: DateTime!
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Review Types
-# ─────────────────────────────────────────────────────────────────────────────
-
-type SellerReviewStats {
-    totalReviews: Long!
-    pendingReviews: Long!
-    approvedReviews: Long!
-    rejectedReviews: Long!
-    averageRating: Float
-    fiveStarReviews: Long!
-    fourStarReviews: Long!
-    threeStarReviews: Long!
-    twoStarReviews: Long!
-    oneStarReviews: Long!
+type SellerVerification {
+    publicId: ID!
+    verificationType: VerificationType!
+    status: VerificationItemStatus!
+    submittedAt: DateTime
+    reviewedAt: DateTime
+    rejectionReason: String
+    expiresAt: DateTime
+    createdAt: DateTime!
+    updatedAt: DateTime!
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Settings Types
-# ─────────────────────────────────────────────────────────────────────────────
-
-type SellerPaymentSettings {
-    id: ID!
-    bankName: String
-    accountHolderName: String
-    accountNumber: String
-    branch: String
-    payoutSchedule: String
-    updatedAt: DateTime
+type SellerStatusHistoryEntry {
+    previousStatus: SellerStatus
+    newStatus: SellerStatus!
+    reason: String
+    changedBy: ID
+    expiresAt: DateTime
+    createdAt: DateTime!
 }
 
-type SellerShippingSettings {
-    id: ID!
-    returnPolicy: String
-    shippingZones: [ShippingZone!]!
-    updatedAt: DateTime
+type SellerProfile {
+    publicId: ID!
+    sellerNumber: String!
+    displayName: String
+    sellerType: SellerType!
+    status: SellerStatus!
+    business: SellerBusiness
+    verifications: [SellerVerification!]!
+    createdAt: DateTime!
+    updatedAt: DateTime!
 }
 
-type ShippingZone {
-    id: ID!
-    zoneName: String!
-    zoneDescription: String
-    region: String
-    deliveryMethod: DeliveryMethod!
-    shippingCost: BigDecimal!
-    freeShippingMin: BigDecimal
-    estimatedDays: String
-    isActive: Boolean
-    updatedAt: DateTime
+type SellerSummary {
+    publicId: ID!
+    sellerNumber: String!
+    displayName: String
+    sellerType: SellerType!
+    status: SellerStatus!
+    createdAt: DateTime!
 }
 
-type SellerNotificationSettings {
-    id: ID!
-    newOrders: Boolean
-    orderUpdates: Boolean
-    customerMessages: Boolean
-    stockAlerts: Boolean
-    paymentUpdates: Boolean
-    refundRequests: Boolean
-    promotionalEmails: Boolean
-    updatedAt: DateTime
+type SellerPage {
+    content: [SellerSummary!]!
+    totalElements: Int!
+    totalPages: Int!
+    currentPage: Int!
+    hasNextPage: Boolean!
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Inputs
 # ─────────────────────────────────────────────────────────────────────────────
 
-input SellerProductFilterInput {
-    status: String
-    categoryId: ID
-    search: String
-}
-
-input SellerStoreUpdateInput {
-    storeName: String!
-    storeDescription: String
-    storeWebsite: String
-    storeLogo: String
-    storeBanner: String
-    email: String
-    phone: String
-    region: String
-    city: String
-    businessAddress: String
-    workingHours: String
-    facebookUrl: String
-    instagramUrl: String
-    twitterUrl: String
-    businessRegistration: String
-    bankName: String
-    accountHolderName: String
-    accountNumber: String
-}
-
-input SellerPaymentSettingsInput {
-    bankName: String
-    accountHolderName: String
-    accountNumber: String
-    branch: String
-    payoutSchedule: String
-}
-
-input SellerShippingSettingsInput {
-    returnPolicy: String
-}
-
-input ShippingZoneInput {
-    zoneName: String!
-    zoneDescription: String
-    region: String!
-    deliveryMethod: DeliveryMethod!
-    shippingCost: BigDecimal!
-    freeShippingMin: BigDecimal
-    estimatedDays: String
-}
-
-input SellerNotificationSettingsInput {
-    newOrders: Boolean
-    orderUpdates: Boolean
-    customerMessages: Boolean
-    stockAlerts: Boolean
-    paymentUpdates: Boolean
-    refundRequests: Boolean
-    promotionalEmails: Boolean
-}
-
-input SellerReplyInput {
-    reply: String!
-}
-
-input SellerProductCreateInput {
-    name: String!
-    description: String
-    slug: String!
-    brand: String
-    sku: String
-    price: BigDecimal!
-    originalPrice: BigDecimal
-    discount: BigDecimal
-    categoryId: ID
-    stock: Int = 0
-    lowStockThreshold: Int = 10
-    reorderPoint: Int = 5
-    images: [String!]
-    status: String = "PENDING"
-}
-
-input SellerProductUpdateInput {
-    name: String
-    description: String
-    slug: String
-    brand: String
-    sku: String
-    price: BigDecimal
-    originalPrice: BigDecimal
-    discount: BigDecimal
-    categoryId: ID
-    stock: Int
-    lowStockThreshold: Int
-    reorderPoint: Int
-    images: [String!]
-    status: String
+input SellerFilterInput {
+    query: String
+    status: SellerStatus
+    sellerType: SellerType
+    page: Int
+    size: Int
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -336,56 +133,12 @@ input SellerProductUpdateInput {
 
 extend type Query {
 
-    # ── Dashboard (SELLER) ───────────────────────────────────────────────
-    sellerDashboard: SellerDashboard!
+    # ── Self-service (SELLER role) ────────────────────────────────────────
+    mySeller: SellerProfile!
 
-    # ── Analytics (SELLER) ───────────────────────────────────────────────
-    sellerAnalytics: SellerAnalytics!
-    sellerSalesAnalytics(days: Int = 30): SellerSalesAnalytics!
+    # ── Public / admin reads ──────────────────────────────────────────────
+    seller(id: ID!): SellerProfile!
+    sellers(filter: SellerFilterInput): SellerPage!
 
-    # ── Products (SELLER) ────────────────────────────────────────────────
-    sellerProducts(pagination: PageInput, filter: SellerProductFilterInput): ProductDto!
-
-    # ── Store (SELLER) ───────────────────────────────────────────────────
-    sellerStore: SellerStore!
-
-    # ── Reviews (SELLER) ─────────────────────────────────────────────────
-    sellerReviews(pagination: PageInput): ReviewPage!
-    sellerReviewStats: SellerReviewStats!
-
-    # ── Tags (SELLER) ────────────────────────────────────────────────────
-    sellerTags: [Tag!]!
-
-    # ── Settings (SELLER) ────────────────────────────────────────────────
-    sellerPaymentSettings: SellerPaymentSettings!
-    sellerShippingSettings: SellerShippingSettings!
-    sellerShippingZones: [ShippingZone!]!
-    sellerNotificationSettings: SellerNotificationSettings!
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Mutations
-# ─────────────────────────────────────────────────────────────────────────────
-
-extend type Mutation {
-
-    # ── Products (SELLER) ────────────────────────────────────────────────
-    createSellerProduct(input: SellerProductCreateInput!): ProductResponse!
-    updateSellerProduct(id: ID!, input: SellerProductUpdateInput!): ProductResponse!
-    deleteSellerProduct(id: ID!): Boolean!
-    assignProductTags(id: ID!, tags: [String!]!): Boolean!
-
-    # ── Store (SELLER) ───────────────────────────────────────────────────
-    updateSellerStore(input: SellerStoreUpdateInput!): SellerStore!
-
-    # ── Reviews (SELLER) ─────────────────────────────────────────────────
-    sellerReplyToReview(reviewId: ID!, input: SellerReplyInput!): Review!
-
-    # ── Settings (SELLER) ────────────────────────────────────────────────
-    updateSellerPaymentSettings(input: SellerPaymentSettingsInput!): SellerPaymentSettings!
-    updateSellerShippingSettings(input: SellerShippingSettingsInput!): SellerShippingSettings!
-    createSellerShippingZone(input: ShippingZoneInput!): ShippingZone!
-    updateSellerShippingZone(zoneId: ID!, input: ShippingZoneInput!): ShippingZone!
-    deleteSellerShippingZone(zoneId: ID!): Boolean!
-    updateSellerNotificationSettings(input: SellerNotificationSettingsInput!): SellerNotificationSettings!
+    sellerStatusHistory(sellerId: ID!): [SellerStatusHistoryEntry!]!
 }

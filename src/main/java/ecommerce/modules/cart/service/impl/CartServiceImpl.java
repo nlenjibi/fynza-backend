@@ -1,6 +1,5 @@
 package ecommerce.modules.cart.service.impl;
 
-import ecommerce.common.exception.InsufficientStockException;
 import ecommerce.common.exception.ResourceNotFoundException;
 import ecommerce.modules.cart.dto.AddToCartRequest;
 import ecommerce.modules.cart.dto.CartItemResponse;
@@ -14,10 +13,11 @@ import ecommerce.modules.cart.repository.StockReservationRepository;
 import ecommerce.modules.cart.service.CartService;
 import ecommerce.modules.coupon.entity.Coupon;
 import ecommerce.modules.coupon.repository.CouponRepository;
-import ecommerce.modules.product.dto.ProductResponse;
+import ecommerce.modules.product.dto.response.ProductResponse;
 import ecommerce.modules.product.entity.Product;
-import ecommerce.modules.product.entity.ProductImage;
 import ecommerce.modules.product.repository.ProductRepository;
+import ecommerce.modules.user.entity.User;
+import ecommerce.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,12 +35,14 @@ import java.util.UUID;
 public class CartServiceImpl implements CartService {
 
     private static final int RESERVATION_MINUTES = 15;
+    private static final int MAX_ITEM_QUANTITY = 9_999;
 
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final StockReservationRepository stockReservationRepository;
     private final CouponRepository couponRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -54,9 +56,9 @@ public class CartServiceImpl implements CartService {
     @Transactional(readOnly = true)
     public CartResponse getCartById(UUID cartId, UUID userId) {
         log.info("Fetching cart by id: {} for user: {}", cartId, userId);
-        Cart cart = cartRepository.findById(cartId)
+        Cart cart = cartRepository.findByPublicId(cartId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Cart", cartId));
-        if (!cart.getUserId().equals(userId)) {
+        if (!cart.getUser().getId().equals(userId)) {
             throw new IllegalStateException("Cart does not belong to user");
         }
         return mapToCartResponse(cart);
@@ -87,29 +89,20 @@ public class CartServiceImpl implements CartService {
         
         var product = productRepository.findById(productId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Product", productId));
-        
+
         return addToCart(cart, product, quantity);
     }
 
     private CartItemResponse addToCart(Cart cart, Product product, int quantity) {
-        int availableStock = (product.getStock() != null ? product.getStock() : 0) 
-                - (product.getReservedQuantity() != null ? product.getReservedQuantity() : 0);
-        if (availableStock < quantity) {
-            throw new InsufficientStockException(product.getName(), availableStock, quantity);
-        }
-        
-        CartItem cartItem = cartItemRepository.findByCartIdAndProductId(cart.getId(), product.getId())
+        // Stock validation delegated to inventory module — skipped here until wired
+        CartItem cartItem = cartItemRepository.findByCartIdAndProduct_Id(cart.getId(), product.getId())
                 .orElse(null);
-        
-        BigDecimal price = calculateDiscountPrice(product);
-        
+
+        // Price sourced from pricing module once available; stored as zero until wired
+        BigDecimal price = BigDecimal.ZERO;
+
         if (cartItem != null) {
-            int newQuantity = cartItem.getQuantity() + quantity;
-            int newAvailableStock = (product.getStock() != null ? product.getStock() : 0) 
-                    - (product.getReservedQuantity() != null ? product.getReservedQuantity() : 0);
-            if (newAvailableStock < newQuantity) {
-                throw new InsufficientStockException(product.getName(), newAvailableStock, newQuantity);
-            }
+            int newQuantity = (int) Math.min((long) cartItem.getQuantity() + quantity, MAX_ITEM_QUANTITY);
             cartItem.setQuantity(newQuantity);
             cartItem.setPrice(price);
             cartItem = cartItemRepository.save(cartItem);
@@ -122,21 +115,21 @@ public class CartServiceImpl implements CartService {
                     .build();
             cartItem = cartItemRepository.save(cartItem);
         }
-        
+
         createStockReservation(cartItem, product, quantity);
-        
+
         return mapToCartItemResponse(cartItem);
     }
 
     @Override
     @Transactional
     public CartItemResponse updateItemQuantity(UUID userId, UUID cartItemId, int quantity) {
-        log.info("Updating cart item quantity for user: {}, cartItem: {}, quantity: {}", 
+        log.info("Updating cart item quantity for user: {}, cartItem: {}, quantity: {}",
                 userId, cartItemId, quantity);
-        
+
         Cart cart = getOrCreateCart(userId);
-        
-        CartItem cartItem = cartItemRepository.findByCartIdAndId(cart.getId(), cartItemId)
+
+        CartItem cartItem = cartItemRepository.findByCartIdAndPublicId(cart.getId(), cartItemId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Cart item", cartItemId));
         
         return updateCartItem(cartItem, quantity);
@@ -150,28 +143,15 @@ public class CartServiceImpl implements CartService {
         
         Cart cart = getOrCreateCart(userId);
         
-        CartItem cartItem = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId)
+        CartItem cartItem = cartItemRepository.findByCartIdAndProduct_Id(cart.getId(), productId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Cart item for product", productId));
-        
+
         return updateCartItem(cartItem, quantity);
     }
 
     private CartItemResponse updateCartItem(CartItem cartItem, int quantity) {
-        var product = cartItem.getProduct();
-        int availableStock = (product.getStock() != null ? product.getStock() : 0) 
-                - (product.getReservedQuantity() != null ? product.getReservedQuantity() : 0);
-        
-        int existingReserved = 0;
         StockReservation reservation = stockReservationRepository.findByCartItemId(cartItem.getId()).orElse(null);
-        if (reservation != null) {
-            existingReserved = reservation.getQuantity();
-        }
-        
-        int netAvailable = availableStock + existingReserved;
-        if (netAvailable < quantity) {
-            throw new InsufficientStockException(product.getName(), netAvailable, quantity);
-        }
-        
+
         cartItem.setQuantity(quantity);
         cartItem = cartItemRepository.save(cartItem);
         
@@ -188,10 +168,10 @@ public class CartServiceImpl implements CartService {
     @Transactional
     public void removeItem(UUID userId, UUID cartItemId) {
         log.info("Removing item from cart for user: {}, cartItem: {}", userId, cartItemId);
-        
+
         Cart cart = getOrCreateCart(userId);
-        
-        CartItem cartItem = cartItemRepository.findByCartIdAndId(cart.getId(), cartItemId)
+
+        CartItem cartItem = cartItemRepository.findByCartIdAndPublicId(cart.getId(), cartItemId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Cart item", cartItemId));
         
         removeCartItem(cartItem);
@@ -204,9 +184,9 @@ public class CartServiceImpl implements CartService {
         
         Cart cart = getOrCreateCart(userId);
         
-        CartItem cartItem = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId)
+        CartItem cartItem = cartItemRepository.findByCartIdAndProduct_Id(cart.getId(), productId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Cart item for product", productId));
-        
+
         removeCartItem(cartItem);
     }
 
@@ -223,7 +203,7 @@ public class CartServiceImpl implements CartService {
     @Override
     @Transactional
     public CartResponse applyCoupon(UUID userId, String couponCode) {
-        log.info("Applying coupon for user: {}, coupon: {}", userId, couponCode);
+        log.info("Applying coupon for user: {}, coupon: {}", userId, couponCode.replace('\n', '_').replace('\r', '_'));
         
         Cart cart = getOrCreateCart(userId);
         
@@ -270,9 +250,11 @@ public class CartServiceImpl implements CartService {
         if (existingCart != null) {
             return mapToCartResponse(existingCart);
         }
-        
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
         Cart newCart = Cart.builder()
-                .userId(userId)
+                .user(user)
                 .build();
         newCart = cartRepository.save(newCart);
         
@@ -286,22 +268,22 @@ public class CartServiceImpl implements CartService {
         
         Cart userCart = getOrCreateCart(userId);
         
-        Cart guestCart = cartRepository.findById(guestCartId)
+        Cart guestCart = cartRepository.findByPublicId(guestCartId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Guest cart", guestCartId));
-        
-        var guestItems = cartItemRepository.findByCartId(guestCartId);
-        
+
+        var guestItems = cartItemRepository.findByCartId(guestCart.getId());
+
         for (CartItem guestItem : guestItems) {
             var product = guestItem.getProduct();
             int quantity = guestItem.getQuantity();
-            
-            CartItem existingItem = cartItemRepository.findByCartIdAndProductId(userCart.getId(), product.getId())
+
+            CartItem existingItem = cartItemRepository.findByCartIdAndProduct_Id(userCart.getId(), product.getId())
                     .orElse(null);
-            
+
             if (existingItem != null) {
                 existingItem.setQuantity(existingItem.getQuantity() + quantity);
                 cartItemRepository.save(existingItem);
-                
+
                 createStockReservation(existingItem, product, quantity);
             } else {
                 CartItem newItem = CartItem.builder()
@@ -311,12 +293,12 @@ public class CartServiceImpl implements CartService {
                         .price(guestItem.getPrice())
                         .build();
                 newItem = cartItemRepository.save(newItem);
-                
+
                 createStockReservation(newItem, product, quantity);
             }
         }
-        
-        cartItemRepository.deleteByCartId(guestCartId);
+
+        cartItemRepository.deleteByCartId(guestCart.getId());
         cartRepository.delete(guestCart);
         
         return mapToCartResponse(userCart);
@@ -325,8 +307,10 @@ public class CartServiceImpl implements CartService {
     private Cart getOrCreateCart(UUID userId) {
         return cartRepository.findByUserIdWithItems(userId)
                 .orElseGet(() -> {
+                    User user = userRepository.findById(userId)
+                            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
                     Cart newCart = Cart.builder()
-                            .userId(userId)
+                            .user(user)
                             .build();
                     return cartRepository.save(newCart);
                 });
@@ -341,11 +325,11 @@ public class CartServiceImpl implements CartService {
                 .build();
         stockReservationRepository.save(reservation);
         
-        productRepository.reserveStockAndIsActiveTrue(product.getId(), quantity);
+        // Stock reservation delegated to inventory module once wired
     }
 
     private void releaseStockReservation(Product product, int quantity) {
-        productRepository.releaseReservedStockAndIsActiveTrue(product.getId(), quantity);
+        // Stock release delegated to inventory module once wired
     }
 
     private void validateCoupon(Coupon coupon, Cart cart) {
@@ -395,8 +379,8 @@ public class CartServiceImpl implements CartService {
         }
         
         return CartResponse.builder()
-                .id(cart.getId())
-                .userId(cart.getUserId())
+                .id(cart.getPublicId())
+                .userId(cart.getUser().getId())
                 .items(itemResponses)
                 .subtotal(subtotal)
                 .tax(tax)
@@ -417,28 +401,12 @@ public class CartServiceImpl implements CartService {
         return subtotal;
     }
 
-    private BigDecimal calculateDiscountPrice(Product product) {
-        if (product.getDiscount() != null && product.getDiscount().compareTo(BigDecimal.ZERO) > 0 
-                && product.getOriginalPrice() != null) {
-            return product.getOriginalPrice()
-                    .subtract(product.getOriginalPrice()
-                            .multiply(product.getDiscount())
-                            .divide(BigDecimal.valueOf(100)));
-        }
-        return product.getPrice();
-    }
-
     private ProductResponse mapToProductResponse(Product product) {
         return ProductResponse.builder()
                 .id(product.getId())
                 .name(product.getName())
-                .price(product.getPrice())
-                .originalPrice(product.getOriginalPrice())
-                .discount(product.getDiscount())
-                .stock(product.getStock())
-                .images(product.getImages().stream()
-                        .map(ProductImage::getImageUrl)
-                        .toList())
+                .slug(product.getSlug())
+                .status(product.getStatus())
                 .build();
     }
 
@@ -446,7 +414,7 @@ public class CartServiceImpl implements CartService {
         StockReservation reservation = stockReservationRepository.findByCartItemId(cartItem.getId()).orElse(null);
         
         return CartItemResponse.builder()
-                .id(cartItem.getId())
+                .id(cartItem.getPublicId())
                 .product(mapToProductResponse(cartItem.getProduct()))
                 .quantity(cartItem.getQuantity())
                 .totalPrice(cartItem.getPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity())))
