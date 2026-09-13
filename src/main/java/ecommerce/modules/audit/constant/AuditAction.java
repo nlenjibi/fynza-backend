@@ -93,7 +93,15 @@ public final class AuditAction {
     public static final String TAG_DELETED              = "TAG_DELETED";
 
     // ── Pricing & Promotions ──────────────────────────────────────────────────
+    public static final String PRICE_CREATED            = "PRICE_CREATED";
     public static final String PRICE_UPDATED            = "PRICE_UPDATED";
+    public static final String PRICE_ACTIVATED          = "PRICE_ACTIVATED";
+    public static final String PRICE_DISABLED           = "PRICE_DISABLED";
+    public static final String PRICE_SCHEDULED          = "PRICE_SCHEDULED";
+    public static final String PRICE_OVERRIDDEN         = "PRICE_OVERRIDDEN";
+    public static final String PRICE_TIER_CREATED       = "PRICE_TIER_CREATED";
+    public static final String PRICE_TIER_UPDATED       = "PRICE_TIER_UPDATED";
+    public static final String PRICE_TIER_DELETED       = "PRICE_TIER_DELETED";
     public static final String PROMOTION_CREATED        = "PROMOTION_CREATED";
     public static final String PROMOTION_UPDATED        = "PROMOTION_UPDATED";
     public static final String PROMOTION_ACTIVATED      = "PROMOTION_ACTIVATED";

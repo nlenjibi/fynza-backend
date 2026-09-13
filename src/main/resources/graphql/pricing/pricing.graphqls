@@ -1,0 +1,116 @@
+# =============================================================================
+# Pricing GraphQL Schema  —  READS ONLY (all writes go through REST)
+# PRD: PRICING-09
+# =============================================================================
+
+# ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum PriceStatus {
+    DRAFT
+    ACTIVE
+    SCHEDULED
+    EXPIRED
+    DISABLED
+}
+
+enum SupportedCurrency {
+    GHS
+    USD
+    EUR
+    GBP
+    NGN
+}
+
+# ─── Types ───────────────────────────────────────────────────────────────────
+
+type PriceTier {
+    publicId:    ID!
+    minQuantity: Int!
+    maxQuantity: Int
+    unitPrice:   String!
+    currency:    String!
+    isActive:    Boolean!
+    createdAt:   String!
+}
+
+type Price {
+    publicId:    ID!
+    productId:   ID!
+    variantId:   ID
+    amount:      String!
+    saleAmount:  String
+    currency:    String!
+    status:      PriceStatus!
+    validFrom:   String
+    validUntil:  String
+    isActive:    Boolean!
+    tiers:       [PriceTier!]!
+    createdAt:   String!
+    updatedAt:   String!
+}
+
+type PriceResult {
+    priceId:         ID!
+    productId:       ID!
+    variantId:       ID
+    basePrice:       String!
+    salePrice:       String
+    effectivePrice:  String!
+    discountAmount:  String!
+    discountPercent: String!
+    currency:        String!
+    validFrom:       String
+    validUntil:      String
+}
+
+type PriceHistoryEntry {
+    id:          ID!
+    oldAmount:   String
+    newAmount:   String!
+    oldCurrency: String
+    newCurrency: String!
+    oldStatus:   String
+    newStatus:   String!
+    changedBy:   ID!
+    reason:      String
+    createdAt:   String!
+}
+
+type PriceList {
+    publicId:    ID!
+    name:        String!
+    description: String
+    isDefault:   Boolean!
+    isActive:    Boolean!
+    createdAt:   String!
+}
+
+type PricePage {
+    content:  [Price!]!
+    pageInfo: PageInfo!
+}
+
+# ─── Queries ─────────────────────────────────────────────────────────────────
+
+extend type Query {
+
+    # Public — product page price display
+    price(productId: ID!, variantId: ID, currency: SupportedCurrency): Price
+
+    effectivePrice(
+        productId: ID!
+        variantId: ID
+        quantity:  Int
+        currency:  SupportedCurrency
+    ): PriceResult
+
+    prices(productId: ID!, currency: SupportedCurrency): [Price!]!
+
+    # Seller — own product prices
+    sellerPrices(productId: ID!, page: PageInput): PricePage!
+
+    # Admin — full price listing and history
+    adminPrices(page: PageInput): PricePage!
+    adminPrice(id: ID!): Price
+    priceHistory(priceId: ID!): [PriceHistoryEntry!]!
+}
