@@ -40,9 +40,7 @@ spring:
         use_sql_comments: true
 
   cache:
-    type: caffeine
-    caffeine:
-      spec: maximumSize=100,expireAfterWrite=1m,recordStats
+    type: redis
 
   security:
     oauth2:
