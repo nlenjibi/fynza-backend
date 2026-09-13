@@ -27,6 +27,8 @@
     <include file="changes/020-product-permissions.sql"  relativeToChangelogFile="true"/>
     <include file="changes/021-category-refactor.sql"    relativeToChangelogFile="true"/>
     <include file="changes/022-category-permissions.sql" relativeToChangelogFile="true"/>
+    <include file="changes/023-pricing-schema.sql"        relativeToChangelogFile="true"/>
+    <include file="changes/024-pricing-permissions.sql"  relativeToChangelogFile="true"/>
     <include file="changes/025-inventory-schema.sql"      relativeToChangelogFile="true"/>
     <include file="changes/026-inventory-permissions.sql" relativeToChangelogFile="true"/>
 

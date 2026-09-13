@@ -5,9 +5,12 @@ import ecommerce.modules.cart.dto.AddToCartRequest;
 import ecommerce.modules.cart.dto.ApplyCouponRequest;
 import ecommerce.modules.cart.dto.CartItemResponse;
 import ecommerce.modules.cart.dto.CartResponse;
+import ecommerce.modules.cart.dto.CartValidateRequest;
+import ecommerce.modules.cart.dto.CartValidateResponse;
 import ecommerce.modules.cart.dto.ReservationResponse;
 import ecommerce.modules.cart.dto.UpdateCartItemRequest;
 import ecommerce.modules.cart.service.CartService;
+import ecommerce.modules.cart.service.CartValidationService;
 import ecommerce.modules.cart.async.StockReservationAsyncService;
 import ecommerce.common.security.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
@@ -38,7 +41,8 @@ import java.util.UUID;
 @PreAuthorize("hasRole('CUSTOMER')")
 public class CartController {
 
-    private final CartService cartService;
+    private final CartService           cartService;
+    private final CartValidationService validationService;
     private final StockReservationAsyncService stockReservationAsyncService;
 
     @GetMapping
@@ -93,6 +97,15 @@ public class CartController {
         UUID userId = principal.getId();
         CartResponse cart = cartService.applyCoupon(userId, request.getCouponCode());
         return ResponseEntity.ok(ApiResponse.success("Coupon applied", cart));
+    }
+
+    @PostMapping("/validate")
+    @Operation(summary = "Validate cart prices before checkout",
+            description = "Resolves current authoritative prices for all items and flags any changes. Always call before placing an order.")
+    public ResponseEntity<ApiResponse<CartValidateResponse>> validateCart(
+            @Valid @RequestBody CartValidateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Cart validation complete",
+                validationService.validate(request)));
     }
 
     @DeleteMapping

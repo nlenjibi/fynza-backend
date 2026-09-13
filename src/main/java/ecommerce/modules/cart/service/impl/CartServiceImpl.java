@@ -16,6 +16,8 @@ import ecommerce.modules.coupon.repository.CouponRepository;
 import ecommerce.modules.product.dto.response.ProductResponse;
 import ecommerce.modules.product.entity.Product;
 import ecommerce.modules.product.repository.ProductRepository;
+import ecommerce.modules.pricing.enums.SupportedCurrency;
+import ecommerce.modules.pricing.service.PriceResolverService;
 import ecommerce.modules.user.entity.User;
 import ecommerce.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -37,12 +39,13 @@ public class CartServiceImpl implements CartService {
     private static final int RESERVATION_MINUTES = 15;
     private static final int MAX_ITEM_QUANTITY = 9_999;
 
-    private final CartRepository cartRepository;
-    private final CartItemRepository cartItemRepository;
-    private final ProductRepository productRepository;
+    private final CartRepository         cartRepository;
+    private final CartItemRepository     cartItemRepository;
+    private final ProductRepository      productRepository;
     private final StockReservationRepository stockReservationRepository;
-    private final CouponRepository couponRepository;
-    private final UserRepository userRepository;
+    private final CouponRepository       couponRepository;
+    private final UserRepository         userRepository;
+    private final PriceResolverService   priceResolverService;
 
     @Override
     @Transactional(readOnly = true)
@@ -98,8 +101,15 @@ public class CartServiceImpl implements CartService {
         CartItem cartItem = cartItemRepository.findByCartIdAndProduct_Id(cart.getId(), product.getId())
                 .orElse(null);
 
-        // Price sourced from pricing module once available; stored as zero until wired
-        BigDecimal price = BigDecimal.ZERO;
+        BigDecimal price;
+        try {
+            price = priceResolverService.resolve(
+                    product.getId(), null, quantity, SupportedCurrency.GHS
+            ).getEffectivePrice();
+        } catch (Exception e) {
+            log.warn("Price resolution failed for product {}: {}", product.getId(), e.getMessage());
+            price = BigDecimal.ZERO;
+        }
 
         if (cartItem != null) {
             int newQuantity = (int) Math.min((long) cartItem.getQuantity() + quantity, MAX_ITEM_QUANTITY);
