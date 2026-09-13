@@ -1,5 +1,7 @@
 package ecommerce.modules.pricing.service.impl;
 
+import ecommerce.common.cache.CacheNames;
+import ecommerce.common.cache.RedisCacheService;
 import ecommerce.modules.pricing.dto.response.PriceResultResponse;
 import ecommerce.modules.pricing.entity.Price;
 import ecommerce.modules.pricing.entity.PriceTier;
@@ -13,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -28,18 +32,27 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class PriceResolverServiceImpl implements PriceResolverService {
 
+    private static final Duration CACHE_TTL = Duration.ofMinutes(5);
+
     private final PriceRepository     priceRepository;
     private final PriceListRepository priceListRepository;
     private final PriceTierRepository priceTierRepository;
+    private final RedisCacheService   cacheService;
 
     @Override
     public PriceResultResponse resolve(UUID productId, UUID variantId, int quantity, SupportedCurrency currency) {
-        return resolveInternal(productId, variantId, quantity, currency);
+        String cacheKey = buildCacheKey(productId, variantId, quantity, currency);
+        return cacheService.get(cacheKey, PriceResultResponse.class)
+                .orElseGet(() -> {
+                    PriceResultResponse result = resolveInternal(productId, variantId, quantity, currency);
+                    cacheService.put(cacheKey, result, CACHE_TTL);
+                    return result;
+                });
     }
 
     @Override
     public PriceResultResponse resolveForCheckout(UUID productId, UUID variantId, int quantity, SupportedCurrency currency) {
-        // Checkout always bypasses cache and reads authoritative data.
+        // Checkout always bypasses cache — reads authoritative DB price.
         return resolveInternal(productId, variantId, quantity, currency);
     }
 
@@ -116,6 +129,12 @@ public class PriceResolverServiceImpl implements PriceResolverService {
 
     private BigDecimal effectiveAmount(Price price) {
         return price.getSaleAmount() != null ? price.getSaleAmount() : price.getAmount();
+    }
+
+    private String buildCacheKey(UUID productId, UUID variantId, int quantity, SupportedCurrency currency) {
+        return CacheNames.PRICE_EFFECTIVE + ":" + productId
+                + ":" + (variantId != null ? variantId : "null")
+                + ":" + quantity + ":" + currency.name();
     }
 
     private Long defaultPriceListId() {
