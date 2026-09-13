@@ -98,7 +98,7 @@ public class Inventory {
     }
 
     public int getAvailableQuantity() {
-        return Math.max(0, onHandQuantity - reservedQuantity);
+        return (int) Math.max(0L, (long) onHandQuantity - reservedQuantity);
     }
 
     public InventoryStatus getStatus() {

@@ -62,8 +62,7 @@ public class InventoryTransferController {
     @PreAuthorize("hasAuthority('inventory.transfer.cancel')")
     @Operation(summary = "Cancel a transfer")
     public ResponseEntity<ApiResponse<InventoryTransferResponse>> cancelTransfer(
-            @PathVariable UUID publicId,
-            @AuthenticationPrincipal UserPrincipal principal) {
+            @PathVariable UUID publicId) {
         return ResponseEntity.ok(ApiResponse.success("Transfer cancelled",
                 transferService.cancelTransfer(publicId)));
     }

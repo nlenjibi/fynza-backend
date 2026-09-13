@@ -70,8 +70,7 @@ public class InventoryController {
     @Operation(summary = "Reserve stock for an order")
     public ResponseEntity<ApiResponse<InventoryReservationResponse>> reserve(
             @PathVariable UUID publicId,
-            @Valid @RequestBody ReserveStockRequest request,
-            @AuthenticationPrincipal UserPrincipal principal) {
+            @Valid @RequestBody ReserveStockRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Stock reserved",
                         reservationService.reserve(publicId, request)));
@@ -81,8 +80,7 @@ public class InventoryController {
     @PreAuthorize("hasAuthority('inventory.release')")
     @Operation(summary = "Release a stock reservation")
     public ResponseEntity<ApiResponse<InventoryReservationResponse>> release(
-            @PathVariable UUID reservationPublicId,
-            @AuthenticationPrincipal UserPrincipal principal) {
+            @PathVariable UUID reservationPublicId) {
         return ResponseEntity.ok(ApiResponse.success("Reservation released",
                 reservationService.release(reservationPublicId)));
     }
@@ -91,8 +89,7 @@ public class InventoryController {
     @PreAuthorize("hasAuthority('inventory.reserve')")
     @Operation(summary = "Confirm a stock reservation (on payment success)")
     public ResponseEntity<ApiResponse<InventoryReservationResponse>> confirm(
-            @PathVariable UUID reservationPublicId,
-            @AuthenticationPrincipal UserPrincipal principal) {
+            @PathVariable UUID reservationPublicId) {
         return ResponseEntity.ok(ApiResponse.success("Reservation confirmed",
                 reservationService.confirm(reservationPublicId)));
     }

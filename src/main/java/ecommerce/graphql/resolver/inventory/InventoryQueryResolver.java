@@ -68,8 +68,14 @@ public class InventoryQueryResolver {
                                                           @Argument Integer page,
                                                           @Argument Integer size) {
         log.debug("GQL inventoryMovements inventoryId={}", inventoryId);
+        long id;
+        try {
+            id = Long.parseLong(inventoryId);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("inventoryId must be a numeric value");
+        }
         return movementRepository.findByInventoryId(
-                Long.parseLong(inventoryId),
+                id,
                 PageRequest.of(page != null ? page : 0, size != null ? size : 20,
                         Sort.by(Sort.Direction.DESC, "createdAt")))
                 .map(StockMovementResponse::from);

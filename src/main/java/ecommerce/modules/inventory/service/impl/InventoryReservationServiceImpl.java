@@ -66,7 +66,7 @@ public class InventoryReservationServiceImpl implements InventoryReservationServ
                 .movementType(MovementType.RESERVATION)
                 .quantity(qty)
                 .previousQuantity(inventory.getReservedQuantity())
-                .newQuantity(inventory.getReservedQuantity() + qty)
+                .newQuantity((int) ((long) inventory.getReservedQuantity() + qty))
                 .referenceType("RESERVATION")
                 .referenceId(reservation.getPublicId())
                 .build());
