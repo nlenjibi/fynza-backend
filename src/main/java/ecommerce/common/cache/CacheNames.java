@@ -81,6 +81,9 @@ public final class CacheNames {
     public static final String STORE_BY_SLUG   = "store-by-slug";
     public static final String STORE_BY_ID     = "store-by-id";
 
+    // Pricing
+    public static final String PRICE_EFFECTIVE  = "price-effective";
+
     // Admin / misc
     public static final String ADMIN_DASHBOARD  = "admin-dashboard";
     public static final String ADMIN_ANALYTICS  = "admin-analytics";
