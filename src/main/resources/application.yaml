@@ -69,6 +69,32 @@ fynza:
       api-base-url: ${SLACK_API_BASE_URL:https://slack.com/api}
     retry-job:
       cron: ${NOTIFICATION_RETRY_CRON:0 */2 * * * *}
+  media:
+    provider:
+      primary: ${MEDIA_PROVIDER:R2}
+      routing-strategy: PRIMARY_ONLY
+      r2:
+        access-key-id: ${R2_ACCESS_KEY_ID:}
+        secret-access-key: ${R2_SECRET_ACCESS_KEY:}
+        endpoint: ${R2_ENDPOINT:}
+        bucket: ${R2_BUCKET:fynza-media}
+        cdn-base-url: ${R2_CDN_BASE_URL:}
+        presigned-url-expiry-seconds: ${R2_PRESIGNED_EXPIRY:600}
+      s3:
+        access-key-id: ${S3_ACCESS_KEY_ID:}
+        secret-access-key: ${S3_SECRET_ACCESS_KEY:}
+        region: ${S3_REGION:us-east-1}
+        bucket: ${S3_BUCKET:fynza-media}
+        cdn-base-url: ${S3_CDN_BASE_URL:}
+        presigned-url-expiry-seconds: ${S3_PRESIGNED_EXPIRY:600}
+    upload:
+      max-file-size-bytes: ${MEDIA_MAX_FILE_SIZE:10485760}
+      max-width-pixels: 8000
+      max-height-pixels: 8000
+      session-ttl-minutes: ${MEDIA_SESSION_TTL_MINUTES:15}
+      session-expiry-check-ms: ${MEDIA_SESSION_EXPIRY_CHECK_MS:300000}
+    quota:
+      default-seller-quota-bytes: ${MEDIA_DEFAULT_QUOTA:2147483648}
   cache:
     redis:
       default-ttl: 15m
