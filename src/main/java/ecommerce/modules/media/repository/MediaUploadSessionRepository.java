@@ -1,7 +1,6 @@
 package ecommerce.modules.media.repository;
 
 import ecommerce.modules.media.entity.MediaUploadSession;
-import ecommerce.modules.media.enums.UploadSessionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
