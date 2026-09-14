@@ -375,9 +375,12 @@ public class MediaServiceImpl implements MediaService {
 
     private String getBucket(ProviderType providerType) {
         return switch (providerType) {
-            case R2       -> props.getProvider().getR2().getBucket();
-            case S3       -> props.getProvider().getS3().getBucket();
-            default       -> null;
+            case R2         -> props.getProvider().getR2().getBucket();
+            case S3         -> props.getProvider().getS3().getBucket();
+            case SUPABASE   -> props.getProvider().getSupabase().getBucket();
+            case FIREBASE   -> props.getProvider().getFirebase().getBucket();
+            case CLOUDINARY -> null;
+            case LOCAL      -> null;
         };
     }
 

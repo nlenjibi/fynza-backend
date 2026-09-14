@@ -25,6 +25,10 @@ public class MediaProperties {
         private RoutingStrategy routingStrategy = RoutingStrategy.PRIMARY_ONLY;
         private R2Config        r2              = new R2Config();
         private S3Config        s3              = new S3Config();
+        private SupabaseConfig  supabase        = new SupabaseConfig();
+        private CloudinaryConfig cloudinary     = new CloudinaryConfig();
+        private FirebaseConfig  firebase        = new FirebaseConfig();
+        private LocalConfig     local           = new LocalConfig();
     }
 
     @Getter @Setter
@@ -45,6 +49,40 @@ public class MediaProperties {
         private String  bucket;
         private String  cdnBaseUrl;
         private long    presignedUrlExpirySeconds = 600;
+    }
+
+    @Getter @Setter
+    public static class SupabaseConfig {
+        private String  url;
+        private String  serviceRoleKey;
+        private String  bucket           = "fynza-media";
+        private String  cdnBaseUrl;
+        private long    signedUrlExpirySeconds = 600;
+    }
+
+    @Getter @Setter
+    public static class CloudinaryConfig {
+        private String  cloudName;
+        private String  apiKey;
+        private String  apiSecret;
+        private String  uploadPreset;
+        private String  cdnBaseUrl;
+        private long    signedUrlExpirySeconds = 600;
+    }
+
+    @Getter @Setter
+    public static class FirebaseConfig {
+        private String  projectId;
+        private String  bucket;
+        private String  serviceAccountJson;
+        private String  cdnBaseUrl;
+    }
+
+    @Getter @Setter
+    public static class LocalConfig {
+        private String  storageDir    = "./media-storage";
+        private String  baseUrl       = "http://localhost:8080/media/files";
+        private String  uploadApiUrl  = "http://localhost:8080";
     }
 
     @Getter @Setter

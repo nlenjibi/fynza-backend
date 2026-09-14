@@ -22,6 +22,8 @@ import java.util.Map;
 import java.util.UUID;
 
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+        name = "fynza.media.provider.primary", havingValue = "S3")
 @RequiredArgsConstructor
 public class S3StorageProvider implements MediaStorageProvider {
 

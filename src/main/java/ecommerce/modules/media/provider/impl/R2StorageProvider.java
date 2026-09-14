@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.UUID;
 
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+        name = "fynza.media.provider.primary", havingValue = "R2", matchIfMissing = true)
 @RequiredArgsConstructor
 public class R2StorageProvider implements MediaStorageProvider {
 
