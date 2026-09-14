@@ -100,7 +100,9 @@ CREATE INDEX IF NOT EXISTS idx_media_variants_asset_id ON media_variants(media_a
 CREATE INDEX IF NOT EXISTS idx_media_variants_status   ON media_variants(status);
 
 --changeset fynza:027-04 labels:media dbms:postgresql
--- Junction: product → media_asset with ordering and primary flag.
+-- Replace the placeholder product_media table (019, used media_id VARCHAR) with
+-- the FK-linked version that references the new media_assets table.
+DROP TABLE IF EXISTS product_media CASCADE;
 CREATE TABLE IF NOT EXISTS product_media (
     id             BIGSERIAL   PRIMARY KEY,
     product_id     UUID        NOT NULL,
