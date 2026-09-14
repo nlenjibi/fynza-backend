@@ -246,7 +246,7 @@ class MediaServiceImplTest {
 
             when(sessionRepository.findByPublicIdAndUserId(sessionPublicId, userId))
                     .thenReturn(Optional.of(uploadSession));
-            when(providerRouter.resolve(ProviderType.R2)).thenReturn(storageProvider);
+            when(providerRouter.resolve()).thenReturn(storageProvider);
             when(storageProvider.verifyUpload(any())).thenReturn(result);
             when(assetRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(sessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -352,7 +352,7 @@ class MediaServiceImplTest {
                     .storageBytes(2000L).objectCount(2L).build();
 
             when(assetRepository.findByPublicId(assetPublicId)).thenReturn(Optional.of(asset));
-            when(providerRouter.resolve(ProviderType.R2)).thenReturn(storageProvider);
+            when(providerRouter.resolve()).thenReturn(storageProvider);
             doNothing().when(storageProvider).deleteObject(any());
             when(assetRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(usageRepository.findForUpdate(userId, MediaOwnerType.USER))
@@ -398,7 +398,7 @@ class MediaServiceImplTest {
         @DisplayName("Admin deletes any asset regardless of owner — object removed from storage")
         void adminDeleteAsset_anyOwner_deletedFromStorageAndDb() {
             when(assetRepository.findByPublicId(assetPublicId)).thenReturn(Optional.of(asset));
-            when(providerRouter.resolve(ProviderType.R2)).thenReturn(storageProvider);
+            when(providerRouter.resolve()).thenReturn(storageProvider);
             doNothing().when(storageProvider).deleteObject(any());
             when(assetRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -447,7 +447,7 @@ class MediaServiceImplTest {
             setField(asset, "visibility", MediaVisibility.PRIVATE);
 
             when(assetRepository.findByPublicId(assetPublicId)).thenReturn(Optional.of(asset));
-            when(providerRouter.resolve(ProviderType.R2)).thenReturn(storageProvider);
+            when(providerRouter.resolve()).thenReturn(storageProvider);
             when(storageProvider.createDownloadUrl(any(), any())).thenReturn("https://r2.example.com/signed?token=xyz");
 
             GenerateSignedUrlRequest request = GenerateSignedUrlRequest.builder().expirySeconds(300).build();
