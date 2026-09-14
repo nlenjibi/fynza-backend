@@ -118,9 +118,9 @@ class MediaServiceImplTest {
         providerConfig.setR2(r2Config);
         providerConfig.setS3(new MediaProperties.S3Config());
 
-        when(props.getUpload()).thenReturn(uploadConfig);
-        when(props.getQuota()).thenReturn(quotaConfig);
-        when(props.getProvider()).thenReturn(providerConfig);
+        lenient().when(props.getUpload()).thenReturn(uploadConfig);
+        lenient().when(props.getQuota()).thenReturn(quotaConfig);
+        lenient().when(props.getProvider()).thenReturn(providerConfig);
     }
 
     // ── initiateUpload ────────────────────────────────────────────────────────

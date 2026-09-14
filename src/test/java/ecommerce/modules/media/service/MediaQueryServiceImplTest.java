@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -79,7 +80,7 @@ class MediaQueryServiceImplTest {
         setField(asset, "updatedAt", Instant.now());
 
         quotaConfig = new MediaProperties.QuotaConfig();
-        when(props.getQuota()).thenReturn(quotaConfig);
+        lenient().when(props.getQuota()).thenReturn(quotaConfig);
     }
 
     // ── getAsset ──────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import ecommerce.common.response.ApiResponse;
 import ecommerce.common.security.UserPrincipal;
 import ecommerce.modules.media.dto.request.AttachProductMediaRequest;
 import ecommerce.modules.media.dto.request.CompleteUploadRequest;
+import ecommerce.modules.media.dto.request.GenerateSignedUrlRequest;
 import ecommerce.modules.media.dto.request.InitiateUploadRequest;
 import ecommerce.modules.media.dto.response.MediaAssetResponse;
 import ecommerce.modules.media.dto.response.SignedUrlResponse;
@@ -72,14 +73,24 @@ public class MediaController {
         return ResponseEntity.ok(ApiResponse.success("Media asset deleted", null));
     }
 
+    @DeleteMapping("/{publicId}/admin")
+    @PreAuthorize("hasAuthority('media.delete.any')")
+    @Operation(summary = "Admin: delete any media asset regardless of ownership")
+    public ResponseEntity<ApiResponse<Void>> adminDeleteAsset(
+            @PathVariable UUID publicId) {
+        mediaService.adminDeleteAsset(publicId);
+        return ResponseEntity.ok(ApiResponse.success("Media asset deleted by admin", null));
+    }
+
     @PostMapping("/{publicId}/signed-url")
     @PreAuthorize("hasAuthority('media.url.read')")
     @Operation(summary = "Generate a signed download URL for a private media asset")
     public ResponseEntity<ApiResponse<SignedUrlResponse>> getSignedUrl(
             @PathVariable UUID publicId,
+            @Valid @RequestBody GenerateSignedUrlRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(ApiResponse.success("Signed URL generated",
-                mediaService.getSignedDownloadUrl(publicId, principal.getId())));
+                mediaService.generateSignedUrl(publicId, request, principal.getId())));
     }
 
     @PostMapping("/products/{productId}/media")

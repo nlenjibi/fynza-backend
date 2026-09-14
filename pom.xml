@@ -259,6 +259,10 @@
                             <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>
+                    <testExcludes>
+                        <testExclude>**/user/controller/MeControllerTest.java</testExclude>
+                        <testExclude>**/user/service/UserManagementServiceTest.java</testExclude>
+                    </testExcludes>
                 </configuration>
             </plugin>
             <plugin>

@@ -6,6 +6,7 @@ import ecommerce.modules.audit.service.AuditLogService;
 import ecommerce.modules.media.config.MediaProperties;
 import ecommerce.modules.media.dto.request.AttachProductMediaRequest;
 import ecommerce.modules.media.dto.request.CompleteUploadRequest;
+import ecommerce.modules.media.dto.request.GenerateSignedUrlRequest;
 import ecommerce.modules.media.dto.request.InitiateUploadRequest;
 import ecommerce.modules.media.dto.response.MediaAssetResponse;
 import ecommerce.modules.media.dto.response.SignedUrlResponse;
@@ -213,6 +214,43 @@ public class MediaServiceImpl implements MediaService {
         decrementUsage(userId, MediaOwnerType.USER, asset.getFileSize());
 
         audit(AuditAction.MEDIA_ASSET_DELETED, "MEDIA_ASSET", publicId, userId);
+    }
+
+    @Override
+    @Transactional
+    public void adminDeleteAsset(UUID publicId) {
+        MediaAsset asset = assetRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new MediaAssetNotFoundException(publicId));
+
+        MediaStorageProvider provider = providerRouter.resolve(asset.getProvider());
+        provider.deleteObject(new StorageObject(getBucket(asset.getProvider()), asset.getObjectKey()));
+
+        asset.setStatus(MediaStatus.DELETED);
+        asset.setIsActive(false);
+        asset.setDeletedAt(Instant.now());
+        assetRepository.save(asset);
+
+        decrementUsage(asset.getUploadedBy(), MediaOwnerType.USER, asset.getFileSize());
+
+        audit(AuditAction.MEDIA_ASSET_DELETED, "MEDIA_ASSET", publicId, asset.getUploadedBy());
+    }
+
+    @Override
+    public SignedUrlResponse generateSignedUrl(UUID publicId, GenerateSignedUrlRequest request, UUID userId) {
+        MediaAsset asset = assetRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new MediaAssetNotFoundException(publicId));
+
+        if (asset.getVisibility() == MediaVisibility.PUBLIC && asset.getCdnUrl() != null) {
+            return new SignedUrlResponse(asset.getCdnUrl(), Instant.now().plusSeconds(request.getExpirySeconds()));
+        }
+
+        MediaStorageProvider provider = providerRouter.resolve(asset.getProvider());
+        Duration expiry = Duration.ofSeconds(request.getExpirySeconds());
+        String url = provider.createDownloadUrl(
+                new StorageObject(getBucket(asset.getProvider()), asset.getObjectKey()),
+                expiry
+        );
+        return new SignedUrlResponse(url, Instant.now().plus(expiry));
     }
 
     @Override

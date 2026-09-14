@@ -35,6 +35,25 @@ type StorageQuota {
     usagePercent: Float!
 }
 
+type MediaAssetPage {
+    content: [MediaAsset!]!
+    totalElements: Int!
+    totalPages: Int!
+    currentPage: Int!
+    hasNextPage: Boolean!
+}
+
+type StorageUsageRecord {
+    ownerId: ID!
+    ownerType: String!
+    storageBytes: String!
+    objectCount: String!
+    bandwidthBytes: String!
+    quotaBytes: String!
+    percentUsed: Float!
+    updatedAt: String!
+}
+
 # ── Enums ─────────────────────────────────────────────────────────────────────
 
 enum MediaStatus {
@@ -100,4 +119,7 @@ extend type Query {
     mediaAsset(publicId: ID!): MediaAsset
     productMedia(productId: ID!): [ProductMediaItem!]!
     myStorageQuota: StorageQuota!
+    myMediaAssets(page: Int, size: Int): MediaAssetPage!
+    myStorageUsage: StorageUsageRecord
+    adminMediaAssets(status: String, page: Int, size: Int): MediaAssetPage!
 }

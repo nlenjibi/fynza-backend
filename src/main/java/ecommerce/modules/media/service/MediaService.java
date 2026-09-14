@@ -2,6 +2,7 @@ package ecommerce.modules.media.service;
 
 import ecommerce.modules.media.dto.request.AttachProductMediaRequest;
 import ecommerce.modules.media.dto.request.CompleteUploadRequest;
+import ecommerce.modules.media.dto.request.GenerateSignedUrlRequest;
 import ecommerce.modules.media.dto.request.InitiateUploadRequest;
 import ecommerce.modules.media.dto.response.MediaAssetResponse;
 import ecommerce.modules.media.dto.response.SignedUrlResponse;
@@ -20,7 +21,11 @@ public interface MediaService {
 
     void deleteAsset(UUID publicId, UUID userId);
 
+    void adminDeleteAsset(UUID publicId);
+
     SignedUrlResponse getSignedDownloadUrl(UUID publicId, UUID userId);
+
+    SignedUrlResponse generateSignedUrl(UUID publicId, GenerateSignedUrlRequest request, UUID userId);
 
     void attachToProduct(UUID productId, AttachProductMediaRequest request, UUID userId);
 
