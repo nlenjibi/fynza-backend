@@ -31,5 +31,7 @@
     <include file="changes/024-pricing-permissions.sql"  relativeToChangelogFile="true"/>
     <include file="changes/025-inventory-schema.sql"      relativeToChangelogFile="true"/>
     <include file="changes/026-inventory-permissions.sql" relativeToChangelogFile="true"/>
+    <include file="changes/027-media-schema.sql"          relativeToChangelogFile="true"/>
+    <include file="changes/028-media-permissions.sql"     relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
