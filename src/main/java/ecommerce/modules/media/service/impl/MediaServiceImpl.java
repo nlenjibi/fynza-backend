@@ -134,12 +134,7 @@ public class MediaServiceImpl implements MediaService {
             throw new BadRequestException("Upload session has expired");
         }
 
-        MediaStorageProvider provider = providerRouter.resolve(session.getProvider());
-        StorageObject storageObject = new StorageObject(
-                getBucket(session.getProvider()),
-                session.getObjectKey()
-        );
-
+        MediaStorageProvider provider = providerRouter.resolve();
         UploadSession uploadSession = new UploadSession(
                 session.getPublicId(),
                 session.getProvider(),
@@ -150,6 +145,11 @@ public class MediaServiceImpl implements MediaService {
                 session.getExpiresAt()
         );
         UploadResult result = provider.verifyUpload(uploadSession);
+
+        if (result.fileSize() > 0 && result.fileSize() != request.size()) {
+            throw new BadRequestException(String.format(
+                    "File size mismatch: expected %d bytes, got %d", request.size(), result.fileSize()));
+        }
 
         session.setStatus(UploadSessionStatus.VERIFIED);
         session.setActualSize(result.fileSize());
@@ -203,7 +203,7 @@ public class MediaServiceImpl implements MediaService {
             throw new ForbiddenException("You do not own this media asset");
         }
 
-        MediaStorageProvider provider = providerRouter.resolve(asset.getProvider());
+        MediaStorageProvider provider = providerRouter.resolve();
         provider.deleteObject(new StorageObject(getBucket(asset.getProvider()), asset.getObjectKey()));
 
         asset.setStatus(MediaStatus.DELETED);
@@ -222,7 +222,7 @@ public class MediaServiceImpl implements MediaService {
         MediaAsset asset = assetRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new MediaAssetNotFoundException(publicId));
 
-        MediaStorageProvider provider = providerRouter.resolve(asset.getProvider());
+        MediaStorageProvider provider = providerRouter.resolve();
         provider.deleteObject(new StorageObject(getBucket(asset.getProvider()), asset.getObjectKey()));
 
         asset.setStatus(MediaStatus.DELETED);
@@ -240,11 +240,15 @@ public class MediaServiceImpl implements MediaService {
         MediaAsset asset = assetRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new MediaAssetNotFoundException(publicId));
 
+        if (asset.getVisibility() != MediaVisibility.PUBLIC && !asset.getUploadedBy().equals(userId)) {
+            throw new ForbiddenException("You do not have access to this media asset");
+        }
+
         if (asset.getVisibility() == MediaVisibility.PUBLIC && asset.getCdnUrl() != null) {
             return new SignedUrlResponse(asset.getCdnUrl(), Instant.now().plusSeconds(request.getExpirySeconds()));
         }
 
-        MediaStorageProvider provider = providerRouter.resolve(asset.getProvider());
+        MediaStorageProvider provider = providerRouter.resolve();
         Duration expiry = Duration.ofSeconds(request.getExpirySeconds());
         String url = provider.createDownloadUrl(
                 new StorageObject(getBucket(asset.getProvider()), asset.getObjectKey()),
@@ -258,11 +262,15 @@ public class MediaServiceImpl implements MediaService {
         MediaAsset asset = assetRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new MediaAssetNotFoundException(publicId));
 
+        if (asset.getVisibility() != MediaVisibility.PUBLIC && !asset.getUploadedBy().equals(userId)) {
+            throw new ForbiddenException("You do not have access to this media asset");
+        }
+
         if (asset.getVisibility() == MediaVisibility.PUBLIC && asset.getCdnUrl() != null) {
             return new SignedUrlResponse(asset.getCdnUrl(), Instant.now().plusSeconds(3600));
         }
 
-        MediaStorageProvider provider = providerRouter.resolve(asset.getProvider());
+        MediaStorageProvider provider = providerRouter.resolve();
         Duration expiry = Duration.ofHours(1);
         String url = provider.createDownloadUrl(
                 new StorageObject(getBucket(asset.getProvider()), asset.getObjectKey()),
@@ -320,6 +328,7 @@ public class MediaServiceImpl implements MediaService {
                         productMediaRepository.save(pm);
                     });
         }
+        audit(AuditAction.PRODUCT_MEDIA_REORDERED, "PRODUCT_MEDIA", productId, userId);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────

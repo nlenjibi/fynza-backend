@@ -66,6 +66,7 @@ public final class AuditAction {
     public static final String PRODUCT_VARIANT_DELETED   = "PRODUCT_VARIANT_DELETED";
     public static final String PRODUCT_MEDIA_ADDED       = "PRODUCT_MEDIA_ADDED";
     public static final String PRODUCT_MEDIA_REMOVED     = "PRODUCT_MEDIA_REMOVED";
+    public static final String PRODUCT_MEDIA_REORDERED   = "PRODUCT_MEDIA_REORDERED";
 
     // ── Media Assets ──────────────────────────────────────────────────────────
     public static final String MEDIA_ASSET_CREATED              = "MEDIA_ASSET_CREATED";

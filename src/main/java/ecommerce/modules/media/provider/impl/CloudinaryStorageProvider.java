@@ -177,7 +177,7 @@ public class CloudinaryStorageProvider implements MediaStorageProvider {
         String toSign = object.objectKey() + cfg.getApiSecret() + timestamp;
         String sig;
         try {
-            MessageDigest md = MessageDigest.getInstance("SHA-1");
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hash = md.digest(toSign.getBytes(StandardCharsets.UTF_8));
             sig = bytesToHex(hash).substring(0, 8);
         } catch (Exception e) {
@@ -198,7 +198,7 @@ public class CloudinaryStorageProvider implements MediaStorageProvider {
         });
         sb.append(apiSecret);
         try {
-            MessageDigest md = MessageDigest.getInstance("SHA-1");
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hash = md.digest(sb.toString().getBytes(StandardCharsets.UTF_8));
             return bytesToHex(hash);
         } catch (Exception e) {

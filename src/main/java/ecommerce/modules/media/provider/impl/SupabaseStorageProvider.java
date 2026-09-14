@@ -106,14 +106,7 @@ public class SupabaseStorageProvider implements MediaStorageProvider {
         String bodyJson = "{\"prefixes\":[\"" + object.objectKey() + "\"]}";
 
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("Authorization", "Bearer " + cfg.getServiceRoleKey())
-                    .header("Content-Type", "application/json")
-                    .DELETE()
-                    .build();
-
-            // Supabase bulk delete requires a body with DELETE; use POST workaround
+            // Supabase bulk delete requires a JSON body with DELETE; use method() override
             HttpRequest deleteRequest = HttpRequest.newBuilder()
                     .uri(URI.create(cfg.getUrl() + "/storage/v1/object/" + cfg.getBucket()))
                     .header("Authorization", "Bearer " + cfg.getServiceRoleKey())

@@ -8,8 +8,10 @@ import ecommerce.modules.media.dto.response.StorageQuotaResponse;
 import ecommerce.modules.media.dto.response.StorageUsageResponse;
 import ecommerce.modules.media.entity.MediaAsset;
 import ecommerce.modules.media.entity.StorageUsage;
+import ecommerce.common.exception.ForbiddenException;
 import ecommerce.modules.media.enums.MediaOwnerType;
 import ecommerce.modules.media.enums.MediaStatus;
+import ecommerce.modules.media.enums.MediaVisibility;
 import ecommerce.modules.media.exception.MediaAssetNotFoundException;
 import ecommerce.modules.media.repository.MediaAssetRepository;
 import ecommerce.modules.media.repository.ProductMediaRepository;
@@ -37,6 +39,9 @@ public class MediaQueryServiceImpl implements MediaQueryService {
     public MediaAssetResponse getAsset(UUID publicId, UUID userId) {
         MediaAsset asset = assetRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new MediaAssetNotFoundException(publicId));
+        if (asset.getVisibility() != MediaVisibility.PUBLIC && !asset.getUploadedBy().equals(userId)) {
+            throw new ForbiddenException("You do not have access to this media asset");
+        }
         return toResponse(asset);
     }
 

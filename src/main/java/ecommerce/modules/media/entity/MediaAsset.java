@@ -23,6 +23,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(exclude = "variants")
 public class MediaAsset {
 
     @Id

@@ -18,6 +18,7 @@ import java.time.Instant;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(exclude = "mediaAsset")
 public class MediaVariant {
 
     @Id

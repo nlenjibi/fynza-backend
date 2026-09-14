@@ -60,6 +60,10 @@ public class ProductMediaServiceImpl implements ProductMediaService {
         MediaAsset asset = assetRepository.findByPublicId(mediaAssetPublicId)
                 .orElseThrow(() -> new MediaAssetNotFoundException(mediaAssetPublicId));
 
+        if (!asset.getUploadedBy().equals(userId)) {
+            throw new ForbiddenException("You do not own this media asset");
+        }
+
         productMediaRepository.findByProductIdAndMediaAssetId(productId, asset.getId())
                 .ifPresent(productMediaRepository::delete);
 
@@ -85,7 +89,7 @@ public class ProductMediaServiceImpl implements ProductMediaService {
                     });
         }
 
-        log.info("Reordered {} media items for product={}", orderedIds.size(), productId);
+        log.info("User {} reordered {} media items for product={}", userId, orderedIds.size(), productId);
     }
 
     @Override

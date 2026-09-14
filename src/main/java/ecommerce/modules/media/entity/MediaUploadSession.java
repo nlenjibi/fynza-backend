@@ -20,6 +20,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(exclude = "mediaAsset")
 public class MediaUploadSession {
 
     @Id
