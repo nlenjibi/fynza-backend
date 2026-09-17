@@ -3,23 +3,20 @@ package ecommerce.modules.cart.async;
 import ecommerce.common.config.AsyncProperties;
 import ecommerce.modules.cart.dto.ReservationResponse;
 import ecommerce.modules.cart.entity.CartItem;
+import ecommerce.modules.cart.entity.ReservationStatus;
 import ecommerce.modules.cart.entity.StockReservation;
 import ecommerce.modules.cart.repository.CartItemRepository;
 import ecommerce.modules.cart.repository.StockReservationRepository;
-import ecommerce.modules.product.entity.Product;
-import ecommerce.modules.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-
-import static ecommerce.modules.cart.entity.ReservationStatus.*;
 
 @Service
 @RequiredArgsConstructor
@@ -28,10 +25,10 @@ public class StockReservationAsyncService {
 
     private static final int MAX_RETRIES = 3;
     private static final long INITIAL_BACKOFF_MS = 1000;
+    private static final long RESERVATION_TTL_SECONDS = 15 * 60L;
 
     private final StockReservationRepository reservationRepository;
     private final CartItemRepository cartItemRepository;
-    private final ProductRepository productRepository;
     private final AsyncProperties asyncProperties;
 
     @Async("inventoryExecutor")
@@ -44,23 +41,21 @@ public class StockReservationAsyncService {
             CartItem cartItem = cartItemRepository.findByPublicId(cartItemId)
                     .orElseThrow(() -> new IllegalArgumentException("Cart item not found: " + cartItemId));
 
-            Product product = cartItem.getProduct();
             int requestedQty = cartItem.getQuantity();
 
-            StockReservation reservation = reservationRepository.findByCartItem_PublicId(cartItemId)
-                    .orElseGet(() -> createPendingReservation(cartItem, product, requestedQty));
+            StockReservation reservation = reservationRepository.findByCartItemId(cartItem.getId())
+                    .orElseGet(() -> createPendingReservation(cartItem, requestedQty));
 
-            if (reservation.getStatus() == CONFIRMED) {
+            if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
                 log.info("[{}] Stock already reserved for cart item: {}", correlationId, cartItemId);
                 return CompletableFuture.completedFuture(ReservationResponse.confirmed(reservation.getPublicId()));
             }
 
-            boolean reserved = attemptReservation(product, requestedQty);
+            boolean reserved = attemptReservation(cartItem.getProductId(), requestedQty);
 
             if (reserved) {
-                productRepository.save(product);
-                reservation.setStatus(CONFIRMED);
-                reservation.setExpiresAt(LocalDateTime.now().plusMinutes(15));
+                reservation.setStatus(ReservationStatus.CONFIRMED);
+                reservation.setExpiresAt(Instant.now().plusSeconds(RESERVATION_TTL_SECONDS));
                 reservationRepository.save(reservation);
                 log.info("[{}] Stock reservation confirmed for cart item: {}, qty: {}",
                         correlationId, cartItemId, requestedQty);
@@ -77,26 +72,28 @@ public class StockReservationAsyncService {
     }
 
     @Transactional
-    public StockReservation createPendingReservation(CartItem cartItem, Product product, int quantity) {
+    public StockReservation createPendingReservation(CartItem cartItem, int quantity) {
         StockReservation reservation = StockReservation.builder()
                 .cartItem(cartItem)
-                .product(product)
+                .cartId(cartItem.getCart().getId())
+                .productId(cartItem.getProductId())
+                .variantId(cartItem.getVariantId())
                 .quantity(quantity)
-                .status(PENDING)
+                .status(ReservationStatus.PENDING)
                 .retryCount(0)
-                .expiresAt(LocalDateTime.now().plusMinutes(15))
+                .expiresAt(Instant.now().plusSeconds(RESERVATION_TTL_SECONDS))
                 .build();
         return reservationRepository.save(reservation);
     }
 
-    private boolean attemptReservation(Product product, int quantity) {
+    private boolean attemptReservation(UUID productId, int quantity) {
         // Stock reservation delegated to inventory module — always returns false until wired
         return false;
     }
 
     private CompletableFuture<ReservationResponse> handleReservationFailure(
             StockReservation reservation, String errorMessage, String correlationId) {
-        
+
         reservation.setRetryCount(reservation.getRetryCount() + 1);
         reservation.setErrorMessage(errorMessage);
 
@@ -107,16 +104,17 @@ public class StockReservationAsyncService {
 
             reservationRepository.save(reservation);
 
+            UUID cartItemPublicId = reservation.getCartItem().getPublicId();
             return CompletableFuture.supplyAsync(() -> {
                 try {
                     TimeUnit.MILLISECONDS.sleep(backoffMs);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
-                return reserveStockAsync(reservation.getCartItem().getPublicId()).join();
+                return reserveStockAsync(cartItemPublicId).join();
             });
         } else {
-            reservation.setStatus(FAILED);
+            reservation.setStatus(ReservationStatus.FAILED);
             reservation.setErrorMessage("Max retries exceeded: " + errorMessage);
             reservationRepository.save(reservation);
             log.warn("[{}] Stock reservation failed after {} retries for reservation: {}",
@@ -138,17 +136,5 @@ public class StockReservationAsyncService {
                                 "Reservation " + res.getStatus().name().toLowerCase())
                         .build())
                 .orElse(ReservationResponse.failed(null, "Reservation not found", 0));
-    }
-
-    public ReservationResponse getReservationByCartItemId(UUID cartItemId) {
-        return reservationRepository.findByCartItem_PublicId(cartItemId)
-                .map(res -> ReservationResponse.builder()
-                        .reservationId(res.getPublicId())
-                        .status(res.getStatus())
-                        .retryCount(res.getRetryCount())
-                        .message(res.getErrorMessage() != null ? res.getErrorMessage() :
-                                "Reservation " + res.getStatus().name().toLowerCase())
-                        .build())
-                .orElse(ReservationResponse.failed(null, "No reservation found for cart item", 0));
     }
 }

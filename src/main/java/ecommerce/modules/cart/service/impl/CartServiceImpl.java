@@ -1,33 +1,34 @@
 package ecommerce.modules.cart.service.impl;
 
-import ecommerce.common.exception.ResourceNotFoundException;
-import ecommerce.modules.cart.dto.AddToCartRequest;
-import ecommerce.modules.cart.dto.CartItemResponse;
-import ecommerce.modules.cart.dto.CartResponse;
-import ecommerce.modules.cart.entity.Cart;
-import ecommerce.modules.cart.entity.CartItem;
-import ecommerce.modules.cart.entity.StockReservation;
+import ecommerce.common.enums.ProductStatus;
+import ecommerce.modules.cart.dto.*;
+import ecommerce.modules.cart.entity.*;
+import ecommerce.modules.cart.event.*;
+import ecommerce.modules.cart.exception.CartErrorCode;
+import ecommerce.modules.cart.exception.CartException;
 import ecommerce.modules.cart.repository.CartItemRepository;
 import ecommerce.modules.cart.repository.CartRepository;
 import ecommerce.modules.cart.repository.StockReservationRepository;
 import ecommerce.modules.cart.service.CartService;
 import ecommerce.modules.coupon.entity.Coupon;
 import ecommerce.modules.coupon.repository.CouponRepository;
-import ecommerce.modules.product.dto.response.ProductResponse;
-import ecommerce.modules.product.entity.Product;
-import ecommerce.modules.product.repository.ProductRepository;
+import ecommerce.modules.inventory.service.InventoryService;
 import ecommerce.modules.pricing.enums.SupportedCurrency;
 import ecommerce.modules.pricing.service.PriceResolverService;
-import ecommerce.modules.user.entity.User;
-import ecommerce.modules.user.repository.UserRepository;
+import ecommerce.modules.product.entity.Product;
+import ecommerce.modules.product.repository.ProductRepository;
+import ecommerce.modules.product.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.math.RoundingMode;
+import java.security.SecureRandom;
+import java.time.Instant;
+import java.util.HexFormat;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -36,400 +37,401 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class CartServiceImpl implements CartService {
 
-    private static final int RESERVATION_MINUTES = 15;
-    private static final int MAX_ITEM_QUANTITY = 9_999;
+    private static final int  MAX_ITEM_QUANTITY   = 9_999;
+    private static final int  GUEST_CART_TTL_DAYS = 7;
+    private static final SecureRandom RANDOM      = new SecureRandom();
 
-    private final CartRepository         cartRepository;
-    private final CartItemRepository     cartItemRepository;
-    private final ProductRepository      productRepository;
-    private final StockReservationRepository stockReservationRepository;
-    private final CouponRepository       couponRepository;
-    private final UserRepository         userRepository;
-    private final PriceResolverService   priceResolverService;
+    private final CartRepository              cartRepository;
+    private final CartItemRepository          cartItemRepository;
+    private final StockReservationRepository  reservationRepository;
+    private final CouponRepository            couponRepository;
+    private final PriceResolverService        priceResolverService;
+    private final ProductRepository           productRepository;
+    private final ProductVariantRepository    variantRepository;
+    private final InventoryService            inventoryService;
+    private final CartEventPublisher          eventPublisher;
+
+    // ── Guest cart ────────────────────────────────────────────────────────────
 
     @Override
-    @Transactional(readOnly = true)
-    public CartResponse getCart(UUID userId) {
-        log.info("Fetching cart for user: {}", userId);
-        Cart cart = getOrCreateCart(userId);
-        return mapToCartResponse(cart);
+    @Transactional
+    public GuestCartResponse createGuestCart() {
+        String token = generateCartToken();
+        Cart cart = Cart.builder()
+                .isGuest(true)
+                .cartToken(token)
+                .status(CartStatus.ACTIVE)
+                .expiresAt(Instant.now().plusSeconds(GUEST_CART_TTL_DAYS * 86_400L))
+                .build();
+        cart = cartRepository.save(cart);
+        eventPublisher.publish(new GuestCartCreatedEvent(cart.getPublicId(), token));
+        log.info("Guest cart created: token={}", token);
+        return GuestCartResponse.builder().cartId(cart.getPublicId()).cartToken(token).build();
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public CartResponse getCartById(UUID cartId, UUID userId) {
-        log.info("Fetching cart by id: {} for user: {}", cartId, userId);
-        Cart cart = cartRepository.findByPublicId(cartId)
-                .orElseThrow(() -> ResourceNotFoundException.forResource("Cart", cartId));
-        if (!cart.getUser().getId().equals(userId)) {
-            throw new IllegalStateException("Cart does not belong to user");
-        }
-        return mapToCartResponse(cart);
+    public CartResponse getGuestCart(String cartToken) {
+        Cart cart = findGuestCart(cartToken);
+        return toResponse(cart);
+    }
+
+    // ── Authenticated cart ────────────────────────────────────────────────────
+
+    @Override
+    public CartResponse getCart(UUID userId) {
+        Cart cart = getOrCreateUserCart(userId);
+        return toResponse(cart);
     }
 
     @Override
     @Transactional
     public CartItemResponse addItem(UUID userId, AddToCartRequest request) {
-        log.info("Adding item to cart for user: {}, product: {}, quantity: {}", 
-                userId, request.getProductId(), request.getQuantity());
-        
-        Cart cart = getOrCreateCart(userId);
-        
-        var product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> ResourceNotFoundException.forResource("Product", request.getProductId()));
-        
-        int quantity = request.getQuantity() != null ? request.getQuantity() : 1;
-        
-        return addToCart(cart, product, quantity);
+        Cart cart = getOrCreateUserCart(userId);
+        CartItem item = upsertItem(cart, request.getProductId(), request.getVariantId(), request.getQuantity());
+        recalculateTotals(cart);
+        cartRepository.save(cart);
+        eventPublisher.publish(new CartItemAddedEvent(
+                cart.getPublicId(), userId,
+                request.getProductId(), request.getVariantId(),
+                request.getQuantity(), item.getUnitPrice()));
+        return toItemResponse(item);
     }
 
     @Override
     @Transactional
-    public CartItemResponse addItemByProductId(UUID userId, UUID productId, int quantity) {
-        log.info("Adding item to cart for user: {}, product: {}, quantity: {}", userId, productId, quantity);
-        
-        Cart cart = getOrCreateCart(userId);
-        
-        var product = productRepository.findById(productId)
-                .orElseThrow(() -> ResourceNotFoundException.forResource("Product", productId));
-
-        return addToCart(cart, product, quantity);
-    }
-
-    private CartItemResponse addToCart(Cart cart, Product product, int quantity) {
-        // Stock validation delegated to inventory module — skipped here until wired
-        CartItem cartItem = cartItemRepository.findByCartIdAndProduct_Id(cart.getId(), product.getId())
-                .orElse(null);
-
-        BigDecimal price;
-        try {
-            price = priceResolverService.resolve(
-                    product.getId(), null, quantity, SupportedCurrency.GHS
-            ).getEffectivePrice();
-        } catch (Exception e) {
-            log.warn("Price resolution failed for product {}: {}", product.getId(), e.getMessage());
-            price = BigDecimal.ZERO;
-        }
-
-        if (cartItem != null) {
-            int newQuantity = (int) Math.min((long) cartItem.getQuantity() + quantity, MAX_ITEM_QUANTITY);
-            cartItem.setQuantity(newQuantity);
-            cartItem.setPrice(price);
-            cartItem = cartItemRepository.save(cartItem);
-        } else {
-            cartItem = CartItem.builder()
-                    .cart(cart)
-                    .product(product)
-                    .quantity(quantity)
-                    .price(price)
-                    .build();
-            cartItem = cartItemRepository.save(cartItem);
-        }
-
-        createStockReservation(cartItem, product, quantity);
-
-        return mapToCartItemResponse(cartItem);
+    public CartItemResponse addItemToGuestCart(String cartToken, AddToCartRequest request) {
+        Cart cart = findGuestCart(cartToken);
+        CartItem item = upsertItem(cart, request.getProductId(), request.getVariantId(), request.getQuantity());
+        recalculateTotals(cart);
+        cartRepository.save(cart);
+        return toItemResponse(item);
     }
 
     @Override
     @Transactional
-    public CartItemResponse updateItemQuantity(UUID userId, UUID cartItemId, int quantity) {
-        log.info("Updating cart item quantity for user: {}, cartItem: {}, quantity: {}",
-                userId, cartItemId, quantity);
-
-        Cart cart = getOrCreateCart(userId);
-
-        CartItem cartItem = cartItemRepository.findByCartIdAndPublicId(cart.getId(), cartItemId)
-                .orElseThrow(() -> ResourceNotFoundException.forResource("Cart item", cartItemId));
-        
-        return updateCartItem(cartItem, quantity);
+    public CartItemResponse updateItemQuantity(UUID userId, UUID cartItemPublicId, int quantity) {
+        Cart cart = getOrCreateUserCart(userId);
+        CartItem item = cartItemRepository.findByCartIdAndPublicId(cart.getId(), cartItemPublicId)
+                .orElseThrow(() -> new CartException(CartErrorCode.ITEM_NOT_FOUND,
+                        "Cart item not found: " + cartItemPublicId));
+        int oldQty = item.getQuantity();
+        item.setQuantity(Math.min(quantity, MAX_ITEM_QUANTITY));
+        item.recalculateLineTotal();
+        item = cartItemRepository.save(item);
+        recalculateTotals(cart);
+        cartRepository.save(cart);
+        eventPublisher.publish(new CartItemUpdatedEvent(
+                cart.getPublicId(), userId, item.getProductId(), item.getVariantId(), oldQty, item.getQuantity()));
+        return toItemResponse(item);
     }
 
     @Override
     @Transactional
-    public CartItemResponse updateItemByProductId(UUID userId, UUID productId, int quantity) {
-        log.info("Updating cart item by productId for user: {}, productId: {}, quantity: {}", 
-                userId, productId, quantity);
-        
-        Cart cart = getOrCreateCart(userId);
-        
-        CartItem cartItem = cartItemRepository.findByCartIdAndProduct_Id(cart.getId(), productId)
-                .orElseThrow(() -> ResourceNotFoundException.forResource("Cart item for product", productId));
-
-        return updateCartItem(cartItem, quantity);
-    }
-
-    private CartItemResponse updateCartItem(CartItem cartItem, int quantity) {
-        StockReservation reservation = stockReservationRepository.findByCartItemId(cartItem.getId()).orElse(null);
-
-        cartItem.setQuantity(quantity);
-        cartItem = cartItemRepository.save(cartItem);
-        
-        if (reservation != null) {
-            reservation.setQuantity(quantity);
-            reservation.setExpiresAt(LocalDateTime.now().plusMinutes(RESERVATION_MINUTES));
-            stockReservationRepository.save(reservation);
-        }
-        
-        return mapToCartItemResponse(cartItem);
-    }
-
-    @Override
-    @Transactional
-    public void removeItem(UUID userId, UUID cartItemId) {
-        log.info("Removing item from cart for user: {}, cartItem: {}", userId, cartItemId);
-
-        Cart cart = getOrCreateCart(userId);
-
-        CartItem cartItem = cartItemRepository.findByCartIdAndPublicId(cart.getId(), cartItemId)
-                .orElseThrow(() -> ResourceNotFoundException.forResource("Cart item", cartItemId));
-        
-        removeCartItem(cartItem);
-    }
-
-    @Override
-    @Transactional
-    public void removeItemByProductId(UUID userId, UUID productId) {
-        log.info("Removing item from cart for user: {}, productId: {}", userId, productId);
-        
-        Cart cart = getOrCreateCart(userId);
-        
-        CartItem cartItem = cartItemRepository.findByCartIdAndProduct_Id(cart.getId(), productId)
-                .orElseThrow(() -> ResourceNotFoundException.forResource("Cart item for product", productId));
-
-        removeCartItem(cartItem);
-    }
-
-    private void removeCartItem(CartItem cartItem) {
-        stockReservationRepository.findByCartItemId(cartItem.getId())
-                .ifPresent(reservation -> {
-                    stockReservationRepository.delete(reservation);
-                    releaseStockReservation(cartItem.getProduct(), reservation.getQuantity());
-                });
-        
-        cartItemRepository.delete(cartItem);
+    public void removeItem(UUID userId, UUID cartItemPublicId) {
+        Cart cart = getOrCreateUserCart(userId);
+        CartItem item = cartItemRepository.findByCartIdAndPublicId(cart.getId(), cartItemPublicId)
+                .orElseThrow(() -> new CartException(CartErrorCode.ITEM_NOT_FOUND,
+                        "Cart item not found: " + cartItemPublicId));
+        reservationRepository.findByCartItemId(item.getId()).ifPresent(reservationRepository::delete);
+        cartItemRepository.delete(item);
+        recalculateTotals(cart);
+        cartRepository.save(cart);
+        eventPublisher.publish(new CartItemRemovedEvent(
+                cart.getPublicId(), userId, item.getProductId(), item.getVariantId(), item.getQuantity()));
     }
 
     @Override
     @Transactional
     public CartResponse applyCoupon(UUID userId, String couponCode) {
-        log.info("Applying coupon for user: {}, coupon: {}", userId, couponCode.replace('\n', '_').replace('\r', '_'));
-        
-        Cart cart = getOrCreateCart(userId);
-        
+        Cart cart = getOrCreateUserCart(userId);
         Coupon coupon = couponRepository.findByCode(couponCode)
-                .orElseThrow(() -> new ResourceNotFoundException("Coupon not found with code: " + couponCode));
-        
+                .orElseThrow(() -> new CartException(CartErrorCode.COUPON_NOT_FOUND,
+                        "Coupon not found: " + couponCode));
         validateCoupon(coupon, cart);
-        
         cart.setCouponCode(couponCode);
+        recalculateTotals(cart);
         cartRepository.save(cart);
-        
-        return mapToCartResponse(cart);
+        eventPublisher.publish(new CouponAppliedEvent(
+                cart.getPublicId(), userId, couponCode, cart.getDiscountAmount()));
+        return toResponse(cart);
+    }
+
+    @Override
+    @Transactional
+    public CartResponse removeCoupon(UUID userId) {
+        Cart cart = getOrCreateUserCart(userId);
+        String removed = cart.getCouponCode();
+        cart.setCouponCode(null);
+        cart.setDiscountAmount(BigDecimal.ZERO);
+        recalculateTotals(cart);
+        cartRepository.save(cart);
+        if (removed != null) {
+            eventPublisher.publish(new CouponRemovedEvent(cart.getPublicId(), userId, removed));
+        }
+        return toResponse(cart);
     }
 
     @Override
     @Transactional
     public void clearCart(UUID userId) {
-        log.info("Clearing cart for user: {}", userId);
-        
-        Cart cart = getOrCreateCart(userId);
-        
-        var cartItems = cartItemRepository.findByCartId(cart.getId());
-        
-        for (CartItem item : cartItems) {
-            stockReservationRepository.findByCartItemId(item.getId())
-                    .ifPresent(reservation -> {
-                        stockReservationRepository.delete(reservation);
-                        releaseStockReservation(item.getProduct(), reservation.getQuantity());
-                    });
-        }
-        
+        Cart cart = getOrCreateUserCart(userId);
+        int count = cart.getItems().size();
+        reservationRepository.deleteByCartId(cart.getId());
         cartItemRepository.deleteByCartId(cart.getId());
-        
+        cart.getItems().clear();
         cart.setCouponCode(null);
+        recalculateTotals(cart);
         cartRepository.save(cart);
+        eventPublisher.publish(new CartClearedEvent(cart.getPublicId(), userId, count));
     }
 
     @Override
     @Transactional
-    public CartResponse createCart(UUID userId) {
-        log.info("Creating cart for user: {}", userId);
-        
-        Cart existingCart = cartRepository.findByUserIdWithItems(userId).orElse(null);
-        if (existingCart != null) {
-            return mapToCartResponse(existingCart);
-        }
+    public CartResponse mergeCart(UUID userId, String guestCartToken) {
+        Cart userCart  = getOrCreateUserCart(userId);
+        Cart guestCart = findGuestCart(guestCartToken);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
-        Cart newCart = Cart.builder()
-                .user(user)
-                .build();
-        newCart = cartRepository.save(newCart);
-        
-        return mapToCartResponse(newCart);
-    }
-
-    @Override
-    @Transactional
-    public CartResponse mergeCart(UUID userId, UUID guestCartId) {
-        log.info("Merging guest cart: {} with user: {}", guestCartId, userId);
-        
-        Cart userCart = getOrCreateCart(userId);
-        
-        Cart guestCart = cartRepository.findByPublicId(guestCartId)
-                .orElseThrow(() -> ResourceNotFoundException.forResource("Guest cart", guestCartId));
-
-        var guestItems = cartItemRepository.findByCartId(guestCart.getId());
+        List<CartItem> guestItems = cartItemRepository.findByCartId(guestCart.getId());
+        int mergedCount = 0;
 
         for (CartItem guestItem : guestItems) {
-            var product = guestItem.getProduct();
-            int quantity = guestItem.getQuantity();
-
-            CartItem existingItem = cartItemRepository.findByCartIdAndProduct_Id(userCart.getId(), product.getId())
-                    .orElse(null);
-
-            if (existingItem != null) {
-                existingItem.setQuantity(existingItem.getQuantity() + quantity);
-                cartItemRepository.save(existingItem);
-
-                createStockReservation(existingItem, product, quantity);
-            } else {
-                CartItem newItem = CartItem.builder()
-                        .cart(userCart)
-                        .product(product)
-                        .quantity(quantity)
-                        .price(guestItem.getPrice())
-                        .build();
-                newItem = cartItemRepository.save(newItem);
-
-                createStockReservation(newItem, product, quantity);
-            }
+            upsertItem(userCart, guestItem.getProductId(), guestItem.getVariantId(), guestItem.getQuantity());
+            mergedCount++;
         }
 
-        cartItemRepository.deleteByCartId(guestCart.getId());
-        cartRepository.delete(guestCart);
-        
-        return mapToCartResponse(userCart);
+        guestCart.setStatus(CartStatus.MERGED);
+        guestCart.setMergedIntoCartId(userCart.getId());
+        cartRepository.save(guestCart);
+
+        recalculateTotals(userCart);
+        cartRepository.save(userCart);
+
+        eventPublisher.publish(new CartMergedEvent(
+                userCart.getPublicId(), userId, guestCartToken, mergedCount));
+        log.info("Merged {} items from guest cart {} into user cart for user={}", mergedCount, guestCartToken, userId);
+        return toResponse(userCart);
     }
 
-    private Cart getOrCreateCart(UUID userId) {
-        return cartRepository.findByUserIdWithItems(userId)
-                .orElseGet(() -> {
-                    User user = userRepository.findById(userId)
-                            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
-                    Cart newCart = Cart.builder()
-                            .user(user)
-                            .build();
-                    return cartRepository.save(newCart);
-                });
+    @Override
+    @Transactional
+    public CartResponse refreshPrices(UUID userId) {
+        Cart cart = getOrCreateUserCart(userId);
+        List<CartItem> items = cartItemRepository.findByCartId(cart.getId());
+        for (CartItem item : items) {
+            try {
+                BigDecimal newPrice = priceResolverService.resolve(
+                        item.getProductId(), item.getVariantId(), item.getQuantity(), SupportedCurrency.GHS
+                ).getEffectivePrice();
+                boolean changed = newPrice.compareTo(item.getUnitPrice()) != 0;
+                item.setUnitPrice(newPrice);
+                item.setPriceChanged(changed);
+                item.setPriceSnapshotAt(Instant.now());
+                item.recalculateLineTotal();
+                cartItemRepository.save(item);
+            } catch (Exception e) {
+                log.warn("Price refresh failed for product={}: {}", item.getProductId(), e.getMessage());
+                item.setPriceChanged(true);
+                cartItemRepository.save(item);
+            }
+        }
+        recalculateTotals(cart);
+        cartRepository.save(cart);
+        return toResponse(cart);
     }
 
-    private void createStockReservation(CartItem cartItem, Product product, int quantity) {
-        StockReservation reservation = StockReservation.builder()
-                .cartItem(cartItem)
-                .product(product)
+    // ── Internal helpers ──────────────────────────────────────────────────────
+
+    private Cart getOrCreateUserCart(UUID userId) {
+        return cartRepository.findByUserIdWithItems(userId).orElseGet(() -> {
+            Cart c = Cart.builder()
+                    .userId(userId)
+                    .isGuest(false)
+                    .status(CartStatus.ACTIVE)
+                    .build();
+            return cartRepository.save(c);
+        });
+    }
+
+    private Cart findGuestCart(String cartToken) {
+        Cart cart = cartRepository.findByCartToken(cartToken)
+                .orElseThrow(() -> new CartException(CartErrorCode.GUEST_CART_NOT_FOUND,
+                        "Guest cart not found for token: " + cartToken));
+        if (cart.isExpired()) {
+            cart.setStatus(CartStatus.EXPIRED);
+            cartRepository.save(cart);
+            throw new CartException(CartErrorCode.CART_EXPIRED, "Guest cart has expired");
+        }
+        return cart;
+    }
+
+    private CartItem upsertItem(Cart cart, UUID productId, UUID variantId, int quantity) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new CartException(CartErrorCode.PRODUCT_NOT_FOUND,
+                        "Product not found: " + productId));
+
+        if (!Boolean.TRUE.equals(product.getIsActive()) || product.getStatus() != ProductStatus.ACTIVE) {
+            throw new CartException(CartErrorCode.ITEM_UNAVAILABLE,
+                    "Product is not available for purchase: " + productId);
+        }
+
+        Long storeId = product.getStoreId();
+
+        if (variantId != null) {
+            variantRepository.findByIdAndProductId(variantId, productId)
+                    .filter(v -> "ACTIVE".equals(v.getVariantStatus()) && Boolean.TRUE.equals(v.getIsActive()))
+                    .orElseThrow(() -> new CartException(CartErrorCode.VARIANT_NOT_FOUND,
+                            "Variant not found or inactive: " + variantId));
+        }
+
+        checkAvailability(productId, variantId, quantity);
+
+        BigDecimal price = resolvePrice(productId, variantId, quantity);
+
+        CartItem existing = cartItemRepository
+                .findByCartIdAndProductAndVariant(cart.getId(), productId, variantId)
+                .orElse(null);
+
+        if (existing != null) {
+            int newQty = (int) Math.min((long) existing.getQuantity() + quantity, MAX_ITEM_QUANTITY);
+            checkAvailability(productId, variantId, newQty);
+            existing.setQuantity(newQty);
+            existing.setUnitPrice(price);
+            existing.setPriceSnapshotAt(Instant.now());
+            existing.recalculateLineTotal();
+            return cartItemRepository.save(existing);
+        }
+
+        CartItem item = CartItem.builder()
+                .cart(cart)
+                .productId(productId)
+                .variantId(variantId)
+                .storeId(storeId)
                 .quantity(quantity)
-                .expiresAt(LocalDateTime.now().plusMinutes(RESERVATION_MINUTES))
+                .unitPrice(price)
+                .lineTotal(price.multiply(BigDecimal.valueOf(quantity)))
+                .priceSnapshotAt(Instant.now())
+                .priceChanged(false)
                 .build();
-        stockReservationRepository.save(reservation);
-        
-        // Stock reservation delegated to inventory module once wired
+        return cartItemRepository.save(item);
     }
 
-    private void releaseStockReservation(Product product, int quantity) {
-        // Stock release delegated to inventory module once wired
+    private void checkAvailability(UUID productId, UUID variantId, int quantity) {
+        try {
+            var availability = inventoryService.getAvailability(productId, variantId);
+            if (!availability.isAllowBackorder() && availability.getAvailableQuantity() < quantity) {
+                throw new CartException(CartErrorCode.ITEM_UNAVAILABLE,
+                        "Only " + availability.getAvailableQuantity() + " units available");
+            }
+        } catch (CartException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Inventory check skipped for product={}: {}", productId, e.getMessage());
+        }
+    }
+
+    private BigDecimal resolvePrice(UUID productId, UUID variantId, int quantity) {
+        try {
+            return priceResolverService.resolve(productId, variantId, quantity, SupportedCurrency.GHS)
+                    .getEffectivePrice();
+        } catch (Exception e) {
+            log.warn("Price resolution failed for product={}: {}", productId, e.getMessage());
+            return BigDecimal.ZERO;
+        }
+    }
+
+    private void recalculateTotals(Cart cart) {
+        List<CartItem> items = cartItemRepository.findByCartId(cart.getId());
+        BigDecimal subtotal = items.stream()
+                .map(CartItem::getLineTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal discount = BigDecimal.ZERO;
+        if (cart.getCouponCode() != null) {
+            discount = computeDiscount(cart.getCouponCode(), subtotal);
+        }
+
+        BigDecimal taxable  = subtotal.subtract(discount);
+        BigDecimal tax      = taxable.multiply(BigDecimal.valueOf(0.10)).setScale(4, RoundingMode.HALF_UP);
+        BigDecimal shipping = subtotal.compareTo(BigDecimal.valueOf(50)) >= 0
+                ? BigDecimal.ZERO : BigDecimal.valueOf(5.99);
+        BigDecimal grand    = taxable.add(tax).add(shipping);
+
+        cart.setSubtotal(subtotal.setScale(4, RoundingMode.HALF_UP));
+        cart.setDiscountAmount(discount.setScale(4, RoundingMode.HALF_UP));
+        cart.setTaxTotal(tax);
+        cart.setShippingTotal(shipping.setScale(4, RoundingMode.HALF_UP));
+        cart.setGrandTotal(grand.setScale(4, RoundingMode.HALF_UP));
+    }
+
+    private BigDecimal computeDiscount(String couponCode, BigDecimal subtotal) {
+        return couponRepository.findByCode(couponCode).map(coupon -> {
+            if (coupon.getDiscountType() == ecommerce.common.enums.DiscountType.PERCENTAGE) {
+                return subtotal.multiply(coupon.getDiscountValue())
+                        .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+            }
+            return coupon.getDiscountValue();
+        }).orElse(BigDecimal.ZERO);
     }
 
     private void validateCoupon(Coupon coupon, Cart cart) {
         if (coupon.getStatus() != ecommerce.common.enums.CouponStatus.ACTIVE) {
-            throw new IllegalStateException("Coupon is not active");
+            throw new CartException(CartErrorCode.COUPON_INACTIVE, "Coupon is not active");
         }
-        
-        LocalDateTime now = LocalDateTime.now();
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
         if (now.isBefore(coupon.getValidFrom()) || now.isAfter(coupon.getValidUntil())) {
-            throw new IllegalStateException("Coupon is expired or not yet valid");
+            throw new CartException(CartErrorCode.COUPON_EXPIRED, "Coupon is expired or not yet valid");
         }
-        
         if (coupon.getMaxUses() != null && coupon.getUsageCount() >= coupon.getMaxUses()) {
-            throw new IllegalStateException("Coupon usage limit reached");
+            throw new CartException(CartErrorCode.COUPON_USAGE_LIMIT_REACHED, "Coupon usage limit reached");
         }
-        
-        BigDecimal subtotal = calculateSubtotal(cart);
-        if (coupon.getMinOrderAmount() != null && subtotal.compareTo(coupon.getMinOrderAmount()) < 0) {
-            throw new IllegalStateException("Minimum order amount not met");
+        if (coupon.getMinOrderAmount() != null
+                && cart.getSubtotal().compareTo(coupon.getMinOrderAmount()) < 0) {
+            throw new CartException(CartErrorCode.COUPON_MIN_AMOUNT_NOT_MET,
+                    "Minimum order amount not met for this coupon");
         }
     }
 
-    private CartResponse mapToCartResponse(Cart cart) {
-        var cartItems = cartItemRepository.findByCartId(cart.getId());
-        
-        BigDecimal subtotal = calculateSubtotal(cart);
-        BigDecimal[] discount = {BigDecimal.ZERO};
-        
-        if (cart.getCouponCode() != null) {
-            final BigDecimal finalSubtotal = subtotal;
-            couponRepository.findByCode(cart.getCouponCode()).ifPresent(coupon -> {
-                if (coupon.getDiscountType() == ecommerce.common.enums.DiscountType.PERCENTAGE) {
-                    discount[0] = finalSubtotal.multiply(coupon.getDiscountValue()).divide(BigDecimal.valueOf(100));
-                } else {
-                    discount[0] = coupon.getDiscountValue();
-                }
-            });
-        }
-        
-        BigDecimal tax = subtotal.subtract(discount[0]).multiply(BigDecimal.valueOf(0.1));
-        BigDecimal shippingCost = subtotal.compareTo(BigDecimal.valueOf(50)) >= 0 ? BigDecimal.ZERO : BigDecimal.valueOf(5.99);
-        BigDecimal total = subtotal.subtract(discount[0]).add(tax).add(shippingCost);
-        
-        var itemResponses = new ArrayList<CartItemResponse>();
-        for (CartItem item : cartItems) {
-            itemResponses.add(mapToCartItemResponse(item));
-        }
-        
+    private static String generateCartToken() {
+        byte[] bytes = new byte[32];
+        RANDOM.nextBytes(bytes);
+        return HexFormat.of().formatHex(bytes);
+    }
+
+    private CartResponse toResponse(Cart cart) {
+        List<CartItem> items = cartItemRepository.findByCartId(cart.getId());
+        boolean hasPriceChanges = items.stream().anyMatch(i -> Boolean.TRUE.equals(i.getPriceChanged()));
+        List<CartItemResponse> itemResponses = items.stream().map(this::toItemResponse).toList();
         return CartResponse.builder()
                 .id(cart.getPublicId())
-                .userId(cart.getUser().getId())
+                .userId(cart.getUserId())
+                .cartToken(cart.getCartToken())
+                .status(cart.getStatus())
+                .isGuest(cart.getIsGuest())
                 .items(itemResponses)
-                .subtotal(subtotal)
-                .tax(tax)
-                .shippingCost(shippingCost)
-                .discount(discount[0])
-                .totalPrice(total)
-                .itemsCount(itemResponses.size())
                 .couponCode(cart.getCouponCode())
+                .subtotal(cart.getSubtotal())
+                .discountAmount(cart.getDiscountAmount())
+                .shippingTotal(cart.getShippingTotal())
+                .taxTotal(cart.getTaxTotal())
+                .grandTotal(cart.getGrandTotal())
+                .itemsCount(itemResponses.size())
+                .expiresAt(cart.getExpiresAt())
+                .updatedAt(cart.getUpdatedAt())
+                .hasPriceChanges(hasPriceChanges)
                 .build();
     }
 
-    private BigDecimal calculateSubtotal(Cart cart) {
-        var cartItems = cartItemRepository.findByCartId(cart.getId());
-        BigDecimal subtotal = BigDecimal.ZERO;
-        for (CartItem item : cartItems) {
-            subtotal = subtotal.add(item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
-        }
-        return subtotal;
-    }
-
-    private ProductResponse mapToProductResponse(Product product) {
-        return ProductResponse.builder()
-                .id(product.getId())
-                .name(product.getName())
-                .slug(product.getSlug())
-                .status(product.getStatus())
-                .build();
-    }
-
-    private CartItemResponse mapToCartItemResponse(CartItem cartItem) {
-        StockReservation reservation = stockReservationRepository.findByCartItemId(cartItem.getId()).orElse(null);
-        
+    private CartItemResponse toItemResponse(CartItem item) {
         return CartItemResponse.builder()
-                .id(cartItem.getPublicId())
-                .product(mapToProductResponse(cartItem.getProduct()))
-                .quantity(cartItem.getQuantity())
-                .totalPrice(cartItem.getPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity())))
-                .reserved(reservation != null && !reservation.isExpired())
-                .reservationExpiresAt(reservation != null ? reservation.getExpiresAt() : null)
+                .id(item.getPublicId())
+                .productId(item.getProductId())
+                .variantId(item.getVariantId())
+                .storeId(item.getStoreId())
+                .quantity(item.getQuantity())
+                .unitPrice(item.getUnitPrice())
+                .lineTotal(item.getLineTotal())
+                .priceChanged(item.getPriceChanged())
+                .priceSnapshotAt(item.getPriceSnapshotAt())
                 .build();
     }
 }

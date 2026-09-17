@@ -193,8 +193,9 @@ public class OrderServiceImpl implements OrderService {
 
         // Create order items from cart items and release reserved stock
         for (var cartItem : cart.getItems()) {
-            var product = cartItem.getProduct();
-            BigDecimal itemPrice = cartItem.getPrice();
+            var product = productRepository.findById(cartItem.getProductId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + cartItem.getProductId()));
+            BigDecimal itemPrice = cartItem.getUnitPrice();
             BigDecimal itemSubtotal = itemPrice.multiply(BigDecimal.valueOf(cartItem.getQuantity()));
 
             OrderItem orderItem = OrderItem.builder()
@@ -253,7 +254,7 @@ public class OrderServiceImpl implements OrderService {
      */
     private BigDecimal calculateSubtotal(Cart cart) {
         return cart.getItems().stream()
-                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
