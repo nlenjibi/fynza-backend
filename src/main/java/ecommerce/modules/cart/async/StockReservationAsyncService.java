@@ -51,7 +51,7 @@ public class StockReservationAsyncService {
                 return CompletableFuture.completedFuture(ReservationResponse.confirmed(reservation.getPublicId()));
             }
 
-            boolean reserved = attemptReservation(cartItem.getProductId(), requestedQty);
+            boolean reserved = attemptReservation();
 
             if (reserved) {
                 reservation.setStatus(ReservationStatus.CONFIRMED);
@@ -86,7 +86,7 @@ public class StockReservationAsyncService {
         return reservationRepository.save(reservation);
     }
 
-    private boolean attemptReservation(UUID productId, int quantity) {
+    private boolean attemptReservation() {
         // Stock reservation delegated to inventory module — always returns false until wired
         return false;
     }

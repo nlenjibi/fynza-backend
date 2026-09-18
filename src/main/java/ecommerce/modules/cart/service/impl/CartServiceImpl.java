@@ -65,7 +65,7 @@ public class CartServiceImpl implements CartService {
                 .build();
         cart = cartRepository.save(cart);
         eventPublisher.publish(new GuestCartCreatedEvent(cart.getPublicId(), token));
-        log.info("Guest cart created: token={}", token);
+        log.info("Guest cart created");
         return GuestCartResponse.builder().cartId(cart.getPublicId()).cartToken(token).build();
     }
 
@@ -178,7 +178,7 @@ public class CartServiceImpl implements CartService {
         int count = cart.getItems().size();
         reservationRepository.deleteByCartId(cart.getId());
         cartItemRepository.deleteByCartId(cart.getId());
-        cart.getItems().clear();
+        cart.clearItems();
         cart.setCouponCode(null);
         recalculateTotals(cart);
         cartRepository.save(cart);
@@ -208,7 +208,7 @@ public class CartServiceImpl implements CartService {
 
         eventPublisher.publish(new CartMergedEvent(
                 userCart.getPublicId(), userId, guestCartToken, mergedCount));
-        log.info("Merged {} items from guest cart {} into user cart for user={}", mergedCount, guestCartToken, userId);
+        log.info("Merged {} items into user cart for user={}", mergedCount, userId);
         return toResponse(userCart);
     }
 

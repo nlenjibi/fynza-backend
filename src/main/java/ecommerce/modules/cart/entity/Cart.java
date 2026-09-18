@@ -6,6 +6,7 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -80,7 +81,16 @@ public class Cart {
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
+    @Getter(lombok.AccessLevel.NONE)
     private List<CartItem> items = new ArrayList<>();
+
+    public List<CartItem> getItems() {
+        return Collections.unmodifiableList(items);
+    }
+
+    public void clearItems() {
+        items.clear();
+    }
 
     @PrePersist
     protected void onCreate() {
