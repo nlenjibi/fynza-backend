@@ -748,7 +748,7 @@ public class OrderServiceImpl implements OrderService {
      */
     private OrderTimelineResponse mapActivityToTimelineResponse(OrderActivityLog activity) {
         return OrderTimelineResponse.builder()
-                .activityId(activity.getPublicId())
+                .activityId(activity.getId())
                 .activityType(activity.getActivityType().name())
                 .status(activity.getActivityType().name())
                 .description(activity.getDescription())
