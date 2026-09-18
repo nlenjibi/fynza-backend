@@ -36,7 +36,7 @@ public class RedisCartServiceImpl implements RedisCartService {
     @Transactional
     public CartItemResponse addItem(UUID userId, UUID productId, int quantity) {
         String cartKey = getCartKey(userId);
-        
+
         if (quantity <= 0) {
             throw new IllegalArgumentException("Quantity must be positive");
         }
@@ -65,15 +65,15 @@ public class RedisCartServiceImpl implements RedisCartService {
         refreshTTL(cartKey);
 
         log.info("Added item to cart for user {}: product {}, quantity {}", userId, productId, quantity);
-        return mapToResponse(item, product);
+        return mapToResponse(item);
     }
 
     @Override
     public CartResponse getCart(UUID userId) {
         String cartKey = getCartKey(userId);
-        
+
         Map<Object, Object> entries = redisTemplate.opsForHash().entries(cartKey);
-        
+
         if (entries.isEmpty()) {
             return emptyCartResponse(userId);
         }
@@ -82,8 +82,7 @@ public class RedisCartServiceImpl implements RedisCartService {
                 .map(value -> {
                     try {
                         CartItemData item = objectMapper.convertValue(value, CartItemData.class);
-                        ProductResponse product = getProductSafe(item.getProductId());
-                        return mapToResponse(item, product);
+                        return mapToResponse(item);
                     } catch (Exception e) {
                         log.error("Error parsing cart item: {}", e.getMessage());
                         return null;
@@ -100,7 +99,7 @@ public class RedisCartServiceImpl implements RedisCartService {
     @Transactional
     public CartItemResponse updateItemQuantity(UUID userId, UUID productId, int quantity) {
         String cartKey = getCartKey(userId);
-        
+
         if (quantity < 0) {
             throw new IllegalArgumentException("Quantity cannot be negative");
         }
@@ -115,15 +114,13 @@ public class RedisCartServiceImpl implements RedisCartService {
             return null;
         }
 
-        ProductResponse product = getProductSafe(productId);
         // Stock check delegated to inventory module — skipped until wired
-
         item.setQuantity(quantity);
         saveCartItem(cartKey, item);
         refreshTTL(cartKey);
 
         log.info("Updated cart item for user {}: product {}, quantity {}", userId, productId, quantity);
-        return mapToResponse(item, product);
+        return mapToResponse(item);
     }
 
     @Override
@@ -132,7 +129,7 @@ public class RedisCartServiceImpl implements RedisCartService {
         String cartKey = getCartKey(userId);
         redisTemplate.opsForHash().delete(cartKey, productId.toString());
         refreshTTL(cartKey);
-        
+
         log.info("Removed item from cart for user {}: product {}", userId, productId);
     }
 
@@ -141,7 +138,7 @@ public class RedisCartServiceImpl implements RedisCartService {
     public void clearCart(UUID userId) {
         String cartKey = getCartKey(userId);
         redisTemplate.delete(cartKey);
-        
+
         log.info("Cleared cart for user {}", userId);
     }
 
@@ -183,25 +180,17 @@ public class RedisCartServiceImpl implements RedisCartService {
         redisTemplate.expire(cartKey, CART_TTL);
     }
 
-    private ProductResponse getProductSafe(UUID productId) {
-        try {
-            return productService.findById(productId);
-        } catch (Exception e) {
-            log.warn("Product {} not found, returning minimal data", productId);
-            return null;
-        }
-    }
+    private CartItemResponse mapToResponse(CartItemData item) {
+        BigDecimal unitPrice = item.getPrice() != null ? item.getPrice() : BigDecimal.ZERO;
+        BigDecimal lineTotal = item.getQuantity() != null
+                ? unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()))
+                : BigDecimal.ZERO;
 
-    private CartItemResponse mapToResponse(CartItemData item, ProductResponse product) {
-        BigDecimal totalPrice = BigDecimal.ZERO;
-        if (item.getPrice() != null && item.getQuantity() != null) {
-            totalPrice = item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
-        }
-        
         return CartItemResponse.builder()
+                .productId(item.getProductId())
                 .quantity(item.getQuantity())
-                .product(product)
-                .totalPrice(totalPrice)
+                .unitPrice(unitPrice)
+                .lineTotal(lineTotal)
                 .build();
     }
 
@@ -210,13 +199,18 @@ public class RedisCartServiceImpl implements RedisCartService {
                 .userId(userId)
                 .items(new ArrayList<>())
                 .itemsCount(0)
-                .totalPrice(BigDecimal.ZERO)
+                .grandTotal(BigDecimal.ZERO)
+                .subtotal(BigDecimal.ZERO)
+                .discountAmount(BigDecimal.ZERO)
+                .shippingTotal(BigDecimal.ZERO)
+                .taxTotal(BigDecimal.ZERO)
+                .hasPriceChanges(false)
                 .build();
     }
 
     private CartResponse buildCartResponse(UUID userId, List<CartItemResponse> items) {
-        BigDecimal totalPrice = items.stream()
-                .map(CartItemResponse::getTotalPrice)
+        BigDecimal subtotal = items.stream()
+                .map(CartItemResponse::getLineTotal)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -224,7 +218,12 @@ public class RedisCartServiceImpl implements RedisCartService {
                 .userId(userId)
                 .items(items)
                 .itemsCount(items.size())
-                .totalPrice(totalPrice)
+                .subtotal(subtotal)
+                .grandTotal(subtotal)
+                .discountAmount(BigDecimal.ZERO)
+                .shippingTotal(BigDecimal.ZERO)
+                .taxTotal(BigDecimal.ZERO)
+                .hasPriceChanges(false)
                 .build();
     }
 }

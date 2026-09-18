@@ -9,5 +9,6 @@ public record CartAbandonedEvent(
     String customerEmail,
     String customerFirstName,
     BigDecimal cartValue,
-    int itemCount
+    int itemCount,
+    boolean isGuest
 ) {}
