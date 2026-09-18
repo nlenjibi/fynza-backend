@@ -81,17 +81,17 @@ CREATE INDEX idx_stock_res_cart ON stock_reservations(cart_id);
 CREATE INDEX idx_stock_res_status ON stock_reservations(status);
 
 --changeset fynza:029-cart-permissions
-INSERT INTO permissions (name, description, resource, action, is_system)
+INSERT INTO permissions (code, resource, action, description)
 VALUES
-    ('cart:read',    'View own cart',        'CART', 'READ',   true),
-    ('cart:write',   'Add/update cart items','CART', 'WRITE',  true),
-    ('cart:delete',  'Remove cart items',    'CART', 'DELETE', true),
-    ('cart:validate','Validate cart prices', 'CART', 'EXECUTE',true)
-ON CONFLICT (name) DO NOTHING;
+    ('cart:read',    'CART', 'READ',    'View own cart'),
+    ('cart:write',   'CART', 'WRITE',   'Add/update cart items'),
+    ('cart:delete',  'CART', 'DELETE',  'Remove cart items'),
+    ('cart:validate','CART', 'EXECUTE', 'Validate cart prices')
+ON CONFLICT (code) DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
-FROM roles r, permissions p
-WHERE r.name = 'CUSTOMER'
-  AND p.name IN ('cart:read','cart:write','cart:delete','cart:validate')
+FROM roles r
+JOIN permissions p ON p.code IN ('cart:read','cart:write','cart:delete','cart:validate')
+WHERE r.code = 'CUSTOMER'
 ON CONFLICT DO NOTHING;
