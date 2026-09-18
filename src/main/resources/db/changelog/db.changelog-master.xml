@@ -34,5 +34,7 @@
     <include file="changes/027-media-schema.sql"          relativeToChangelogFile="true"/>
     <include file="changes/028-media-permissions.sql"     relativeToChangelogFile="true"/>
     <include file="changes/029-cart-schema.sql"           relativeToChangelogFile="true"/>
+    <include file="changes/030-wishlist-schema.sql"        relativeToChangelogFile="true"/>
+    <include file="changes/031-wishlist-permissions.sql"   relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

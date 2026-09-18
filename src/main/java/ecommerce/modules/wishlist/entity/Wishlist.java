@@ -1,24 +1,21 @@
 package ecommerce.modules.wishlist.entity;
 
-import ecommerce.modules.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "wishlists", indexes = {
-        @Index(name = "idx_wishlist_user", columnList = "user_id", unique = true)
-})
+@Table(name = "wishlists")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EqualsAndHashCode
 public class Wishlist {
 
     @Id
@@ -28,9 +25,40 @@ public class Wishlist {
     @Column(name = "public_id", nullable = false, unique = true, updatable = false)
     private UUID publicId;
 
-    @Column(nullable = false)
+    @Column(name = "customer_id")
+    private UUID customerId;
+
+    @Column(name = "guest_token_hash", length = 64)
+    private String guestTokenHash;
+
+    @Column(name = "name", nullable = false, length = 100)
     @Builder.Default
-    private Boolean isActive = true;
+    private String name = "My Wishlist";
+
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
+    private WishlistStatus status = WishlistStatus.ACTIVE;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "visibility", nullable = false, length = 20)
+    @Builder.Default
+    private WishlistVisibility visibility = WishlistVisibility.PRIVATE;
+
+    @Column(name = "is_default", nullable = false)
+    @Builder.Default
+    private Boolean isDefault = false;
+
+    @Column(name = "share_token_hash", length = 64, unique = true)
+    private String shareTokenHash;
+
+    @OneToMany(mappedBy = "wishlist", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    @Getter(lombok.AccessLevel.NONE)
+    private List<WishlistItem> items = new ArrayList<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -38,12 +66,15 @@ public class Wishlist {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    public List<WishlistItem> getItems() {
+        return Collections.unmodifiableList(items);
+    }
+
     @PrePersist
     protected void onCreate() {
-        publicId = UUID.randomUUID();
+        publicId  = UUID.randomUUID();
         createdAt = Instant.now();
         updatedAt = Instant.now();
-        if (isActive == null) isActive = true;
     }
 
     @PreUpdate
@@ -51,21 +82,7 @@ public class Wishlist {
         updatedAt = Instant.now();
     }
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
-    private User user;
-
-    @OneToMany(mappedBy = "wishlist", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<WishlistItem> wishlistItems = new ArrayList<>();
-
-    public void addWishlistItem(WishlistItem item) {
-        wishlistItems.add(item);
-        item.setWishlist(this);
-    }
-
-    public void removeWishlistItem(WishlistItem item) {
-        wishlistItems.remove(item);
-        item.setWishlist(null);
+    public boolean isGuest() {
+        return customerId == null && guestTokenHash != null;
     }
 }

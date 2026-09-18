@@ -1,16 +1,12 @@
 package ecommerce.modules.wishlist.repository;
 
 import ecommerce.modules.wishlist.entity.WishlistItem;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.math.BigDecimal;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,27 +14,24 @@ import java.util.UUID;
 @Repository
 public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long> {
 
-    Optional<WishlistItem> findByUser_PublicIdAndProduct_Id(UUID userPublicId, UUID productId);
+    List<WishlistItem> findByWishlist_PublicId(UUID wishlistId);
 
-    boolean existsByUser_PublicIdAndProduct_Id(UUID userPublicId, UUID productId);
+    Optional<WishlistItem> findByPublicId(UUID publicId);
 
-    List<WishlistItem> findByUser_PublicIdOrderByCreatedAtDesc(UUID userPublicId);
+    Optional<WishlistItem> findByWishlist_PublicIdAndProductIdAndVariantId(
+            UUID wishlistId, UUID productId, UUID variantId);
 
-    Page<WishlistItem> findByUser_PublicId(UUID userPublicId, Pageable pageable);
+    boolean existsByWishlist_PublicIdAndProductIdAndVariantId(
+            UUID wishlistId, UUID productId, UUID variantId);
 
-    // Price-drop detection moved to pricing module — returns empty until wired
-    default List<WishlistItem> findItemsWithPriceDrops(UUID userPublicId) {
-        return Collections.emptyList();
-    }
+    boolean existsByWishlist_CustomerIdAndProductIdAndVariantId(
+            UUID customerId, UUID productId, UUID variantId);
 
-    // Price/savings aggregation moved to pricing module — returns zeros until wired
-    default Object[] findTotalValueAndSavings(UUID userPublicId) {
-        return new Object[]{BigDecimal.ZERO, BigDecimal.ZERO};
-    }
+    long countByWishlist_PublicId(UUID wishlistId);
 
-    long countByUser_PublicId(UUID userPublicId);
+    long countByWishlist_CustomerId(UUID customerId);
 
     @Modifying
-    @Query("DELETE FROM WishlistItem w WHERE w.user.publicId = :userPublicId")
-    int deleteByUser_PublicId(@Param("userPublicId") UUID userPublicId);
+    @Query("DELETE FROM WishlistItem wi WHERE wi.wishlist.publicId = :wishlistId")
+    int deleteByWishlist_PublicId(@Param("wishlistId") UUID wishlistId);
 }
