@@ -38,5 +38,6 @@
     <include file="changes/031-wishlist-permissions.sql"   relativeToChangelogFile="true"/>
     <include file="changes/032-order-schema.sql"           relativeToChangelogFile="true"/>
     <include file="changes/033-order-permissions.sql"      relativeToChangelogFile="true"/>
+    <include file="changes/034-read-model-views.sql"       relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

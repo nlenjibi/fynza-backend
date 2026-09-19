@@ -52,15 +52,16 @@ public class OrderServiceImpl implements OrderService {
             OrderStatus.PENDING, OrderStatus.CONFIRMED
     );
 
-    private final OrderRepository          orderRepository;
-    private final OrderItemRepository      orderItemRepository;
-    private final SellerOrderRepository    sellerOrderRepository;
-    private final OrderTimelineRepository  orderTimelineRepository;
-    private final CartRepository           cartRepository;
-    private final ProductRepository        productRepository;
-    private final AddressRepository        addressRepository;
-    private final SellerRepository         sellerRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final OrderRepository              orderRepository;
+    private final OrderItemRepository          orderItemRepository;
+    private final SellerOrderRepository        sellerOrderRepository;
+    private final OrderTimelineRepository      orderTimelineRepository;
+    private final OrderSummaryViewRepository   orderSummaryViewRepository;
+    private final CartRepository               cartRepository;
+    private final ProductRepository            productRepository;
+    private final AddressRepository            addressRepository;
+    private final SellerRepository             sellerRepository;
+    private final ApplicationEventPublisher    eventPublisher;
 
     // ── Customer ──────────────────────────────────────────────────────────────
 
@@ -193,8 +194,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Page<OrderResponse> getUserOrders(UUID customerId, Pageable pageable) {
-        return orderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId, pageable)
-                .map(this::toResponse);
+        return orderSummaryViewRepository.findByCustomerIdOrderByCreatedAtDesc(customerId, pageable)
+                .map(this::toSummaryResponse);
     }
 
     @Override
@@ -221,18 +222,22 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Page<OrderResponse> getAllOrders(Pageable pageable) {
-        return orderRepository.findAll(pageable).map(this::toResponse);
+        return orderSummaryViewRepository.findAll(pageable).map(this::toSummaryResponse);
     }
 
     @Override
     public Page<OrderResponse> getOrdersByStatus(OrderStatus status, Pageable pageable) {
-        return orderRepository.findByStatus(status, pageable).map(this::toResponse);
+        return orderSummaryViewRepository.findByStatus(status.name(), pageable).map(this::toSummaryResponse);
     }
 
     @Override
     public Page<OrderResponse> searchOrdersAdmin(String query, OrderStatus status, String paymentStatus, Pageable pageable) {
-        PaymentStatus ps = paymentStatus != null ? PaymentStatus.valueOf(paymentStatus.toUpperCase()) : null;
-        return orderRepository.searchAdmin(status, ps, query, pageable).map(this::toResponse);
+        return orderSummaryViewRepository.searchAdmin(
+                status != null ? status.name() : null,
+                paymentStatus != null ? paymentStatus.toUpperCase() : null,
+                query,
+                pageable
+        ).map(this::toSummaryResponse);
     }
 
     @Override
@@ -318,13 +323,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Page<OrderResponse> getSellerOrders(UUID sellerId, Pageable pageable) {
-        // Convert UUID sellerId to Long — seller identity in this platform is Long-based
-        // We retrieve SellerOrders by sellerId (Long) mapped from product.sellerId
-        // For GraphQL context, sellerId comes from UserPrincipal which is UUID-based
-        // We query SellerOrder and map back to parent Orders
         Long sellerLongId = resolveSellerLongId(sellerId);
-        return sellerOrderRepository.findBySellerIdOrderByCreatedAtDesc(sellerLongId, pageable)
-                .map(so -> toResponse(so.getOrder()));
+        return orderSummaryViewRepository.findBySellerId(sellerLongId, pageable)
+                .map(this::toSummaryResponse);
     }
 
     @Override
@@ -426,6 +427,25 @@ public class OrderServiceImpl implements OrderService {
             if (!orderRepository.existsByOrderNumber(candidate)) return candidate;
         }
         return "FYN-" + year + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+    }
+
+    private OrderResponse toSummaryResponse(OrderSummaryView view) {
+        return OrderResponse.builder()
+                .id(view.getPublicId())
+                .orderNumber(view.getOrderNumber())
+                .status(view.getStatus())
+                .paymentStatus(view.getPaymentStatus())
+                .paymentMethod(view.getPaymentMethod())
+                .customerId(view.getCustomerId())
+                .subtotal(view.getSubtotal())
+                .tax(view.getTax())
+                .shippingCost(view.getShippingCost())
+                .discount(view.getDiscount())
+                .totalAmount(view.getTotalAmount())
+                .couponCode(view.getCouponCode())
+                .createdAt(view.getCreatedAt())
+                .updatedAt(view.getUpdatedAt())
+                .build();
     }
 
     private OrderResponse toResponse(Order order) {

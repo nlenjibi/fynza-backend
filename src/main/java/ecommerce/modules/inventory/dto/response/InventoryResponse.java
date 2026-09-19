@@ -1,6 +1,7 @@
 package ecommerce.modules.inventory.dto.response;
 
 import ecommerce.modules.inventory.entity.Inventory;
+import ecommerce.modules.inventory.entity.InventorySummaryView;
 import ecommerce.modules.inventory.enums.InventoryStatus;
 import lombok.Builder;
 import lombok.Data;
@@ -30,6 +31,32 @@ public class InventoryResponse {
     private Boolean isActive;
     private Instant createdAt;
     private Instant updatedAt;
+
+    public static InventoryResponse from(InventorySummaryView view) {
+        InventoryStatus status = view.getStockStatus() != null
+                ? InventoryStatus.valueOf(view.getStockStatus())
+                : InventoryStatus.DISABLED;
+        return InventoryResponse.builder()
+                .publicId(view.getPublicId())
+                .productId(view.getProductId())
+                .variantId(view.getVariantId())
+                .sellerId(view.getSellerId())
+                .storeId(view.getStoreId())
+                .locationId(view.getLocationId())
+                .onHandQuantity(view.getOnHandQuantity() != null ? view.getOnHandQuantity() : 0)
+                .reservedQuantity(view.getReservedQuantity() != null ? view.getReservedQuantity() : 0)
+                .availableQuantity(view.getAvailableQuantity() != null ? view.getAvailableQuantity() : 0)
+                .incomingQuantity(view.getIncomingQuantity() != null ? view.getIncomingQuantity() : 0)
+                .damagedQuantity(view.getDamagedQuantity() != null ? view.getDamagedQuantity() : 0)
+                .lowStockThreshold(view.getLowStockThreshold() != null ? view.getLowStockThreshold() : 0)
+                .allowBackorder(Boolean.TRUE.equals(view.getAllowBackorder()))
+                .status(status)
+                .version(null)
+                .isActive(view.getIsActive())
+                .createdAt(view.getCreatedAt())
+                .updatedAt(view.getUpdatedAt())
+                .build();
+    }
 
     public static InventoryResponse from(Inventory inv) {
         return InventoryResponse.builder()
