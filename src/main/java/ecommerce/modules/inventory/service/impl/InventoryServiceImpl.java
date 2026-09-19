@@ -18,6 +18,7 @@ import ecommerce.modules.inventory.exception.InventoryOwnershipException;
 import ecommerce.modules.inventory.exception.InvalidInventoryOperationException;
 import ecommerce.modules.inventory.repository.InventoryLocationRepository;
 import ecommerce.modules.inventory.repository.InventoryRepository;
+import ecommerce.modules.inventory.repository.InventorySummaryViewRepository;
 import ecommerce.modules.inventory.repository.StockMovementRepository;
 import ecommerce.modules.inventory.service.InventoryService;
 import ecommerce.modules.seller.entity.Seller;
@@ -42,11 +43,12 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class InventoryServiceImpl implements InventoryService {
 
-    private final InventoryRepository         inventoryRepository;
-    private final InventoryLocationRepository locationRepository;
-    private final StockMovementRepository     movementRepository;
-    private final SellerRepository            sellerRepository;
-    private final ApplicationEventPublisher   eventPublisher;
+    private final InventoryRepository             inventoryRepository;
+    private final InventoryLocationRepository     locationRepository;
+    private final InventorySummaryViewRepository  inventorySummaryViewRepository;
+    private final StockMovementRepository         movementRepository;
+    private final SellerRepository                sellerRepository;
+    private final ApplicationEventPublisher       eventPublisher;
 
     @Override
     @Transactional
@@ -111,7 +113,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     public Page<InventoryResponse> getSellerInventory(UUID userId, Pageable pageable) {
         Seller seller = resolveSeller(userId);
-        return inventoryRepository.findBySellerIdAndIsActiveTrue(seller.getId(), pageable)
+        return inventorySummaryViewRepository.findBySellerIdAndIsActiveTrue(seller.getId(), pageable)
                 .map(InventoryResponse::from);
     }
 

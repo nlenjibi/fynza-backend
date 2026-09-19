@@ -9,5 +9,5 @@ import java.util.List;
 @Repository
 public interface OrderTimelineRepository extends JpaRepository<OrderTimeline, Long> {
 
-    List<OrderTimeline> findByOrderIdOrderByTimestampDesc(Long orderId);
+    List<OrderTimeline> findByOrder_IdOrderByCreatedAtDesc(Long orderId);
 }

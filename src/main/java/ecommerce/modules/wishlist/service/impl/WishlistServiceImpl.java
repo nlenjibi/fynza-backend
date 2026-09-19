@@ -10,8 +10,10 @@ import ecommerce.modules.wishlist.entity.WishlistStatus;
 import ecommerce.modules.wishlist.entity.WishlistVisibility;
 import ecommerce.modules.wishlist.event.*;
 import ecommerce.modules.wishlist.exception.*;
+import ecommerce.modules.wishlist.entity.WishlistSummaryView;
 import ecommerce.modules.wishlist.repository.WishlistItemRepository;
 import ecommerce.modules.wishlist.repository.WishlistRepository;
+import ecommerce.modules.wishlist.repository.WishlistSummaryViewRepository;
 import ecommerce.modules.wishlist.service.WishlistPolicy;
 import ecommerce.modules.wishlist.service.WishlistService;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +38,7 @@ public class WishlistServiceImpl implements WishlistService {
 
     private final WishlistRepository wishlistRepository;
     private final WishlistItemRepository wishlistItemRepository;
+    private final WishlistSummaryViewRepository wishlistSummaryViewRepository;
     private final WishlistPolicy wishlistPolicy;
     private final CartService cartService;
     private final ApplicationEventPublisher eventPublisher;
@@ -116,8 +119,9 @@ public class WishlistServiceImpl implements WishlistService {
 
     @Override
     public List<WishlistResponse> getMyWishlists(UUID customerId) {
-        return wishlistRepository.findByCustomerIdAndStatusNot(customerId, WishlistStatus.DELETED)
-                .stream().map(this::toResponse).toList();
+        return wishlistSummaryViewRepository
+                .findByCustomerIdAndStatusNot(customerId, WishlistStatus.DELETED.name())
+                .stream().map(this::toSummaryResponse).toList();
     }
 
     // =========================================================================
@@ -336,6 +340,21 @@ public class WishlistServiceImpl implements WishlistService {
     // =========================================================================
     // Mapping
     // =========================================================================
+
+    private WishlistResponse toSummaryResponse(WishlistSummaryView view) {
+        return WishlistResponse.builder()
+                .id(view.getPublicId())
+                .name(view.getName())
+                .description(view.getDescription())
+                .status(WishlistStatus.valueOf(view.getStatus()))
+                .visibility(WishlistVisibility.valueOf(view.getVisibility()))
+                .isDefault(view.getIsDefault())
+                .itemCount(view.getItemCount() != null ? view.getItemCount() : 0)
+                .items(List.of())
+                .createdAt(view.getCreatedAt())
+                .updatedAt(view.getUpdatedAt())
+                .build();
+    }
 
     private WishlistResponse toResponse(Wishlist wishlist) {
         List<WishlistItem> items = wishlistItemRepository.findByWishlist_PublicId(wishlist.getPublicId());

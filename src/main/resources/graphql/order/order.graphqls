@@ -1,102 +1,142 @@
 
 # =============================================================================
 # Order GraphQL Schema
-# Covers: Customer, Admin, and Seller order operations
+# All reads are here. Mutations are REST-only.
+# POST /v1/checkout         — create order
+# POST /v1/orders/{id}/cancel — cancel
+# PATCH /v1/admin/orders/{id} — admin status update
+# PATCH /v1/seller/orders/{id}/status — seller status update
 # =============================================================================
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Inputs
-# ─────────────────────────────────────────────────────────────────────────────
+type OrderAddress {
+    fullName: String
+    phone: String
+    line1: String
+    line2: String
+    city: String
+    state: String
+    postalCode: String
+    country: String
+}
 
-input OrderItemInput {
+type OrderItem {
+    id: ID!
     productId: ID!
+    variantId: ID
+    sellerId: String
+    productName: String!
+    productSku: String
+    productImageUrl: String
     quantity: Int!
+    unitPrice: BigDecimal!
+    subtotal: BigDecimal!
+    createdAt: DateTime
 }
 
-input OrderCreateInput {
-    shippingAddressId: ID
-    billingAddressId: ID
-    paymentMethod: String
-    couponCode: String
-    items: [OrderItemInput!]
-    shippingCost: BigDecimal
-    customerNotes: String
-}
-
-input OrderFilterInput {
-    status: String
-    paymentStatus: String
-    dateFrom: DateTime
-    dateTo: DateTime
-    minAmount: BigDecimal
-    maxAmount: BigDecimal
-    query: String
-    orderNumber: String
-    customerEmail: String
-    highValue: Boolean
-    overdue: Boolean
-}
-
-input OrderStatusUpdateInput {
+type Order {
+    id: ID!
+    orderNumber: String!
     status: String!
+    paymentStatus: String!
+    paymentMethod: String
+    customerId: ID!
+    items: [OrderItem!]!
+    subtotal: BigDecimal!
+    tax: BigDecimal!
+    shippingCost: BigDecimal!
+    discount: BigDecimal!
+    totalAmount: BigDecimal!
+    couponCode: String
     trackingNumber: String
-    notes: String
+    customerNotes: String
+    shippingAddress: OrderAddress
+    billingAddress: OrderAddress
+    createdAt: DateTime!
+    updatedAt: DateTime
 }
 
-input OrderSearchInput {
-    query: String
-    status: String
-    paymentStatus: String
-    dateFrom: DateTime
-    dateTo: DateTime
-    minAmount: BigDecimal
-    maxAmount: BigDecimal
+type OrderPage {
+    content: [Order!]!
+    pageInfo: PageInfo
 }
 
-input CancelOrderInput {
-    reason: String
+type OrderTimeline {
+    id: ID!
+    status: String!
+    message: String
+    changedBy: ID
+    occurredAt: DateTime!
 }
 
-input RefundOrderInput {
-    reason: String!
-    amount: BigDecimal
+type OrderTracking {
+    orderId: ID!
+    orderNumber: String!
+    status: String!
+    displayName: String
+    trackingNumber: String
+    timeline: [OrderTimeline!]!
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Queries
-# ─────────────────────────────────────────────────────────────────────────────
+type OrderStats {
+    totalOrders: Int!
+    pendingOrders: Int!
+    confirmedOrders: Int!
+    processingOrders: Int!
+    shippedOrders: Int!
+    deliveredOrders: Int!
+    cancelledOrders: Int!
+    totalRevenue: BigDecimal!
+    averageOrderValue: BigDecimal!
+}
+
+type RecentOrder {
+    orderId: String!
+    orderNumber: String!
+    customerName: String
+    amount: BigDecimal!
+    status: String!
+    createdAt: String!
+}
+
+type OrderDashboard {
+    totalOrders: Int!
+    pendingOrders: Int!
+    recentOrders: [RecentOrder!]!
+    totalRevenue: BigDecimal!
+    orderCompletionRate: Float!
+    cancellationRate: Float!
+}
+
+type SellerOrderStats {
+    totalOrders: Int!
+    pending: Int!
+    confirmed: Int!
+    processing: Int!
+    shipped: Int!
+    delivered: Int!
+    cancelled: Int!
+}
 
 extend type Query {
 
-    # ── Customer Queries (AUTHENTICATED) ──────────────────────────────────
-
+    # ── Customer ──────────────────────────────────────────────────────────────
     order(id: ID!): Order
     orderByNumber(orderNumber: String!): Order
     myOrders(pagination: PageInput): OrderPage!
 
-    # ── Order Tracking (CUSTOMER, ADMIN, SELLER) ─────────────────────────
-
+    # ── Tracking ──────────────────────────────────────────────────────────────
     orderTracking(orderId: ID!): OrderTracking!
     orderTimeline(orderId: ID!): [OrderTimeline!]!
 
-    # ── Admin Queries (ADMIN) ────────────────────────────────────────────
-
+    # ── Admin ─────────────────────────────────────────────────────────────────
     allOrders(pagination: PageInput): OrderPage!
-    adminSearchOrders(filter: OrderSearchInput, pagination: PageInput): OrderPage!
+    adminSearchOrders(query: String, status: String, paymentStatus: String, pagination: PageInput): OrderPage!
     ordersByStatus(status: String!, pagination: PageInput): OrderPage!
     orderStatistics: OrderStats!
     orderDashboard: OrderDashboard!
     customerOrders(customerId: ID!, pagination: PageInput): OrderPage!
 
-    # ── Seller Queries (SELLER) ──────────────────────────────────────────
-
-    sellerOrders(pagination: PageInput, filter: OrderSearchInput): OrderPage!
+    # ── Seller ────────────────────────────────────────────────────────────────
+    sellerOrders(pagination: PageInput): OrderPage!
     sellerOrderStats: SellerOrderStats!
 }
-
-# Order mutations (createOrder, cancelOrder, refund, status updates) are handled
-# exclusively by the REST API per PRD §19 & §86:
-#   POST /v1/checkout           — create order
-#   POST /v1/orders/{id}/cancel — cancel order
-#   POST /v1/orders/{id}/refund — request refund
-#   PATCH /v1/admin/orders/{id} — admin status updates

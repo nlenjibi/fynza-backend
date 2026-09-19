@@ -7,10 +7,6 @@ public record OrderStatusChangedEvent(
     UUID orderId,
     String orderNumber,
     UUID customerId,
-    String customerEmail,
-    String customerFirstName,
     OrderStatus previousStatus,
-    OrderStatus newStatus,
-    UUID sellerId,
-    String trackingNumber
+    OrderStatus newStatus
 ) {}
