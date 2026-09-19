@@ -2,7 +2,6 @@ package ecommerce.modules.order.controller;
 
 import ecommerce.common.response.ApiResponse;
 import ecommerce.common.security.UserPrincipal;
-import ecommerce.modules.order.dto.OrderResponse;
 import ecommerce.modules.order.dto.request.CancelOrderRequest;
 import ecommerce.modules.order.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
