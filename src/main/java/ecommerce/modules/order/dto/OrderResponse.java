@@ -1,12 +1,13 @@
 package ecommerce.modules.order.dto;
 
+import ecommerce.modules.order.entity.OrderAddress;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,6 +19,8 @@ public class OrderResponse {
     private UUID id;
     private String orderNumber;
     private String status;
+    private String paymentStatus;
+    private String paymentMethod;
     private UUID customerId;
     private List<OrderItemResponse> items;
     private BigDecimal subtotal;
@@ -25,11 +28,11 @@ public class OrderResponse {
     private BigDecimal shippingCost;
     private BigDecimal discount;
     private BigDecimal totalAmount;
-    private String paymentMethod;
-    private String paymentStatus;
-    private AddressResponse shippingAddress;
+    private String couponCode;
     private String trackingNumber;
-    private LocalDateTime estimatedDelivery;
-    private List<TimelineItem> timeline;
-    private LocalDateTime createdAt;
+    private String customerNotes;
+    private OrderAddress shippingAddress;
+    private OrderAddress billingAddress;
+    private Instant createdAt;
+    private Instant updatedAt;
 }

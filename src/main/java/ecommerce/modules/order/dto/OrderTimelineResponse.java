@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Data
@@ -13,13 +13,9 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class OrderTimelineResponse {
-    private UUID activityId;
-    private String activityType;
+    private UUID id;
     private String status;
-    private String description;
-    private String oldValue;
-    private String newValue;
-    private LocalDateTime timestamp;
-    private String icon;
-    private String color;
+    private String message;
+    private UUID changedBy;
+    private Instant occurredAt;
 }

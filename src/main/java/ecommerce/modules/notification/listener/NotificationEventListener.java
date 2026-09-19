@@ -38,24 +38,13 @@ public class NotificationEventListener {
         notificationService.send(
             NotificationType.ORDER_PLACED,
             event.customerId(),
-            event.sellerId(),
+            null,
             Map.of(
-                "recipientEmail", event.customerEmail(),
-                "firstName", event.customerFirstName(),
                 "orderNumber", event.orderNumber(),
                 "totalAmount", event.totalAmount().toPlainString()
             ),
             "/orders/" + event.orderId(),
             new EntityRef("ORDER", event.orderId())
-        );
-        notificationService.sendBroadcast(
-            NotificationType.SELLER_ORDER_RECEIVED,
-            event.orderId(),
-            event.sellerId(),
-            Map.of(
-                "orderNumber", event.orderNumber(),
-                "totalAmount", event.totalAmount().toPlainString()
-            )
         );
     }
 
@@ -71,13 +60,9 @@ public class NotificationEventListener {
             default        -> null;
         };
         if (type == null) return;
-        Map<String, String> vars = new java.util.HashMap<>(Map.of(
-            "recipientEmail", event.customerEmail(),
-            "firstName", event.customerFirstName(),
-            "orderNumber", event.orderNumber()
-        ));
-        if (event.trackingNumber() != null) vars.put("trackingNumber", event.trackingNumber());
-        notificationService.send(type, event.customerId(), event.sellerId(), vars,
+        Map<String, String> vars = new java.util.HashMap<>();
+        vars.put("orderNumber", event.orderNumber());
+        notificationService.send(type, event.customerId(), null, vars,
             "/orders/" + event.orderId(), new EntityRef("ORDER", event.orderId()));
     }
 
@@ -88,13 +73,10 @@ public class NotificationEventListener {
         notificationService.send(
             NotificationType.ORDER_CANCELLED,
             event.customerId(),
-            event.sellerId(),
+            null,
             Map.of(
-                "recipientEmail", event.customerEmail(),
-                "firstName", event.customerFirstName(),
                 "orderNumber", event.orderNumber(),
-                "totalAmount", event.totalAmount().toPlainString(),
-                "reason", event.cancellationReason() != null ? event.cancellationReason() : ""
+                "reason", event.reason() != null ? event.reason() : ""
             ),
             "/orders/" + event.orderId(),
             new EntityRef("ORDER", event.orderId())

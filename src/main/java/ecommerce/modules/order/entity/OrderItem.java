@@ -1,8 +1,5 @@
 package ecommerce.modules.order.entity;
 
-import ecommerce.modules.product.entity.Product;
-import ecommerce.modules.product.entity.ProductVariant;
-import ecommerce.modules.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -12,8 +9,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "order_items", indexes = {
-        @Index(name = "idx_order_item_order_id", columnList = "order_id"),
-        @Index(name = "idx_order_item_product_id", columnList = "product_id")
+        @Index(name = "idx_order_items_order_id",        columnList = "order_id"),
+        @Index(name = "idx_order_items_seller_order_id", columnList = "seller_order_id"),
+        @Index(name = "idx_order_items_product_id",      columnList = "product_id")
 })
 @Getter
 @Setter
@@ -27,30 +25,17 @@ public class OrderItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @EqualsAndHashCode.Include
     @Column(name = "public_id", nullable = false, unique = true, updatable = false)
     private UUID publicId;
-
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean isActive = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @Column(name = "updated_at")
-    private Instant updatedAt;
-
     @PrePersist
     protected void onCreate() {
-        publicId = UUID.randomUUID();
+        if (publicId == null) publicId = UUID.randomUUID();
         createdAt = Instant.now();
-        updatedAt = Instant.now();
-        if (isActive == null) isActive = true;
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = Instant.now();
     }
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -58,29 +43,33 @@ public class OrderItem {
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+    @JoinColumn(name = "seller_order_id", nullable = false)
+    private SellerOrder sellerOrder;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "variant_id")
-    private ProductVariant variant;
+    @Column(name = "product_id", nullable = false)
+    private UUID productId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "seller_id")
-    private User seller;
+    @Column(name = "variant_id")
+    private UUID variantId;
+
+    @Column(name = "seller_id")
+    private Long sellerId;
+
+    @Column(name = "product_name", nullable = false, length = 500)
+    private String productName;
+
+    @Column(name = "product_sku", length = 100)
+    private String productSku;
+
+    @Column(name = "product_image_url", length = 1000)
+    private String productImageUrl;
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
-    @Column(name = "price", nullable = false, precision = 10, scale = 2)
-    private BigDecimal price;
+    @Column(name = "unit_price", nullable = false, precision = 12, scale = 2)
+    private BigDecimal unitPrice;
 
-    @Column(name = "subtotal", nullable = false, precision = 10, scale = 2)
+    @Column(name = "subtotal", nullable = false, precision = 12, scale = 2)
     private BigDecimal subtotal;
-
-    @Column(name = "size", length = 50)
-    private String size;
-
-    @Column(name = "color", length = 50)
-    private String color;
 }

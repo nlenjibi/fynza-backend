@@ -132,7 +132,7 @@ public class OrderValidationPipeline {
 
         if (!failures.isEmpty()) {
             order.setStatus(OrderStatus.VALIDATION_FAILED);
-            order.setNotes("Validation failed: " + String.join("; ", failures));
+            order.setCustomerNotes("Validation failed: " + String.join("; ", failures));
             orderRepository.save(order);
             log.warn("Order {} validation failed: {}", order.getId(), failures);
             return ValidationResult.builder()
@@ -144,7 +144,7 @@ public class OrderValidationPipeline {
         }
 
         order.setStatus(OrderStatus.VALIDATED);
-        order.setNotes("All validations passed");
+        order.setCustomerNotes("All validations passed");
         orderRepository.save(order);
         log.info("Order {} validation completed successfully", order.getId());
 

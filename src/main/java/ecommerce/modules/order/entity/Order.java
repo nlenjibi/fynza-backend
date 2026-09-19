@@ -2,24 +2,22 @@ package ecommerce.modules.order.entity;
 
 import ecommerce.common.enums.OrderStatus;
 import ecommerce.common.enums.PaymentMethod;
-import ecommerce.modules.user.entity.Address;
-import ecommerce.modules.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 @Entity
 @Table(name = "orders", indexes = {
-        @Index(name = "idx_order_customer_id", columnList = "customer_id"),
-        @Index(name = "idx_order_order_number", columnList = "order_number", unique = true),
-        @Index(name = "idx_order_status", columnList = "status"),
-        @Index(name = "idx_order_payment_status", columnList = "payment_status")
+        @Index(name = "idx_orders_customer_id",    columnList = "customer_id"),
+        @Index(name = "idx_orders_order_number",   columnList = "order_number", unique = true),
+        @Index(name = "idx_orders_status",         columnList = "status"),
+        @Index(name = "idx_orders_payment_status", columnList = "payment_status")
 })
 @Getter
 @Setter
@@ -33,6 +31,7 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @EqualsAndHashCode.Include
     @Column(name = "public_id", nullable = false, unique = true, updatable = false)
     private UUID publicId;
 
@@ -48,7 +47,7 @@ public class Order {
 
     @PrePersist
     protected void onCreate() {
-        publicId = UUID.randomUUID();
+        if (publicId == null) publicId = UUID.randomUUID();
         createdAt = Instant.now();
         updatedAt = Instant.now();
         if (isActive == null) isActive = true;
@@ -59,79 +58,96 @@ public class Order {
         updatedAt = Instant.now();
     }
 
-    @EqualsAndHashCode.Include
-    @Column(name = "order_number", nullable = false, unique = true, length = 50)
+    @Column(name = "order_number", nullable = false, unique = true, length = 30)
     private String orderNumber;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
-    private User customer;
+    @Column(name = "customer_id", nullable = false)
+    private UUID customerId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
     @Builder.Default
     private OrderStatus status = OrderStatus.PENDING;
 
-    @Column(name = "subtotal", nullable = false, precision = 10, scale = 2)
-    @Builder.Default
-    private BigDecimal subtotal = BigDecimal.ZERO;
-
-    @Column(name = "tax", precision = 10, scale = 2)
-    @Builder.Default
-    private BigDecimal tax = BigDecimal.ZERO;
-
-    @Column(name = "shipping_cost", precision = 10, scale = 2)
-    @Builder.Default
-    private BigDecimal shippingCost = BigDecimal.ZERO;
-
-    @Column(name = "discount", precision = 10, scale = 2)
-    @Builder.Default
-    private BigDecimal discount = BigDecimal.ZERO;
-
-    @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
-    @Builder.Default
-    private BigDecimal totalAmount = BigDecimal.ZERO;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "payment_method", length = 30)
-    private PaymentMethod paymentMethod;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false, length = 30)
     @Builder.Default
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "shipping_address_id")
-    private Address shippingAddress;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 30)
+    private PaymentMethod paymentMethod;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "billing_address_id")
-    private Address billingAddress;
+    @Column(name = "subtotal", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal subtotal = BigDecimal.ZERO;
 
-    @Column(name = "tracking_number", length = 100)
-    private String trackingNumber;
+    @Column(name = "tax", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal tax = BigDecimal.ZERO;
 
-    @Column(name = "estimated_delivery")
-    private LocalDateTime estimatedDelivery;
+    @Column(name = "shipping_cost", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal shippingCost = BigDecimal.ZERO;
 
-    @Column(name = "notes", columnDefinition = "TEXT")
-    private String notes;
+    @Column(name = "discount", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal discount = BigDecimal.ZERO;
+
+    @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal totalAmount = BigDecimal.ZERO;
 
     @Column(name = "coupon_code", length = 50)
     private String couponCode;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<OrderItem> orderItems = new ArrayList<>();
+    @Column(name = "tracking_number", length = 100)
+    private String trackingNumber;
 
-    public void addOrderItem(OrderItem item) {
-        orderItems.add(item);
-        item.setOrder(this);
+    @Column(name = "customer_notes", columnDefinition = "TEXT")
+    private String customerNotes;
+
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "fullName",   column = @Column(name = "shipping_name")),
+            @AttributeOverride(name = "phone",      column = @Column(name = "shipping_phone")),
+            @AttributeOverride(name = "line1",      column = @Column(name = "shipping_line1")),
+            @AttributeOverride(name = "line2",      column = @Column(name = "shipping_line2")),
+            @AttributeOverride(name = "city",       column = @Column(name = "shipping_city")),
+            @AttributeOverride(name = "state",      column = @Column(name = "shipping_state")),
+            @AttributeOverride(name = "postalCode", column = @Column(name = "shipping_postal")),
+            @AttributeOverride(name = "country",    column = @Column(name = "shipping_country"))
+    })
+    private OrderAddress shippingAddress;
+
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "fullName",   column = @Column(name = "billing_name")),
+            @AttributeOverride(name = "phone",      column = @Column(name = "billing_phone")),
+            @AttributeOverride(name = "line1",      column = @Column(name = "billing_line1")),
+            @AttributeOverride(name = "line2",      column = @Column(name = "billing_line2")),
+            @AttributeOverride(name = "city",       column = @Column(name = "billing_city")),
+            @AttributeOverride(name = "state",      column = @Column(name = "billing_state")),
+            @AttributeOverride(name = "postalCode", column = @Column(name = "billing_postal")),
+            @AttributeOverride(name = "country",    column = @Column(name = "billing_country"))
+    })
+    private OrderAddress billingAddress;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    @Getter(lombok.AccessLevel.NONE)
+    private List<SellerOrder> sellerOrders = new ArrayList<>();
+
+    public List<SellerOrder> getSellerOrders() {
+        return Collections.unmodifiableList(sellerOrders);
     }
 
-    public void removeOrderItem(OrderItem item) {
-        orderItems.remove(item);
-        item.setOrder(null);
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    @Getter(lombok.AccessLevel.NONE)
+    private List<OrderItem> orderItems = new ArrayList<>();
+
+    public List<OrderItem> getOrderItems() {
+        return Collections.unmodifiableList(orderItems);
     }
 }
