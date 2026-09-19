@@ -174,7 +174,10 @@ public class RedisConfig implements CachingConfigurer {
                 entry(base, CacheNames.SELLER_DASHBOARD,        Duration.ofMinutes(10)),
                 entry(base, CacheNames.FAQS,                    Duration.ofHours(1)),
                 entry(base, CacheNames.SEARCH_FILTERS,          Duration.ofHours(1)),
-                entry(base, CacheNames.SETTINGS,                Duration.ofHours(1))
+                entry(base, CacheNames.SETTINGS,                Duration.ofHours(1)),
+
+                // Inventory
+                entry(base, CacheNames.INVENTORY_AVAILABILITY,  Duration.ofMinutes(5))
         );
 
         log.info("Redis CacheManager configured with {} per-cache TTLs (default={})", perCache.size(), defaultTtl);

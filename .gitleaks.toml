@@ -1,0 +1,21 @@
+title = "Fynza Backend Gitleaks Configuration"
+
+[allowlist]
+  description = "Allowlisted placeholder values committed before env-var discipline was enforced"
+
+  # Template / placeholder strings that look like secrets but carry no real credential value.
+  # Real secrets must never appear here — use environment variables instead.
+  regexes = [
+    "your-256-bit-secret-key-here-change-in-production-minimum-32-chars",
+    "your-256-bit-secret-key-for-jwt-signing-must-be-at-least-32-chars",
+    "sandbox-client-secret",
+    "sandbox-client-id",
+    "your_secure_password_here",
+    "your_redis_password",
+  ]
+
+  # Example / template files — never contain real credentials
+  paths = [
+    ".env.example",
+    ".env.local.example",
+  ]

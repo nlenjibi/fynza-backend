@@ -12,12 +12,14 @@ import ecommerce.modules.product.dto.response.ProductResponse;
 import ecommerce.modules.product.entity.Product;
 import ecommerce.modules.product.entity.ProductCategory;
 import ecommerce.modules.product.entity.ProductStatusHistory;
+import ecommerce.modules.product.entity.ProductSummaryView;
 import ecommerce.modules.product.exception.ProductNotFoundException;
 import ecommerce.modules.product.mapper.ProductMapper;
 import ecommerce.modules.product.policy.ProductOwnershipPolicy;
 import ecommerce.modules.product.repository.ProductCategoryRepository;
 import ecommerce.modules.product.repository.ProductRepository;
 import ecommerce.modules.product.repository.ProductStatusHistoryRepository;
+import ecommerce.modules.product.repository.ProductSummaryViewRepository;
 import ecommerce.modules.product.service.ProductNumberService;
 import ecommerce.modules.product.service.ProductService;
 import ecommerce.modules.product.service.ProductSlugService;
@@ -44,6 +46,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository              productRepository;
     private final ProductCategoryRepository      categoryRepository;
     private final ProductStatusHistoryRepository statusHistoryRepository;
+    private final ProductSummaryViewRepository   productSummaryViewRepository;
     private final StoreRepository                storeRepository;
     private final ProductOwnershipPolicy         ownershipPolicy;
     private final StoreOwnershipPolicy           storeOwnershipPolicy;
@@ -178,15 +181,34 @@ public class ProductServiceImpl implements ProductService {
     public Page<ProductResponse> findByStore(UUID storePublicId, Pageable pageable) {
         Store store = storeRepository.findByPublicId(storePublicId)
                 .orElseThrow(() -> new StoreNotFoundException(storePublicId));
-        return productRepository.findByStoreIdAndIsActiveTrue(store.getId(), pageable)
-                .map(mapper::toResponse);
+        return productSummaryViewRepository.findByStoreIdAndIsActiveTrue(store.getId(), pageable)
+                .map(this::toSummaryResponse);
     }
 
     @Override
     public Page<ProductResponse> findPublicProducts(Pageable pageable) {
-        return productRepository.findByStatusAndVisibilityAndIsActiveTrue(
-                        ProductStatus.ACTIVE, ProductVisibility.PUBLIC, pageable)
-                .map(mapper::toResponse);
+        return productSummaryViewRepository.findByStatusAndVisibilityAndIsActiveTrue(
+                        ProductStatus.ACTIVE.name(), ProductVisibility.PUBLIC.name(), pageable)
+                .map(this::toSummaryResponse);
+    }
+
+    private ProductResponse toSummaryResponse(ProductSummaryView view) {
+        return ProductResponse.builder()
+                .id(view.getId())
+                .productNumber(view.getProductNumber())
+                .storeId(view.getStoreId())
+                .sellerId(view.getSellerId())
+                .name(view.getName())
+                .slug(view.getSlug())
+                .brand(view.getBrand())
+                .sku(view.getSku())
+                .description(view.getDescription())
+                .productType(view.getProductType() != null ? ProductType.valueOf(view.getProductType()) : null)
+                .status(view.getStatus() != null ? ProductStatus.valueOf(view.getStatus()) : null)
+                .visibility(view.getVisibility() != null ? ProductVisibility.valueOf(view.getVisibility()) : null)
+                .createdAt(view.getCreatedAt())
+                .updatedAt(view.getUpdatedAt())
+                .build();
     }
 
     private void recordStatusHistory(UUID productId, ProductStatus from, ProductStatus to,

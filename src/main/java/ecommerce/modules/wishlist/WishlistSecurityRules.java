@@ -10,7 +10,7 @@ public class WishlistSecurityRules implements SecurityRules {
     @Override
     public void configure(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry registry) {
         registry
-                .requestMatchers("/v1/wishlists/**").hasAnyRole("CUSTOMER");
-
+                .requestMatchers("/v1/wishlists/guest").permitAll()
+                .requestMatchers("/v1/wishlists/**").authenticated();
     }
 }

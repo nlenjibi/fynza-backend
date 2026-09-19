@@ -122,9 +122,9 @@ public class FollowServiceImpl implements FollowService {
     private FollowerResponse mapToFollowerResponse(StoreFollow follow) {
         User customer = follow.getCustomer();
         
-        long orderCount = orderRepository.findByCustomerId(customer.getId(), Pageable.unpaged()).getTotalElements();
+        long orderCount = orderRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId(), Pageable.unpaged()).getTotalElements();
         
-        double totalSpent = orderRepository.findByCustomerId(customer.getId(), Pageable.unpaged()).getContent()
+        double totalSpent = orderRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId(), Pageable.unpaged()).getContent()
                 .stream()
                 .filter(o -> o.getPaymentStatus() == ecommerce.modules.order.entity.PaymentStatus.PAID)
                 .mapToDouble(o -> o.getTotalAmount().doubleValue())

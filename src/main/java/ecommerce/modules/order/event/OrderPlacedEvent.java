@@ -7,8 +7,5 @@ public record OrderPlacedEvent(
     UUID orderId,
     String orderNumber,
     UUID customerId,
-    String customerEmail,
-    String customerFirstName,
-    BigDecimal totalAmount,
-    UUID sellerId
+    BigDecimal totalAmount
 ) {}

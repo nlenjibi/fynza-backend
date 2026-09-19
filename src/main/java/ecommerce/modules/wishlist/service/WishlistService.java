@@ -1,38 +1,46 @@
 package ecommerce.modules.wishlist.service;
 
-import ecommerce.modules.wishlist.dto.AddToWishlistRequest;
-import ecommerce.modules.wishlist.dto.UpdateWishlistItemRequest;
-import ecommerce.modules.wishlist.dto.WishlistItemDto;
-import ecommerce.modules.wishlist.dto.WishlistSummaryDto;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import ecommerce.modules.wishlist.dto.request.*;
+import ecommerce.modules.wishlist.dto.response.*;
 
 import java.util.List;
 import java.util.UUID;
 
 public interface WishlistService {
 
-    WishlistItemDto addToWishlist(UUID userId, AddToWishlistRequest request);
+    WishlistResponse createWishlist(UUID customerId, CreateWishlistRequest request);
 
-    List<WishlistItemDto> getUserWishlist(UUID userId);
+    WishlistResponse getWishlist(UUID customerId, UUID wishlistPublicId);
 
-    Page<WishlistItemDto> getUserWishlistPaginated(UUID userId, Pageable pageable);
+    WishlistResponse updateWishlist(UUID customerId, UUID wishlistPublicId, UpdateWishlistRequest request);
 
-    WishlistSummaryDto getWishlistSummary(UUID userId);
+    void deleteWishlist(UUID customerId, UUID wishlistPublicId);
 
-    void removeFromWishlist(UUID userId, UUID productId);
+    WishlistResponse getOrCreateDefaultWishlist(UUID customerId);
 
-    WishlistItemDto updateWishlistItem(UUID userId, UUID productId, UpdateWishlistItemRequest request);
+    WishlistItemResponse addItem(UUID customerId, UUID wishlistPublicId, AddWishlistItemRequest request);
 
-    boolean isInWishlist(UUID userId, UUID productId);
+    void removeItem(UUID customerId, UUID itemPublicId);
 
-    void clearWishlist(UUID userId);
+    void moveToCart(UUID customerId, UUID itemPublicId);
 
-    List<WishlistItemDto> getItemsWithPriceDrops(UUID userId);
+    void addToCart(UUID customerId, UUID itemPublicId);
 
-    WishlistItemDto markAsPurchased(UUID userId, UUID productId);
+    WishlistItemResponse updateNotificationPreferences(UUID customerId, UUID itemPublicId, NotificationPreferenceRequest request);
 
-    void moveToCart(UUID userId, UUID productId);
+    GuestWishlistResponse createGuestWishlist();
 
-    long getWishlistCount(UUID userId);
+    void mergeGuestWishlist(UUID customerId, String guestToken);
+
+    String shareWishlist(UUID customerId, UUID wishlistPublicId);
+
+    void unshareWishlist(UUID customerId, UUID wishlistPublicId);
+
+    String regenerateShareToken(UUID customerId, UUID wishlistPublicId);
+
+    WishlistResponse getSharedWishlist(String shareToken);
+
+    List<WishlistResponse> getMyWishlists(UUID customerId);
+
+    boolean isInWishlist(UUID customerId, UUID productId, UUID variantId);
 }

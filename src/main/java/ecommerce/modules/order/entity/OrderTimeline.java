@@ -5,12 +5,11 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "order_timeline", indexes = {
-        @Index(name = "idx_timeline_order_id", columnList = "order_id")
+        @Index(name = "idx_order_timeline_order_id", columnList = "order_id")
 })
 @Getter
 @Setter
@@ -24,30 +23,17 @@ public class OrderTimeline {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @EqualsAndHashCode.Include
     @Column(name = "public_id", nullable = false, unique = true, updatable = false)
     private UUID publicId;
-
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean isActive = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @Column(name = "updated_at")
-    private Instant updatedAt;
-
     @PrePersist
     protected void onCreate() {
-        publicId = UUID.randomUUID();
+        if (publicId == null) publicId = UUID.randomUUID();
         createdAt = Instant.now();
-        updatedAt = Instant.now();
-        if (isActive == null) isActive = true;
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = Instant.now();
     }
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -61,6 +47,6 @@ public class OrderTimeline {
     @Column(name = "message", columnDefinition = "TEXT")
     private String message;
 
-    @Column(name = "timestamp", nullable = false)
-    private LocalDateTime timestamp;
+    @Column(name = "changed_by")
+    private UUID changedBy;
 }

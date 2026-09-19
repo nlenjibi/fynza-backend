@@ -10,9 +10,9 @@ public class CartSecurityRules implements SecurityRules {
     @Override
     public void configure(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry registry) {
         registry
-                // All cart endpoints require CUSTOMER role (class-level @PreAuthorize)
-                .requestMatchers( "/v1/cart").hasRole("CUSTOMER")
-                .requestMatchers( "/v1/cart/reservations/{reservationId}").hasRole("CUSTOMER")
-                .requestMatchers( "/v1/cart/**").hasRole("CUSTOMER");
+                .requestMatchers("/v1/cart/guest").permitAll()
+                .requestMatchers("/v1/cart/guest/**/items").permitAll()
+                .requestMatchers("/v1/cart/validate").permitAll()
+                .requestMatchers("/v1/cart/**").hasAuthority("cart:read");
     }
 }

@@ -1,0 +1,45 @@
+extend type Query {
+    myCart: CartResponse!
+    guestCart(cartToken: String!): CartResponse!
+    cartItem(cartItemId: ID!): CartItemResponse
+}
+
+type CartResponse {
+    id: ID!
+    userId: ID
+    cartToken: String
+    status: CartStatus!
+    isGuest: Boolean!
+    items: [CartItemResponse!]!
+    couponCode: String
+    subtotal: BigDecimal!
+    discountAmount: BigDecimal!
+    shippingTotal: BigDecimal!
+    taxTotal: BigDecimal!
+    grandTotal: BigDecimal!
+    itemsCount: Int!
+    expiresAt: DateTime
+    updatedAt: DateTime
+    hasPriceChanges: Boolean!
+}
+
+type CartItemResponse {
+    id: ID!
+    productId: ID!
+    variantId: ID
+    storeId: ID
+    quantity: Int!
+    unitPrice: BigDecimal!
+    lineTotal: BigDecimal!
+    priceChanged: Boolean!
+    priceSnapshotAt: DateTime
+}
+
+enum CartStatus {
+    ACTIVE
+    CHECKOUT
+    ABANDONED
+    EXPIRED
+    CONVERTED
+    MERGED
+}
