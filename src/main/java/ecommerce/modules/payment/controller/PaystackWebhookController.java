@@ -2,138 +2,104 @@ package ecommerce.modules.payment.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import ecommerce.modules.payment.config.PaystackProperties;
+import ecommerce.modules.payment.provider.PaymentProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
-import java.util.HexFormat;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
- * Controller for handling Paystack webhook events.
+ * Webhook controller for payment gateway callbacks.
+ *
+ * Endpoint: POST /v1/payments/webhooks/{provider}
+ * Signature verification is delegated to the active {@link PaymentProvider}.
+ * Only webhooks whose {provider} path matches the active provider are accepted.
  */
 @RestController
-@RequestMapping("/v1/webhooks/paystack")
+@RequestMapping("/v1/payments/webhooks")
 @RequiredArgsConstructor
 @Slf4j
 public class PaystackWebhookController {
 
-    private final PaystackProperties paystackProperties;
+    private final PaymentProvider paymentProvider;
     private final ObjectMapper objectMapper;
 
-    /**
-     * Handle Paystack webhook events.
-     * Events handled: charge.success, charge.failed, refund.created
-     */
-    @PostMapping
+    @PostMapping("/{provider}")
     public ResponseEntity<String> handleWebhook(
+            @PathVariable String provider,
             @RequestBody String payload,
-            @RequestHeader(value = "x-paystack-signature", required = false) String signature) {
+            @RequestHeader Map<String, String> headers) {
 
-        log.info("Received Paystack webhook");
+        String activeProvider = paymentProvider.providerType().name().toLowerCase();
 
-        String secret = paystackProperties.getWebhookSecret();
-        if (secret != null && !secret.isBlank()) {
-            String expected = hmacSha256Hex(payload, secret);
-            if (!expected.equals(signature)) {
-                log.warn("Paystack webhook signature mismatch — possible spoofed request");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid signature");
-            }
+        if (!activeProvider.equals(provider.toLowerCase())) {
+            log.warn("Webhook received for provider '{}' but active provider is '{}' — ignoring",
+                    sanitize(provider), activeProvider);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Provider not active");
+        }
+
+        Map<String, String> lowerHeaders = headers.entrySet().stream()
+                .collect(Collectors.toMap(e -> e.getKey().toLowerCase(), Map.Entry::getValue,
+                        (a, b) -> a));
+
+        if (!paymentProvider.verifyWebhookSignature(payload, lowerHeaders)) {
+            log.warn("[{}] Webhook signature verification failed", sanitize(provider));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid signature");
         }
 
         try {
             JsonNode event = objectMapper.readTree(payload);
-            String eventType = event.has("event") ? event.get("event").asText() : "";
-
-            log.info("Processing webhook event: {}", eventType);
+            String eventType = event.path("event").asText("unknown");
+            log.info("[{}] Webhook event received: {}", sanitize(provider), sanitize(eventType));
 
             switch (eventType) {
-                case "charge.success":
-                    handleChargeSuccess(event);
-                    break;
-                case "charge.failed":
-                    handleChargeFailed(event);
-                    break;
-                case "refund.created":
-                    handleRefundCreated(event);
-                    break;
-                default:
-                    log.info("Unhandled webhook event: {}", eventType);
+                case "charge.success"  -> handleChargeSuccess(event, provider);
+                case "charge.failed"   -> handleChargeFailed(event, provider);
+                case "refund.created"  -> handleRefundCreated(event, provider);
+                // Stripe events
+                case "payment_intent.succeeded"       -> handleChargeSuccess(event, provider);
+                case "payment_intent.payment_failed"  -> handleChargeFailed(event, provider);
+                // Flutterwave events
+                case "charge.completed" -> handleChargeSuccess(event, provider);
+                default -> log.info("[{}] Unhandled webhook event: {}", sanitize(provider), sanitize(eventType));
             }
 
-            return ResponseEntity.ok("Webhook processed");
+            return ResponseEntity.ok("Webhook accepted");
         } catch (Exception e) {
-            log.error("Error processing webhook: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing webhook");
+            log.error("[{}] Webhook processing error: {}", sanitize(provider), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Processing error");
         }
     }
 
-    private String hmacSha256Hex(String data, String secret) {
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            byte[] hash = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hash);
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to compute webhook signature", e);
-        }
+    private void handleChargeSuccess(JsonNode event, String provider) {
+        JsonNode data = event.path("data");
+        String reference = data.path("reference").asText(data.path("id").asText(""));
+        log.info("[{}] Payment succeeded — reference={}", sanitize(provider), sanitize(reference));
+        // TODO: update PaymentTransaction, publish PAYMENT_SUCCEEDED domain event
     }
 
-    /**
-     * Handle successful payment event.
-     */
-    private void handleChargeSuccess(JsonNode event) {
-        log.info("Payment successful");
-        JsonNode data = event.has("data") ? event.get("data") : null;
-        if (data != null) {
-            String reference = data.has("reference") ? data.get("reference").asText() : "";
-            String status = data.has("status") ? data.get("status").asText() : "";
-            String transactionId = data.has("id") ? data.get("id").asText() : "";
-
-            log.info("Transaction successful - Reference: {}, Status: {}, TransactionId: {}",
-                    reference, status, transactionId);
-
-            // TODO: Update payment status in database
-            // TODO: Trigger order fulfillment
-        }
+    private void handleChargeFailed(JsonNode event, String provider) {
+        JsonNode data = event.path("data");
+        String reference = data.path("reference").asText(data.path("id").asText(""));
+        String reason    = data.path("message").asText(data.path("failure_message").asText("unknown"));
+        log.warn("[{}] Payment failed — reference={} reason={}", sanitize(provider), sanitize(reference), sanitize(reason));
+        // TODO: update PaymentTransaction, publish PAYMENT_FAILED domain event
     }
 
-    /**
-     * Handle failed payment event.
-     */
-    private void handleChargeFailed(JsonNode event) {
-        log.warn("Payment failed");
-        JsonNode data = event.has("data") ? event.get("data") : null;
-        if (data != null) {
-            String reference = data.has("reference") ? data.get("reference").asText() : "";
-            String reason = data.has("message") ? data.get("message").asText() : "Unknown";
-
-            log.warn("Transaction failed - Reference: {}, Reason: {}", reference, reason);
-
-            // TODO: Update payment status in database
-            // TODO: Notify user of failure
-        }
+    private void handleRefundCreated(JsonNode event, String provider) {
+        JsonNode data = event.path("data");
+        String reference = data.path("transaction").asText(data.path("payment_intent").asText(""));
+        String refundId  = data.path("id").asText("");
+        log.info("[{}] Refund created — reference={} refundId={}", sanitize(provider), sanitize(reference), sanitize(refundId));
+        // TODO: update Refund entity, publish REFUND_SUCCEEDED domain event
     }
 
-    /**
-     * Handle refund created event.
-     */
-    private void handleRefundCreated(JsonNode event) {
-        log.info("Refund created");
-        JsonNode data = event.has("data") ? event.get("data") : null;
-        if (data != null) {
-            String reference = data.has("transaction") ? data.get("transaction").asText() : "";
-            String refundId = data.has("id") ? data.get("id").asText() : "";
-
-            log.info("Refund created - Transaction: {}, RefundId: {}", reference, refundId);
-
-            // TODO: Update payment status to REFUNDED
-            // TODO: Trigger order cancellation if applicable
-        }
+    private static String sanitize(String value) {
+        return value == null ? "" : value.replaceAll("[\\r\\n\\t]", "_");
     }
 }
