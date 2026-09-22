@@ -8,8 +8,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * Paystack payment gateway configuration properties.
+ * @deprecated Replaced by {@link PaymentProperties} under prefix {@code fynza.payment.paystack}.
  */
+@Deprecated(since = "2.0", forRemoval = true)
 @Configuration
 @ConfigurationProperties(prefix = "paystack")
 @Getter
