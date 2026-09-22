@@ -13,17 +13,26 @@ public interface ShippingRateRepository extends JpaRepository<ShippingRate, Long
     Optional<ShippingRate> findByPublicId(UUID publicId);
     boolean existsByShippingMethod_IdAndZone_Id(Long methodId, Long zoneId);
 
-    @Query("""
-            SELECT r FROM ShippingRate r
-            JOIN FETCH r.shippingMethod m
-            JOIN FETCH m.carrier
-            JOIN FETCH r.zone z
-            WHERE r.isActive = true
-              AND z.isActive = true
-              AND m.isActive = true
+    @Query(value = """
+            SELECT r.* FROM shipping_rates r
+            JOIN shipping_methods m ON m.id = r.shipping_method_id
+            JOIN shipping_zones z ON z.id = r.zone_id
+            WHERE r.is_active = true
+              AND z.is_active = true
+              AND m.is_active = true
               AND :region = ANY(z.regions)
-            """)
+            """, nativeQuery = true)
     List<ShippingRate> findActiveRatesForRegion(@Param("region") String region);
+
+    @Query(value = """
+            SELECT r.* FROM shipping_rates r
+            JOIN shipping_methods m ON m.id = r.shipping_method_id
+            JOIN shipping_zones z ON z.id = r.zone_id
+            WHERE r.is_active = true
+              AND z.is_active = true
+              AND m.is_active = true
+            """, nativeQuery = true)
+    List<ShippingRate> findAllActiveRates();
 
     List<ShippingRate> findByShippingMethod_PublicId(UUID methodPublicId);
 }

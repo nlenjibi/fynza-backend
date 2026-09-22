@@ -13,6 +13,6 @@ public interface ShippingZoneRepository extends JpaRepository<ShippingZone, Long
     Optional<ShippingZone> findByPublicId(UUID publicId);
     List<ShippingZone> findByIsActiveTrue();
 
-    @Query("SELECT z FROM ShippingZone z WHERE z.isActive = true AND :region = ANY(z.regions)")
+    @Query(value = "SELECT * FROM shipping_zones z WHERE z.is_active = true AND :region = ANY(z.regions)", nativeQuery = true)
     List<ShippingZone> findActiveZonesByRegion(@Param("region") String region);
 }

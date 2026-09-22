@@ -19,6 +19,8 @@ public interface ShipmentService {
 
     List<ShipmentResponse> getShipmentsForOrder(UUID orderId);
 
+    List<ShipmentResponse> getShipmentsByFulfillment(UUID fulfillmentPublicId);
+
     ShipmentResponse updateStatus(UUID userId, UUID shipmentPublicId, UpdateShipmentStatusRequest request);
 
     ShipmentResponse generateLabel(UUID userId, UUID shipmentPublicId);

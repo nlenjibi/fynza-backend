@@ -52,7 +52,7 @@ public class ShippingRateServiceImpl implements ShippingRateService {
 
     @Override
     public List<ShippingRateResponse> getAllActiveRates() {
-        return shippingRateRepository.findActiveRatesForRegion("%")
+        return shippingRateRepository.findAllActiveRates()
                 .stream().map(ShippingRateResponse::from).toList();
     }
 }

@@ -5,7 +5,9 @@ import ecommerce.modules.shipping.dto.request.*;
 import ecommerce.modules.shipping.dto.response.*;
 import ecommerce.modules.shipping.entity.*;
 import ecommerce.modules.shipping.exception.CarrierNotFoundException;
-import ecommerce.modules.shipping.exception.ShipmentNotFoundException;
+import ecommerce.modules.shipping.exception.ShippingMethodNotFoundException;
+import ecommerce.modules.shipping.exception.ShippingRateNotFoundException;
+import ecommerce.modules.shipping.exception.ShippingZoneNotFoundException;
 import ecommerce.modules.shipping.repository.*;
 import ecommerce.modules.shipping.service.CarrierAdminService;
 import lombok.RequiredArgsConstructor;
@@ -176,7 +178,7 @@ public class CarrierAdminServiceImpl implements CarrierAdminService {
     @Transactional
     public ShippingRateResponse toggleRate(UUID ratePublicId, boolean active) {
         ShippingRate rate = shippingRateRepository.findByPublicId(ratePublicId)
-                .orElseThrow(() -> new ShipmentNotFoundException("Shipping rate not found: " + ratePublicId));
+                .orElseThrow(() -> new ShippingRateNotFoundException("Shipping rate not found: " + ratePublicId));
         rate.setIsActive(active);
         return ShippingRateResponse.from(shippingRateRepository.save(rate));
     }
@@ -192,11 +194,11 @@ public class CarrierAdminServiceImpl implements CarrierAdminService {
 
     private ShippingMethod findMethodOrThrow(UUID publicId) {
         return shippingMethodRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new CarrierNotFoundException("Shipping method not found: " + publicId));
+                .orElseThrow(() -> new ShippingMethodNotFoundException("Shipping method not found: " + publicId));
     }
 
     private ShippingZone findZoneOrThrow(UUID publicId) {
         return shippingZoneRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new CarrierNotFoundException("Shipping zone not found: " + publicId));
+                .orElseThrow(() -> new ShippingZoneNotFoundException("Shipping zone not found: " + publicId));
     }
 }

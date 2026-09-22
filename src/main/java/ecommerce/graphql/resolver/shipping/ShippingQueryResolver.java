@@ -50,13 +50,13 @@ public class ShippingQueryResolver {
     public FulfillmentResponse myFulfillment(
             @AuthenticationPrincipal UserPrincipal principal,
             @Argument String id) {
-        return fulfillmentService.getFulfillment(UUID.fromString(id));
+        return fulfillmentService.getFulfillmentForSeller(principal.getId(), UUID.fromString(id));
     }
 
     @QueryMapping
     @PreAuthorize("hasAuthority('shipping:write')")
     public List<ShipmentResponse> myShipments(@Argument String fulfillmentId) {
-        return shipmentService.getShipmentsForOrder(UUID.fromString(fulfillmentId));
+        return shipmentService.getShipmentsByFulfillment(UUID.fromString(fulfillmentId));
     }
 
     @QueryMapping

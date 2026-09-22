@@ -1,5 +1,6 @@
 package ecommerce.modules.shipping.service.impl;
 
+import ecommerce.common.event.FynzaEventPublisher;
 import ecommerce.common.exception.ForbiddenException;
 import ecommerce.modules.shipping.dto.request.CreateShipmentRequest;
 import ecommerce.modules.shipping.dto.request.RecordTrackingEventRequest;
@@ -23,7 +24,6 @@ import ecommerce.modules.shipping.service.ShipmentService;
 import ecommerce.modules.seller.repository.SellerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,7 +55,7 @@ public class ShipmentServiceImpl implements ShipmentService {
     private final ShippingLabelRepository shippingLabelRepository;
     private final SellerRepository sellerRepository;
     private final ShippingProvider shippingProvider;
-    private final ApplicationEventPublisher eventPublisher;
+    private final FynzaEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -96,7 +96,7 @@ public class ShipmentServiceImpl implements ShipmentService {
         List<ShipmentItem> items = saveItems(shipment, request);
         recordEvent(shipment, ShipmentStatus.DRAFT, "Shipment created", null);
 
-        eventPublisher.publishEvent(new ShipmentCreatedEvent(
+        eventPublisher.publish(new ShipmentCreatedEvent(
                 shipment.getPublicId(),
                 shipment.getShipmentNumber(),
                 fulfillment.getPublicId(),
@@ -135,6 +135,10 @@ public class ShipmentServiceImpl implements ShipmentService {
         ShipmentStatus prev = shipment.getStatus();
         ShipmentStatus next = request.getStatus();
 
+        if (prev == next) {
+            throw new InvalidShipmentTransitionException("Shipment is already in status: " + next);
+        }
+
         shipment.setStatus(next);
         if (request.getTrackingNumber() != null) shipment.setTrackingNumber(request.getTrackingNumber());
 
@@ -145,13 +149,12 @@ public class ShipmentServiceImpl implements ShipmentService {
         recordEvent(shipment, next, request.getNotes(), request.getLocation());
 
         if (next == ShipmentStatus.DELIVERED) {
-            shipment.setActualDeliveryDate(LocalDate.now());
-            eventPublisher.publishEvent(new ShipmentDeliveredEvent(
+            eventPublisher.publish(new ShipmentDeliveredEvent(
                     shipment.getPublicId(), shipment.getShipmentNumber(),
                     shipment.getFulfillment().getOrderId(), sellerId, LocalDate.now()));
         }
 
-        eventPublisher.publishEvent(new ShipmentStatusChangedEvent(
+        eventPublisher.publish(new ShipmentStatusChangedEvent(
                 shipment.getPublicId(), shipment.getShipmentNumber(),
                 shipment.getFulfillment().getOrderId(), sellerId,
                 prev, next, shipment.getTrackingNumber()));
@@ -298,7 +301,10 @@ public class ShipmentServiceImpl implements ShipmentService {
         switch (status) {
             case LABEL_CREATED -> shipment.setLabelCreatedAt(now);
             case PICKED_UP -> shipment.setPickedUpAt(now);
-            case DELIVERED -> shipment.setDeliveredAt(now);
+            case DELIVERED -> {
+                shipment.setDeliveredAt(now);
+                shipment.setActualDeliveryDate(LocalDate.now());
+            }
             case CANCELLED -> shipment.setCancelledAt(now);
             default -> { /* other statuses don't have dedicated timestamp columns */ }
         }
@@ -331,9 +337,15 @@ public class ShipmentServiceImpl implements ShipmentService {
         return "SHP-" + year + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
+    @Override
+    public List<ShipmentResponse> getShipmentsByFulfillment(UUID fulfillmentPublicId) {
+        return shipmentRepository.findByFulfillment_PublicId(fulfillmentPublicId)
+                .stream().map(this::toResponse).toList();
+    }
+
     private Long resolveSellerLongId(UUID userId) {
         return sellerRepository.findByOwnerUserId(userId)
                 .map(s -> s.getId())
-                .orElse(0L);
+                .orElseThrow(() -> new ForbiddenException("User is not a registered seller"));
     }
 }

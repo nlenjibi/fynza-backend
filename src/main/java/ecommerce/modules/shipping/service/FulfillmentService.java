@@ -14,6 +14,8 @@ public interface FulfillmentService {
 
     FulfillmentResponse getFulfillment(UUID fulfillmentPublicId);
 
+    FulfillmentResponse getFulfillmentForSeller(UUID userId, UUID fulfillmentPublicId);
+
     Page<FulfillmentResponse> getSellerFulfillments(UUID userId, FulfillmentStatus status, Pageable pageable);
 
     FulfillmentResponse updateStatus(UUID userId, UUID fulfillmentPublicId, FulfillmentStatus newStatus, String notes);

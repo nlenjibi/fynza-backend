@@ -47,9 +47,11 @@ public class FulfillmentServiceImpl implements FulfillmentService {
         Long sellerId = resolveSellerLongId(userId);
 
         if (fulfillmentRepository.existsBySellerOrderId(request.getSellerOrderId())) {
-            return FulfillmentResponse.from(
-                    fulfillmentRepository.findBySellerOrderId(request.getSellerOrderId()).orElseThrow(),
-                    List.of());
+            Fulfillment existing = fulfillmentRepository.findBySellerOrderId(request.getSellerOrderId()).orElseThrow();
+            if (!existing.getSellerId().equals(sellerId)) {
+                throw new ForbiddenException("You do not own this fulfillment");
+            }
+            return FulfillmentResponse.from(existing, List.of());
         }
 
         Fulfillment fulfillment = Fulfillment.builder()
@@ -66,6 +68,16 @@ public class FulfillmentServiceImpl implements FulfillmentService {
     @Override
     public FulfillmentResponse getFulfillment(UUID fulfillmentPublicId) {
         Fulfillment fulfillment = findOrThrow(fulfillmentPublicId);
+        return toResponse(fulfillment);
+    }
+
+    @Override
+    public FulfillmentResponse getFulfillmentForSeller(UUID userId, UUID fulfillmentPublicId) {
+        Long sellerId = resolveSellerLongId(userId);
+        Fulfillment fulfillment = findOrThrow(fulfillmentPublicId);
+        if (!fulfillment.getSellerId().equals(sellerId)) {
+            throw new ForbiddenException("You do not own this fulfillment");
+        }
         return toResponse(fulfillment);
     }
 
@@ -139,6 +151,6 @@ public class FulfillmentServiceImpl implements FulfillmentService {
     private Long resolveSellerLongId(UUID userId) {
         return sellerRepository.findByOwnerUserId(userId)
                 .map(s -> s.getId())
-                .orElse(0L);
+                .orElseThrow(() -> new ForbiddenException("User is not a registered seller"));
     }
 }
