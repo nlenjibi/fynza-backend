@@ -56,15 +56,13 @@ public class OrderResolver {
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public OrderTrackingResponse orderTracking(@Argument UUID orderId,
-                                               @AuthenticationPrincipal UserPrincipal principal) {
+    public OrderTrackingResponse orderTracking(@Argument UUID orderId) {
         return orderService.getTrackingInfo(orderId);
     }
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public List<OrderTimelineResponse> orderTimeline(@Argument UUID orderId,
-                                                      @AuthenticationPrincipal UserPrincipal principal) {
+    public List<OrderTimelineResponse> orderTimeline(@Argument UUID orderId) {
         return orderService.getOrderTimeline(orderId);
     }
 

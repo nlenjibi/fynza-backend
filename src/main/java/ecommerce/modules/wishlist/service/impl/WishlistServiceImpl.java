@@ -399,9 +399,11 @@ public class WishlistServiceImpl implements WishlistService {
                 .orElseThrow(() -> new WishlistItemNotFoundException("Wishlist item not found: " + publicId));
     }
 
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     private String generateSecureToken() {
         byte[] bytes = new byte[32];
-        new SecureRandom().nextBytes(bytes);
+        SECURE_RANDOM.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 

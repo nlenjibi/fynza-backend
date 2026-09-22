@@ -62,8 +62,7 @@ public class PriceQueryResolver {
 
     @QueryMapping
     public List<PriceResponse> prices(
-            @Argument String productId,
-            @Argument String currency) {
+            @Argument String productId) {
         log.debug("GQL prices productId={}", productId);
         return adminPriceService.getPricesByProductId(UUID.fromString(productId));
     }
@@ -106,8 +105,7 @@ public class PriceQueryResolver {
     @QueryMapping
     @PreAuthorize("hasAuthority('price.history.read')")
     public List<PriceHistoryResponse> priceHistory(
-            @Argument String priceId,
-            @AuthenticationPrincipal UserPrincipal principal) {
+            @Argument String priceId) {
         log.debug("GQL priceHistory priceId={}", priceId);
         return adminPriceService.getPriceHistory(UUID.fromString(priceId));
     }

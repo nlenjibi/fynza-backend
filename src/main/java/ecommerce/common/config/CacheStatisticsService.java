@@ -119,7 +119,11 @@ public class CacheStatisticsService {
     }
 
     private static long parseLong(Properties props, String key) {
-        return Long.parseLong(props.getProperty(key, "0"));
+        try {
+            return Long.parseLong(props.getProperty(key, "0"));
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
     }
 
     // ── records ───────────────────────────────────────────────────────────────

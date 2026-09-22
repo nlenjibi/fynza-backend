@@ -205,7 +205,6 @@ public class OrderServiceImpl implements OrderService {
         if (!customerId.equals(order.getCustomerId())) throw new OrderAccessDeniedException();
         assertCancellable(order);
 
-        OrderStatus prev = order.getStatus();
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
 
