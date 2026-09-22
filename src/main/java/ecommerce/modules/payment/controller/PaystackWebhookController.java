@@ -38,9 +38,9 @@ public class PaystackWebhookController {
 
         if (!activeProvider.equals(provider.toLowerCase())) {
             log.warn("Webhook received for provider '{}' but active provider is '{}' — ignoring",
-                    provider, activeProvider);
+                    sanitize(provider), activeProvider);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Provider not active: " + provider);
+                    .body("Provider not active");
         }
 
         Map<String, String> lowerHeaders = headers.entrySet().stream()
@@ -48,14 +48,14 @@ public class PaystackWebhookController {
                         (a, b) -> a));
 
         if (!paymentProvider.verifyWebhookSignature(payload, lowerHeaders)) {
-            log.warn("[{}] Webhook signature verification failed", provider);
+            log.warn("[{}] Webhook signature verification failed", sanitize(provider));
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid signature");
         }
 
         try {
             JsonNode event = objectMapper.readTree(payload);
             String eventType = event.path("event").asText("unknown");
-            log.info("[{}] Webhook event received: {}", provider, eventType);
+            log.info("[{}] Webhook event received: {}", sanitize(provider), sanitize(eventType));
 
             switch (eventType) {
                 case "charge.success"  -> handleChargeSuccess(event, provider);
@@ -66,12 +66,12 @@ public class PaystackWebhookController {
                 case "payment_intent.payment_failed"  -> handleChargeFailed(event, provider);
                 // Flutterwave events
                 case "charge.completed" -> handleChargeSuccess(event, provider);
-                default -> log.info("[{}] Unhandled webhook event: {}", provider, eventType);
+                default -> log.info("[{}] Unhandled webhook event: {}", sanitize(provider), sanitize(eventType));
             }
 
             return ResponseEntity.ok("Webhook accepted");
         } catch (Exception e) {
-            log.error("[{}] Webhook processing error: {}", provider, e.getMessage(), e);
+            log.error("[{}] Webhook processing error: {}", sanitize(provider), e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Processing error");
         }
     }
@@ -79,7 +79,7 @@ public class PaystackWebhookController {
     private void handleChargeSuccess(JsonNode event, String provider) {
         JsonNode data = event.path("data");
         String reference = data.path("reference").asText(data.path("id").asText(""));
-        log.info("[{}] Payment succeeded — reference={}", provider, reference);
+        log.info("[{}] Payment succeeded — reference={}", sanitize(provider), sanitize(reference));
         // TODO: update PaymentTransaction, publish PAYMENT_SUCCEEDED domain event
     }
 
@@ -87,7 +87,7 @@ public class PaystackWebhookController {
         JsonNode data = event.path("data");
         String reference = data.path("reference").asText(data.path("id").asText(""));
         String reason    = data.path("message").asText(data.path("failure_message").asText("unknown"));
-        log.warn("[{}] Payment failed — reference={} reason={}", provider, reference, reason);
+        log.warn("[{}] Payment failed — reference={} reason={}", sanitize(provider), sanitize(reference), sanitize(reason));
         // TODO: update PaymentTransaction, publish PAYMENT_FAILED domain event
     }
 
@@ -95,7 +95,11 @@ public class PaystackWebhookController {
         JsonNode data = event.path("data");
         String reference = data.path("transaction").asText(data.path("payment_intent").asText(""));
         String refundId  = data.path("id").asText("");
-        log.info("[{}] Refund created — reference={} refundId={}", provider, reference, refundId);
+        log.info("[{}] Refund created — reference={} refundId={}", sanitize(provider), sanitize(reference), sanitize(refundId));
         // TODO: update Refund entity, publish REFUND_SUCCEEDED domain event
+    }
+
+    private static String sanitize(String value) {
+        return value == null ? "" : value.replaceAll("[\\r\\n\\t]", "_");
     }
 }

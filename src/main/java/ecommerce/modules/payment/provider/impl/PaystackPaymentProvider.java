@@ -99,7 +99,7 @@ public class PaystackPaymentProvider implements PaymentProvider {
             BigDecimal amount = BigDecimal.valueOf(data.path("amount").asLong(0))
                     .divide(BigDecimal.valueOf(100));
             String status = mapStatus(data.path("status").asText("unknown"));
-            log.info("[Paystack] Verified reference={} status={}", request.getReference(), status);
+            log.info("[Paystack] Verified reference={} status={}", sanitize(request.getReference()), status);
             return PaymentVerifyResult.builder()
                     .reference(data.path("reference").asText(request.getReference()))
                     .status(status)
@@ -128,7 +128,7 @@ public class PaystackPaymentProvider implements PaymentProvider {
         try {
             JsonNode raw = post(cfg.getBaseUrl() + "/refund", body, cfg.getSecretKey());
             JsonNode data = raw.path("data");
-            log.info("[Paystack] Refund initiated reference={}", request.getReference());
+            log.info("[Paystack] Refund initiated reference={}", sanitize(request.getReference()));
             return RefundResult.builder()
                     .refundId(String.valueOf(data.path("id").asLong()))
                     .reference(request.getReference())
@@ -184,6 +184,10 @@ public class PaystackPaymentProvider implements PaymentProvider {
             case "reversed"  -> "REVERSED";
             default          -> paystackStatus.toUpperCase();
         };
+    }
+
+    private static String sanitize(String value) {
+        return value == null ? "" : value.replaceAll("[\\r\\n\\t]", "_");
     }
 
     private String hmacSha256Hex(String data, String secret) {

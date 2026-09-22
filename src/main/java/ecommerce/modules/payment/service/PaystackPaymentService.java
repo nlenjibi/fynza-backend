@@ -21,20 +21,24 @@ public class PaystackPaymentService {
 
     public PaymentInitiateResult initializePayment(PaymentInitiateRequest request) {
         log.info("Initiating payment via {} for amount {} {}",
-                paymentProvider.providerType(), request.getAmount(), request.getCurrency());
+                paymentProvider.providerType(), request.getAmount(), sanitize(request.getCurrency()));
         return paymentProvider.initiate(request);
     }
 
     public PaymentVerifyResult verifyPayment(String reference) {
-        log.info("Verifying payment reference={} via {}", reference, paymentProvider.providerType());
+        log.info("Verifying payment reference={} via {}", sanitize(reference), paymentProvider.providerType());
         return paymentProvider.verify(PaymentVerifyRequest.builder().reference(reference).build());
     }
 
     public RefundResult processRefund(String reference, BigDecimal amount) {
-        log.info("Processing refund reference={} amount={} via {}", reference, amount, paymentProvider.providerType());
+        log.info("Processing refund reference={} amount={} via {}", sanitize(reference), amount, paymentProvider.providerType());
         return paymentProvider.refund(RefundRequest.builder()
                 .reference(reference)
                 .amount(amount)
                 .build());
+    }
+
+    private static String sanitize(String value) {
+        return value == null ? "" : value.replaceAll("[\\r\\n\\t]", "_");
     }
 }
