@@ -1,6 +1,5 @@
 package ecommerce.modules.cart.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import ecommerce.modules.cart.entity.CartStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,19 +18,18 @@ import java.util.UUID;
 public class CartResponse {
     private UUID id;
     private UUID userId;
-    private List<CartItemResponse> items;
-    private BigDecimal subtotal;
-    private BigDecimal tax;
-    private BigDecimal shippingCost;
-    private BigDecimal discount;
-    private BigDecimal totalPrice;
-    private Integer itemsCount;
-    private String couponCode;
+    private String cartToken;
     private CartStatus status;
-
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    private LocalDateTime createdAt;
-
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    private LocalDateTime updatedAt;
+    private Boolean isGuest;
+    private List<CartItemResponse> items;
+    private String couponCode;
+    private BigDecimal subtotal;
+    private BigDecimal discountAmount;
+    private BigDecimal shippingTotal;
+    private BigDecimal taxTotal;
+    private BigDecimal grandTotal;
+    private Integer itemsCount;
+    private Instant expiresAt;
+    private Instant updatedAt;
+    private Boolean hasPriceChanges;
 }

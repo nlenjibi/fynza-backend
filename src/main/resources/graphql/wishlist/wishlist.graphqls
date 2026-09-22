@@ -1,98 +1,47 @@
-# ──────────────────────────────────────────────────────────────
-#  Scalars (must be declared or imported in root schema)
-# ──────────────────────────────────────────────────────────────
-# scalar BigDecimal
-# scalar DateTime
-
-# ──────────────────────────────────────────────────────────────
-#  Enums
-# ──────────────────────────────────────────────────────────────
-enum WishlistPriority {
-    HIGH
-    MEDIUM
-    LOW
-    URGENT
+enum WishlistStatus {
+    ACTIVE
+    ARCHIVED
+    DELETED
 }
 
-# ──────────────────────────────────────────────────────────────
-#  Types
-# ──────────────────────────────────────────────────────────────
+enum WishlistVisibility {
+    PRIVATE
+    SHARED
+    PUBLIC
+}
+
+type Wishlist {
+    id:          ID!
+    name:        String!
+    description: String
+    status:      WishlistStatus!
+    visibility:  WishlistVisibility!
+    isDefault:   Boolean!
+    itemCount:   Int!
+    items:       [WishlistItem!]!
+    createdAt:   DateTime!
+    updatedAt:   DateTime!
+}
+
 type WishlistItem {
-    id:                  ID!
-    userId:              ID!
-    product:             ProductSummary!
-    notes:               String
-    priority:            WishlistPriority!
-    desiredQuantity:     Int!
-
-    # Price tracking
-    priceWhenAdded:      BigDecimal
-    currentPrice:        BigDecimal
-    priceDifference:     BigDecimal
-    isPriceDropped:      Boolean
-    targetPrice:         BigDecimal
-
-    # Notification flags
-    notifyOnPriceDrop:   Boolean
-    notifyOnStock:       Boolean
-    shouldNotifyPriceDrop: Boolean
-    shouldNotifyStock:   Boolean
-
-    # Status
-    purchased:           Boolean!
-    isPublic:            Boolean!
-    inStock:             Boolean!
-
-    addedAt:             DateTime!
-    purchasedAt:         DateTime
+    id:                 ID!
+    wishlistId:         ID!
+    productId:          ID!
+    variantId:          ID
+    notifyOnPriceDrop:  Boolean!
+    notifyOnRestock:    Boolean!
+    createdAt:          DateTime!
 }
 
-"""Lightweight product snapshot embedded in each wishlist item."""
-type ProductSummary {
-    id:                ID!
-    name:              String!
-    slug:              String
-    sku:               String
-    price:             BigDecimal!
-    discountPrice:     BigDecimal
-    imageUrl:          String
-    categoryName:      String
-    inStock:           Boolean!
-    availableQuantity: Int
-    inventoryStatus:   String
-}
-
-type WishlistSummary {
-    userId:              ID!
-    totalItems:          Int!
-    inStockItems:        Int!
-    outOfStockItems:     Int!
-    itemsWithPriceDrops: Int!
-    purchasedItems:      Int!
-    totalValue:          BigDecimal!
-    totalSavings:        BigDecimal!
-    items:               [WishlistItem!]!
-}
-
-type WishlistItemPage {
-    content:  [WishlistItem!]!
+type WishlistPage {
+    content:  [Wishlist!]!
     pageInfo: PageInfo!
 }
 
-# ──────────────────────────────────────────────────────────────
-#  Inputs
-# ──────────────────────────────────────────────────────────────
-# ──────────────────────────────────────────────────────────────
-#  Queries
-# ──────────────────────────────────────────────────────────────
-# Security: All wishlist operations require AUTHENTICATION
 extend type Query {
-    # Security: AUTHENTICATED - Own wishlist only
-    myWishlist:                    [WishlistItem!]!
-    myWishlistPaginated(pagination: PageInput): WishlistItemPage!
-    wishlistSummary:               WishlistSummary!
-    wishlistCount:                Int!
-    isInWishlist(productId: ID!):  Boolean!
-    wishlistItemsWithPriceDrops:   [WishlistItem!]!
+    myWishlists:                          [Wishlist!]!
+    myWishlist(wishlistId: ID!):          Wishlist!
+    myDefaultWishlist:                    Wishlist!
+    isInWishlist(productId: ID!, variantId: ID): Boolean!
+    sharedWishlist(token: String!):       Wishlist
 }
-

@@ -1,0 +1,160 @@
+extend type Query {
+    # Public tracking — no auth required
+    shipmentTracking(trackingNumber: String!): ShipmentTracking
+
+    # Seller queries
+    myFulfillments(status: FulfillmentStatusGql, page: Int = 0, size: Int = 20): FulfillmentPage
+    myFulfillment(id: ID!): Fulfillment
+    myShipments(fulfillmentId: ID!): [Shipment]
+
+    # Customer queries
+    orderShipments(orderId: ID!): [Shipment]
+
+    # Public reference data
+    shippingMethods: [ShippingMethod]
+    carriers: [Carrier]
+}
+
+# -------------------------------------------------------------------------
+# Core types
+# -------------------------------------------------------------------------
+
+type Fulfillment {
+    id: ID!
+    orderId: ID!
+    sellerOrderId: ID!
+    status: FulfillmentStatusGql!
+    notes: String
+    shipments: [Shipment]
+    packedAt: DateTime
+    shippedAt: DateTime
+    completedAt: DateTime
+    cancelledAt: DateTime
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type FulfillmentPage {
+    content: [Fulfillment]
+    totalElements: Int
+    totalPages: Int
+    currentPage: Int
+    hasNextPage: Boolean
+}
+
+type Shipment {
+    id: ID!
+    shipmentNumber: String!
+    fulfillmentId: ID!
+    carrierId: ID
+    carrierName: String
+    shippingMethodId: ID
+    shippingMethodName: String
+    status: ShipmentStatusGql!
+    trackingNumber: String
+    labelUrl: String
+    estimatedDeliveryDate: String
+    actualDeliveryDate: String
+    address: ShipmentAddress
+    weightKg: BigDecimal
+    shippingCost: BigDecimal!
+    currency: String!
+    items: [ShipmentItem]
+    trackingEvents: [TrackingEvent]
+    labelCreatedAt: DateTime
+    pickedUpAt: DateTime
+    deliveredAt: DateTime
+    cancelledAt: DateTime
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type ShipmentAddress {
+    recipientName: String
+    recipientPhone: String
+    addressLine1: String
+    addressLine2: String
+    city: String
+    state: String
+    country: String
+    postalCode: String
+}
+
+type ShipmentItem {
+    id: ID!
+    orderItemId: ID!
+    productId: ID!
+    variantId: ID
+    productName: String!
+    productSku: String
+    quantity: Int!
+}
+
+type TrackingEvent {
+    id: ID!
+    status: ShipmentStatusGql!
+    description: String
+    location: String
+    occurredAt: DateTime!
+}
+
+type ShipmentTracking {
+    shipmentNumber: String!
+    trackingNumber: String
+    status: ShipmentStatusGql!
+    carrierName: String
+    estimatedDeliveryDate: String
+    actualDeliveryDate: String
+    events: [TrackingEvent]
+}
+
+type Carrier {
+    id: ID!
+    name: String!
+    code: String!
+    logoUrl: String
+    isActive: Boolean!
+}
+
+type ShippingMethod {
+    id: ID!
+    carrierId: ID!
+    carrierName: String!
+    name: String!
+    code: String!
+    description: String
+    estimatedDaysMin: Int!
+    estimatedDaysMax: Int!
+    isActive: Boolean!
+}
+
+# -------------------------------------------------------------------------
+# Enums
+# -------------------------------------------------------------------------
+
+enum FulfillmentStatusGql {
+    PENDING
+    PROCESSING
+    PACKED
+    READY_TO_SHIP
+    SHIPPED
+    COMPLETED
+    CANCELLED
+}
+
+enum ShipmentStatusGql {
+    DRAFT
+    READY
+    LABEL_CREATED
+    PICKUP_SCHEDULED
+    PICKED_UP
+    IN_TRANSIT
+    OUT_FOR_DELIVERY
+    DELIVERED
+    DELIVERY_FAILED
+    RETURN_TO_SENDER
+    RETURNED
+    CANCELLED
+    LOST
+    DAMAGED
+}

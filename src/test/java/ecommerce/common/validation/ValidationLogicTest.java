@@ -1,6 +1,7 @@
 package ecommerce.common.validation;
 
-import ecommerce.modules.wishlist.dto.PriceDropNotificationDto;
+import ecommerce.modules.wishlist.dto.request.AddWishlistItemRequest;
+import ecommerce.modules.wishlist.dto.request.CreateWishlistRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -8,8 +9,8 @@ import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,26 +26,38 @@ public class ValidationLogicTest {
     }
 
     @Test
-    public void testPriceDropNotificationValid() {
-        PriceDropNotificationDto dto = PriceDropNotificationDto.builder()
-                .productId(java.util.UUID.randomUUID())
-                .oldPrice(new BigDecimal("100.00"))
-                .newPrice(new BigDecimal("80.00"))
-                .build();
+    public void testCreateWishlistRequest_Valid() {
+        CreateWishlistRequest req = new CreateWishlistRequest();
+        req.setName("My Wishlist");
 
-        Set<ConstraintViolation<PriceDropNotificationDto>> violations = validator.validate(dto);
-        assertTrue(violations.isEmpty(), "Should have no violations for valid price drop");
+        Set<ConstraintViolation<CreateWishlistRequest>> violations = validator.validate(req);
+        assertTrue(violations.isEmpty(), "Should have no violations for valid request");
     }
 
     @Test
-    public void testPriceDropNotificationInvalid() {
-        PriceDropNotificationDto dto = PriceDropNotificationDto.builder()
-                .productId(java.util.UUID.randomUUID())
-                .oldPrice(new BigDecimal("100.00"))
-                .newPrice(new BigDecimal("120.00"))
-                .build();
+    public void testCreateWishlistRequest_BlankName_Invalid() {
+        CreateWishlistRequest req = new CreateWishlistRequest();
+        req.setName("");
 
-        Set<ConstraintViolation<PriceDropNotificationDto>> violations = validator.validate(dto);
-        assertFalse(violations.isEmpty(), "Should have violations for newPrice > oldPrice");
+        Set<ConstraintViolation<CreateWishlistRequest>> violations = validator.validate(req);
+        assertFalse(violations.isEmpty(), "Should have violations when name is blank");
+    }
+
+    @Test
+    public void testAddWishlistItemRequest_Valid() {
+        AddWishlistItemRequest req = new AddWishlistItemRequest();
+        req.setProductId(UUID.randomUUID());
+
+        Set<ConstraintViolation<AddWishlistItemRequest>> violations = validator.validate(req);
+        assertTrue(violations.isEmpty(), "Should have no violations when productId is present");
+    }
+
+    @Test
+    public void testAddWishlistItemRequest_NullProductId_Invalid() {
+        AddWishlistItemRequest req = new AddWishlistItemRequest();
+        req.setProductId(null);
+
+        Set<ConstraintViolation<AddWishlistItemRequest>> violations = validator.validate(req);
+        assertFalse(violations.isEmpty(), "Should have violations when productId is null");
     }
 }

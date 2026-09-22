@@ -569,10 +569,10 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public CustomerDashboardResponse getCustomerDashboard(UUID userId) {
         CustomerProfile profile = customerProfileRepository.findByUserId(userId).orElse(null);
-        long wishlistItems = wishlistItemRepository.countByUser_PublicId(userId);
-        List<Order> recentOrderEntities = orderRepository.findByCustomer_PublicId(userId,
+        long wishlistItems = wishlistItemRepository.countByWishlist_CustomerId(userId);
+        List<Order> recentOrderEntities = orderRepository.findByCustomerIdOrderByCreatedAtDesc(userId,
                 org.springframework.data.domain.PageRequest.of(0, 10)).getContent();
-        long totalOrders = orderRepository.findByCustomer_PublicId(userId,
+        long totalOrders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(userId,
                 org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE)).getTotalElements();
         long savedAddresses = addressRepository.findByUser_PublicId(userId).size();
 

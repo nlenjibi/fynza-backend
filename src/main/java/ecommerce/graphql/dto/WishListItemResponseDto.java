@@ -1,7 +1,7 @@
 package ecommerce.graphql.dto;
 
 import ecommerce.common.response.PaginatedResponse;
-import ecommerce.modules.wishlist.dto.WishlistItemDto;
+import ecommerce.modules.wishlist.dto.response.WishlistResponse;
 import lombok.*;
 
 import java.util.List;
@@ -12,10 +12,7 @@ import java.util.List;
 @Builder
 @Getter
 @Setter
-
-
 public class WishListItemResponseDto {
-    private List<WishlistItemDto> content;
-    private PaginatedResponse<WishlistItemDto> pageInfo;
-
+    private List<WishlistResponse> content;
+    private PaginatedResponse<WishlistResponse> pageInfo;
 }

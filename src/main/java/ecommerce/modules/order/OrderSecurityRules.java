@@ -8,24 +8,20 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class OrderSecurityRules implements SecurityRules {
+
     @Override
     public void configure(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry registry) {
         registry
-                // Checkout — authenticated customers only
-                .requestMatchers(HttpMethod.POST, "/v1/checkout").hasRole("CUSTOMER")
+                // Checkout — authenticated customers with order:write permission
+                .requestMatchers(HttpMethod.POST, "/v1/checkout").hasAuthority("order:write")
 
-                // Customer order queries and cancellation
-                .requestMatchers(HttpMethod.GET, "/v1/customers/orders").hasRole("CUSTOMER")
-                .requestMatchers(HttpMethod.GET, "/v1/customers/orders/{id}").hasRole("CUSTOMER")
-                .requestMatchers(HttpMethod.POST, "/v1/customers/orders/{id}/cancel").hasRole("CUSTOMER")
-                .requestMatchers(HttpMethod.POST, "/v1/customers/orders/{id}/refund").hasRole("CUSTOMER")
+                // Customer order mutations
+                .requestMatchers(HttpMethod.POST, "/v1/orders/{id}/cancel").hasAuthority("order:write")
 
-                // Order tracking — customers, sellers and admins; secured at method level per resolver
-                .requestMatchers(HttpMethod.GET, "/v1/orders/{orderId}/tracking").authenticated()
-                .requestMatchers(HttpMethod.GET, "/v1/orders/{orderId}/timeline").authenticated()
+                // Seller order mutations
+                .requestMatchers(HttpMethod.PATCH, "/v1/seller/orders/{id}/status").hasAuthority("order:write")
 
-                // Admin order management
-                .requestMatchers(HttpMethod.GET, "/v1/admin/orders/**").hasAnyRole("ADMIN", "MANAGER")
-                .requestMatchers(HttpMethod.PATCH, "/v1/admin/orders/{id}").hasAnyRole("ADMIN", "MANAGER");
+                // Admin order mutations
+                .requestMatchers(HttpMethod.PATCH, "/v1/admin/orders/{id}").hasAuthority("order:admin");
     }
 }

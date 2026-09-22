@@ -1,27 +1,19 @@
 package ecommerce.modules.wishlist.entity;
 
-import ecommerce.modules.product.entity.Product;
-import ecommerce.modules.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "wishlist_items", indexes = {
-        @Index(name = "idx_wishlist_item_user", columnList = "user_id"),
-        @Index(name = "idx_wishlist_item_product", columnList = "product_id"),
-        @Index(name = "idx_wishlist_item_wishlist", columnList = "wishlist_id")
-})
+@Table(name = "wishlist_items")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EqualsAndHashCode
+@ToString(exclude = "wishlist")
 public class WishlistItem {
 
     @Id
@@ -31,9 +23,23 @@ public class WishlistItem {
     @Column(name = "public_id", nullable = false, unique = true, updatable = false)
     private UUID publicId;
 
-    @Column(nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "wishlist_id", nullable = false)
+    private Wishlist wishlist;
+
+    @Column(name = "product_id", nullable = false)
+    private UUID productId;
+
+    @Column(name = "variant_id")
+    private UUID variantId;
+
+    @Column(name = "notify_on_price_drop", nullable = false)
     @Builder.Default
-    private Boolean isActive = true;
+    private Boolean notifyOnPriceDrop = false;
+
+    @Column(name = "notify_on_restock", nullable = false)
+    @Builder.Default
+    private Boolean notifyOnRestock = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -43,80 +49,13 @@ public class WishlistItem {
 
     @PrePersist
     protected void onCreate() {
-        publicId = UUID.randomUUID();
+        publicId  = UUID.randomUUID();
         createdAt = Instant.now();
         updatedAt = Instant.now();
-        if (isActive == null) isActive = true;
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = Instant.now();
-    }
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "wishlist_id", nullable = false)
-    private Wishlist wishlist;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
-
-    @Column(name = "added_at", nullable = false)
-    @Builder.Default
-    private LocalDateTime addedAt = LocalDateTime.now();
-
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    @Builder.Default
-    private WishlistPriority priority = WishlistPriority.MEDIUM;
-
-    @Column(length = 1000)
-    private String notes;
-
-    @Column(name = "desired_quantity")
-    @Builder.Default
-    private Integer desiredQuantity = 1;
-
-    @Column(name = "target_price", precision = 10, scale = 2)
-    private BigDecimal targetPrice;
-
-    @Column(name = "notify_on_price_drop")
-    @Builder.Default
-    private Boolean notifyOnPriceDrop = true;
-
-    @Column(name = "notify_on_stock")
-    @Builder.Default
-    private Boolean notifyOnStock = true;
-
-    @Column(name = "is_public")
-    @Builder.Default
-    private Boolean isPublic = false;
-
-    @Column(name = "collection_name")
-    private String collectionName;
-
-    @Column(name = "purchased")
-    @Builder.Default
-    private Boolean purchased = false;
-
-    @Column(name = "price_dropped")
-    @Builder.Default
-    private Boolean priceDropped = false;
-
-    @Column(name = "purchased_at")
-    private LocalDateTime purchasedAt;
-
-    public void markAsPurchased() {
-        this.purchased = true;
-        this.purchasedAt = LocalDateTime.now();
-    }
-
-    public boolean isPriceDropped() {
-        return Boolean.TRUE.equals(this.priceDropped);
     }
 }

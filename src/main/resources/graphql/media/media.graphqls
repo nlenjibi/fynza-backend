@@ -1,0 +1,125 @@
+# =============================================================================
+# Media GraphQL Schema — queries only (mutations live in REST)
+# =============================================================================
+
+# ── Types ─────────────────────────────────────────────────────────────────────
+
+type MediaAsset {
+    publicId: ID!
+    ownerId: ID!
+    ownerType: MediaOwnerType!
+    provider: MediaProvider!
+    originalFilename: String
+    mimeType: String!
+    mediaType: MediaType!
+    fileSize: String!
+    width: Int
+    height: Int
+    visibility: MediaVisibility!
+    status: MediaStatus!
+    cdnUrl: String
+    createdAt: String!
+}
+
+type ProductMediaItem {
+    mediaAsset: MediaAsset!
+    sortOrder: Int!
+    isPrimary: Boolean!
+    altText: String
+}
+
+type StorageQuota {
+    storageBytes: String!
+    objectCount: String!
+    quotaBytes: String!
+    usagePercent: Float!
+}
+
+type MediaAssetPage {
+    content: [MediaAsset!]!
+    totalElements: Int!
+    totalPages: Int!
+    currentPage: Int!
+    hasNextPage: Boolean!
+}
+
+type StorageUsageRecord {
+    ownerId: ID!
+    ownerType: String!
+    storageBytes: String!
+    objectCount: String!
+    bandwidthBytes: String!
+    quotaBytes: String!
+    percentUsed: Float!
+    updatedAt: String!
+}
+
+# ── Enums ─────────────────────────────────────────────────────────────────────
+
+enum MediaStatus {
+    PENDING
+    UPLOADING
+    UPLOADED
+    PROCESSING
+    READY
+    FAILED
+    EXPIRED
+    DELETING
+    DELETED
+    QUARANTINED
+}
+
+enum MediaVisibility {
+    PUBLIC
+    PRIVATE
+    AUTHENTICATED
+    OWNER_ONLY
+    SELLER_ONLY
+    ADMIN_ONLY
+}
+
+enum MediaType {
+    PRODUCT_IMAGE
+    PRODUCT_VIDEO
+    SELLER_AVATAR
+    SELLER_BANNER
+    SELLER_DOCUMENT
+    USER_AVATAR
+    REVIEW_IMAGE
+    CATEGORY_BANNER
+    STORE_BANNER
+    PROMOTIONAL_BANNER
+    DOCUMENT
+}
+
+enum MediaOwnerType {
+    PRODUCT
+    VARIANT
+    SELLER
+    USER
+    REVIEW
+    CATEGORY
+    STORE
+    BANNER
+    DOCUMENT
+}
+
+enum MediaProvider {
+    R2
+    S3
+    SUPABASE
+    CLOUDINARY
+    FIREBASE
+    LOCAL
+}
+
+# ── Queries ───────────────────────────────────────────────────────────────────
+
+extend type Query {
+    mediaAsset(publicId: ID!): MediaAsset
+    productMedia(productId: ID!): [ProductMediaItem!]!
+    myStorageQuota: StorageQuota!
+    myMediaAssets(page: Int, size: Int): MediaAssetPage!
+    myStorageUsage: StorageUsageRecord
+    adminMediaAssets(status: String, page: Int, size: Int): MediaAssetPage!
+}

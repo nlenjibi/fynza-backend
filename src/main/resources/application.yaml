@@ -69,6 +69,100 @@ fynza:
       api-base-url: ${SLACK_API_BASE_URL:https://slack.com/api}
     retry-job:
       cron: ${NOTIFICATION_RETRY_CRON:0 */2 * * * *}
+  media:
+    provider:
+      primary: ${MEDIA_PROVIDER:R2}
+      routing-strategy: PRIMARY_ONLY
+      r2:
+        access-key-id: ${R2_ACCESS_KEY_ID:}
+        secret-access-key: ${R2_SECRET_ACCESS_KEY:}
+        endpoint: ${R2_ENDPOINT:}
+        bucket: ${R2_BUCKET:fynza-media}
+        cdn-base-url: ${R2_CDN_BASE_URL:}
+        presigned-url-expiry-seconds: ${R2_PRESIGNED_EXPIRY:600}
+      s3:
+        access-key-id: ${S3_ACCESS_KEY_ID:}
+        secret-access-key: ${S3_SECRET_ACCESS_KEY:}
+        region: ${S3_REGION:us-east-1}
+        bucket: ${S3_BUCKET:fynza-media}
+        cdn-base-url: ${S3_CDN_BASE_URL:}
+        presigned-url-expiry-seconds: ${S3_PRESIGNED_EXPIRY:600}
+      supabase:
+        url: ${SUPABASE_URL:}
+        service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+        bucket: ${SUPABASE_BUCKET:fynza-media}
+        cdn-base-url: ${SUPABASE_CDN_BASE_URL:}
+        signed-url-expiry-seconds: ${SUPABASE_SIGNED_URL_EXPIRY:600}
+      cloudinary:
+        cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+        api-key: ${CLOUDINARY_API_KEY:}
+        api-secret: ${CLOUDINARY_API_SECRET:}
+        upload-preset: ${CLOUDINARY_UPLOAD_PRESET:}
+        cdn-base-url: ${CLOUDINARY_CDN_BASE_URL:}
+        signed-url-expiry-seconds: ${CLOUDINARY_SIGNED_URL_EXPIRY:600}
+      firebase:
+        project-id: ${FIREBASE_PROJECT_ID:}
+        bucket: ${FIREBASE_BUCKET:}
+        service-account-json: ${FIREBASE_SERVICE_ACCOUNT_JSON:}
+        cdn-base-url: ${FIREBASE_CDN_BASE_URL:}
+      local:
+        storage-dir: ${LOCAL_STORAGE_DIR:./media-storage}
+        base-url: ${LOCAL_BASE_URL:http://localhost:8080/media/files}
+        upload-api-url: ${LOCAL_UPLOAD_API_URL:http://localhost:8080}
+    upload:
+      max-file-size-bytes: ${MEDIA_MAX_FILE_SIZE:10485760}
+      max-width-pixels: 8000
+      max-height-pixels: 8000
+      session-ttl-minutes: ${MEDIA_SESSION_TTL_MINUTES:15}
+      session-expiry-check-ms: ${MEDIA_SESSION_EXPIRY_CHECK_MS:300000}
+    quota:
+      default-seller-quota-bytes: ${MEDIA_DEFAULT_QUOTA:2147483648}
+  payment:
+    provider: ${PAYMENT_PROVIDER:paystack}
+    paystack:
+      secret-key: ${PAYSTACK_SECRET_KEY:}
+      public-key: ${PAYSTACK_PUBLIC_KEY:}
+      base-url: ${PAYSTACK_BASE_URL:https://api.paystack.co}
+      webhook-secret: ${PAYSTACK_WEBHOOK_SECRET:}
+      connect-timeout: ${PAYSTACK_CONNECT_TIMEOUT:30000}
+      read-timeout: ${PAYSTACK_READ_TIMEOUT:30000}
+    stripe:
+      secret-key: ${STRIPE_SECRET_KEY:}
+      public-key: ${STRIPE_PUBLIC_KEY:}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+      base-url: ${STRIPE_BASE_URL:https://api.stripe.com}
+      connect-timeout: ${STRIPE_CONNECT_TIMEOUT:30000}
+      read-timeout: ${STRIPE_READ_TIMEOUT:30000}
+    paypal:
+      client-id: ${PAYPAL_CLIENT_ID:}
+      client-secret: ${PAYPAL_CLIENT_SECRET:}
+      webhook-id: ${PAYPAL_WEBHOOK_ID:}
+      sandbox: ${PAYPAL_SANDBOX:false}
+      base-url: ${PAYPAL_BASE_URL:https://api-m.paypal.com}
+      connect-timeout: ${PAYPAL_CONNECT_TIMEOUT:30000}
+      read-timeout: ${PAYPAL_READ_TIMEOUT:30000}
+    flutterwave:
+      secret-key: ${FLUTTERWAVE_SECRET_KEY:}
+      public-key: ${FLUTTERWAVE_PUBLIC_KEY:}
+      encryption-key: ${FLUTTERWAVE_ENCRYPTION_KEY:}
+      webhook-secret: ${FLUTTERWAVE_WEBHOOK_SECRET:}
+      base-url: ${FLUTTERWAVE_BASE_URL:https://api.flutterwave.com/v3}
+      connect-timeout: ${FLUTTERWAVE_CONNECT_TIMEOUT:30000}
+      read-timeout: ${FLUTTERWAVE_READ_TIMEOUT:30000}
+  payout:
+    provider: ${PAYOUT_PROVIDER:paystack}
+    settlement-days: ${PAYOUT_SETTLEMENT_DAYS:3}
+    minimum-amount: ${PAYOUT_MINIMUM_AMOUNT:20.00}
+    max-retry-count: ${PAYOUT_MAX_RETRY_COUNT:3}
+    scheduler:
+      process-cron: ${PAYOUT_PROCESS_CRON:0 */5 * * * *}
+      retry-cron: ${PAYOUT_RETRY_CRON:0 0 * * * *}
+    paystack:
+      secret-key: ${PAYSTACK_SECRET_KEY:}
+      webhook-secret: ${PAYSTACK_WEBHOOK_SECRET:}
+      base-url: ${PAYSTACK_BASE_URL:https://api.paystack.co}
+      connect-timeout: ${PAYSTACK_PAYOUT_CONNECT_TIMEOUT:30000}
+      read-timeout: ${PAYSTACK_PAYOUT_READ_TIMEOUT:30000}
   cache:
     redis:
       default-ttl: 15m

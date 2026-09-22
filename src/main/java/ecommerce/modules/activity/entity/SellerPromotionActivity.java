@@ -21,11 +21,8 @@ import java.util.UUID;
 public class SellerPromotionActivity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
-    private UUID publicId;
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
 
     @Column(nullable = false)
     @Builder.Default
@@ -61,7 +58,7 @@ public class SellerPromotionActivity {
 
     @PrePersist
     protected void onCreate() {
-        publicId = UUID.randomUUID();
+        id = UUID.randomUUID();
         createdAt = Instant.now();
         updatedAt = Instant.now();
         if (isActive == null) isActive = true;

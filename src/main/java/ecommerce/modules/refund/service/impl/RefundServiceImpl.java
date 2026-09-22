@@ -11,7 +11,6 @@ import ecommerce.modules.refund.dto.RefundStatsResponse;
 import ecommerce.modules.refund.entity.Refund;
 import ecommerce.modules.refund.repository.RefundRepository;
 import ecommerce.modules.refund.service.RefundService;
-import ecommerce.modules.user.entity.User;
 import ecommerce.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +47,7 @@ public class RefundServiceImpl implements RefundService {
         Order order = orderRepository.findByPublicId(request.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
-        if (!order.getCustomer().getId().equals(customerId)) {
+        if (!order.getCustomerId().equals(customerId)) {
             throw new IllegalArgumentException("Order does not belong to this customer");
         }
 
@@ -64,10 +63,7 @@ public class RefundServiceImpl implements RefundService {
             throw new IllegalArgumentException("Refund amount cannot exceed order total");
         }
 
-        // Seller association resolved from OrderItem.seller once wired
-        UUID sellerId = order.getOrderItems().isEmpty() ? null
-                : (order.getOrderItems().get(0).getSeller() != null
-                        ? order.getOrderItems().get(0).getSeller().getPublicId() : null);
+        UUID sellerId = null; // Seller UUID resolution deferred; SellerOrder.sellerId is Long
 
         Refund refund = Refund.builder()
                 .refundNumber(Refund.generateRefundNumber())
@@ -303,15 +299,8 @@ public class RefundServiceImpl implements RefundService {
     private RefundResponse mapToResponse(Refund refund) {
         Order order = refund.getOrder();
         
-        String customerName = "";
+        String customerName = order.getCustomerId() != null ? order.getCustomerId().toString() : "";
         String customerEmail = "";
-        try {
-            User customer = order.getCustomer();
-            customerName = customer.getFirstName() + " " + customer.getLastName();
-            customerEmail = customer.getEmail();
-        } catch (Exception e) {
-            log.warn("Could not fetch customer details for refund: {}", refund.getId());
-        }
 
         String sellerName = "";
         if (refund.getSellerId() != null) {

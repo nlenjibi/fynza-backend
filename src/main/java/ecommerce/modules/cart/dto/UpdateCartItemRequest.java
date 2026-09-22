@@ -1,6 +1,5 @@
 package ecommerce.modules.cart.dto;
 
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -14,8 +13,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UpdateCartItemRequest {
 
-    @NotNull(message = "Quantity is required")
-    @Min(value = 1, message = "Quantity must be at least 1")
-    @Max(value = 1000, message = "Quantity cannot exceed 1000")
+    @NotNull(message = "quantity is required")
+    @Min(value = 1, message = "quantity must be at least 1")
     private Integer quantity;
 }

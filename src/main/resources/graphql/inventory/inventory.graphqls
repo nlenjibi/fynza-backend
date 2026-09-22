@@ -1,0 +1,137 @@
+# =============================================================================
+# Inventory GraphQL Schema — queries only (mutations live in REST)
+# =============================================================================
+
+# ── Types ─────────────────────────────────────────────────────────────────────
+
+type InventoryRecord {
+    publicId: ID!
+    productId: ID!
+    variantId: ID
+    sellerId: ID!
+    locationId: ID!
+    onHandQuantity: Int!
+    reservedQuantity: Int!
+    availableQuantity: Int!
+    incomingQuantity: Int!
+    damagedQuantity: Int!
+    lowStockThreshold: Int!
+    allowBackorder: Boolean!
+    status: InventoryStatus!
+    isActive: Boolean!
+    createdAt: String!
+    updatedAt: String!
+}
+
+type Availability {
+    productId: ID!
+    variantId: ID
+    availableQuantity: Int!
+    status: InventoryStatus!
+    allowBackorder: Boolean!
+}
+
+type StockMovementRecord {
+    id: ID!
+    inventoryId: ID!
+    movementType: MovementType!
+    quantity: Int!
+    previousQuantity: Int!
+    newQuantity: Int!
+    referenceType: String
+    referenceId: ID
+    reason: String
+    performedBy: ID
+    createdAt: String!
+}
+
+type StockMovementPage {
+    content: [StockMovementRecord!]!
+    totalElements: Int!
+    totalPages: Int!
+    currentPage: Int!
+    hasNextPage: Boolean!
+}
+
+type InventoryLocationRecord {
+    publicId: ID!
+    sellerId: ID!
+    storeId: ID
+    name: String!
+    code: String!
+    locationType: LocationType!
+    status: String!
+    isActive: Boolean!
+    createdAt: String!
+}
+
+type InventoryTransferRecord {
+    publicId: ID!
+    sourceLocationId: ID!
+    destinationLocationId: ID!
+    status: TransferStatus!
+    requestedBy: ID!
+    approvedBy: ID
+    completedAt: String
+    createdAt: String!
+    updatedAt: String!
+}
+
+type InventoryTransferPage {
+    content: [InventoryTransferRecord!]!
+    totalElements: Int!
+    totalPages: Int!
+    currentPage: Int!
+    hasNextPage: Boolean!
+}
+
+# ── Enums ─────────────────────────────────────────────────────────────────────
+
+enum InventoryStatus {
+    IN_STOCK
+    LOW_STOCK
+    OUT_OF_STOCK
+    DISABLED
+}
+
+enum MovementType {
+    PURCHASE
+    RECEIPT
+    SALE
+    RESERVATION
+    RELEASE
+    RETURN
+    ADJUSTMENT
+    DAMAGE
+    LOSS
+    TRANSFER_IN
+    TRANSFER_OUT
+}
+
+enum LocationType {
+    WAREHOUSE
+    STORE
+    FULFILLMENT_CENTER
+    DROPSHIPPER
+    SUPPLIER
+    VIRTUAL
+}
+
+enum TransferStatus {
+    REQUESTED
+    APPROVED
+    IN_TRANSIT
+    RECEIVED
+    CANCELLED
+}
+
+# ── Queries ───────────────────────────────────────────────────────────────────
+
+extend type Query {
+    inventory(publicId: ID!): InventoryRecord
+    myInventory(page: Int, size: Int): [InventoryRecord!]!
+    availability(productId: ID!, variantId: ID): Availability
+    inventoryMovements(inventoryId: ID!, page: Int, size: Int): StockMovementPage!
+    inventoryLocations: [InventoryLocationRecord!]!
+    inventoryTransfers(page: Int, size: Int): InventoryTransferPage!
+}
