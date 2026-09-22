@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset fynza:041-drop-stale-shipping-if-wrong-schema
+--changeset fynza:041-drop-stale-shipping-if-wrong-schema splitStatements:false
 DO $$
 BEGIN
     -- Drop all shipping tables if shipping_zones.id is UUID (stale schema from a prior
