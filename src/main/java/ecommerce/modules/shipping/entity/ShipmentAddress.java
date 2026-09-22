@@ -10,6 +10,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString
 public class ShipmentAddress {
 
     @Column(name = "recipient_name", length = 255)
