@@ -39,5 +39,11 @@
     <include file="changes/032-order-schema.sql"           relativeToChangelogFile="true"/>
     <include file="changes/033-order-permissions.sql"      relativeToChangelogFile="true"/>
     <include file="changes/034-read-model-views.sql"       relativeToChangelogFile="true"/>
+    <include file="changes/035-payout-financial-accounts-schema.sql" relativeToChangelogFile="true"/>
+    <include file="changes/036-payout-accounts-schema.sql"           relativeToChangelogFile="true"/>
+    <include file="changes/037-payout-schema.sql"                    relativeToChangelogFile="true"/>
+    <include file="changes/038-payout-ledger-schema.sql"             relativeToChangelogFile="true"/>
+    <include file="changes/039-payout-schedule-schema.sql"           relativeToChangelogFile="true"/>
+    <include file="changes/040-payout-permissions.sql"               relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
