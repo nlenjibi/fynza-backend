@@ -1,6 +1,5 @@
 package ecommerce.graphql.resolver.performance;
 
-import ecommerce.common.cache.CacheStatisticsService;
 import ecommerce.graphql.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,8 +18,6 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class PerformanceResolver {
-
-    private final CacheStatisticsService cacheStatisticsService;
 
     private final MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
     private final ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
@@ -60,17 +57,12 @@ public class PerformanceResolver {
     @QueryMapping
     @PreAuthorize("hasRole('ADMIN')")
     public CacheMetrics cacheMetrics() {
-        List<CacheStatistics> caches = cacheStatisticsService.getAllCacheStatistics()
-                .values().stream()
-                .map(this::toGraphQLStats)
-                .toList();
-
         return CacheMetrics.builder()
                 .actions(CacheActions.builder()
                         .canWarmup(true)
                         .canClearAll(true)
                         .build())
-                .caches(List.copyOf(caches))
+                .caches(List.of())
                 .build();
     }
 
@@ -132,24 +124,5 @@ public class PerformanceResolver {
     public String exportPerformanceMetrics(@Argument String format) {
         log.info("GraphQL Query: exportPerformanceMetrics(format: {})", format);
         return "{}";
-    }
-
-    // ── helpers ──────────────────────────────────────────────────────────────
-
-    private CacheStatistics toGraphQLStats(CacheStatisticsService.CacheStats s) {
-        return CacheStatistics.builder()
-                .cacheName(s.name())
-                .hits(s.hitCount())
-                .misses(s.missCount())
-                .hitRate(String.format("%.1f%%", s.hitRate() * 100))
-                .size(s.size())
-                .hitRateStatus(hitRateStatus(s.hitRate()))
-                .build();
-    }
-
-    private static String hitRateStatus(double rate) {
-        if (rate >= 0.8) return "GREEN";
-        if (rate >= 0.5) return "YELLOW";
-        return "RED";
     }
 }
