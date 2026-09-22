@@ -198,6 +198,21 @@ public class AsyncConfig {
         return executor;
     }
 
+    @Bean("shippingExecutor")
+    public Executor shippingExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(4);
+        executor.setMaxPoolSize(10);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("shipping-");
+        executor.setTaskDecorator(mdcTaskDecorator());
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(60);
+        executor.initialize();
+        return executor;
+    }
+
     // Analytics events are fire-and-forget after TX commit; small pool is sufficient.
     @Bean("analyticsExecutor")
     public Executor analyticsExecutor() {
