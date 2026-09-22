@@ -1,13 +1,13 @@
 --liquibase formatted sql
 
---changeset fynza:036-shipping-permissions
+--changeset fynza:042-shipping-permissions
 INSERT INTO permissions (code, resource, action, description) VALUES
     ('shipping:read',   'SHIPPING', 'READ',    'View own shipments and tracking'),
     ('shipping:write',  'SHIPPING', 'WRITE',   'Create and manage shipments'),
     ('shipping:admin',  'SHIPPING', 'EXECUTE', 'Admin shipping management (carriers, methods, zones, rates)')
 ON CONFLICT (code) DO NOTHING;
 
---changeset fynza:036-shipping-role-grants
+--changeset fynza:042-shipping-role-grants
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r

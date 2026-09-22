@@ -1,0 +1,65 @@
+extend type Query {
+    wallet: WalletResponse
+    myPayouts(page: Int = 0, size: Int = 20): PayoutPage
+    payout(id: ID!): PayoutDetail
+    myPayoutAccounts: [PayoutAccountResponse]
+}
+
+type WalletResponse {
+    publicId: ID!
+    pendingBalance: Float!
+    availableBalance: Float!
+    reservedBalance: Float!
+    totalEarned: Float!
+    totalPaidOut: Float!
+    currency: String!
+}
+
+type PayoutPage {
+    content: [PayoutSummary!]!
+    totalElements: Int!
+    totalPages: Int!
+    currentPage: Int!
+}
+
+type PayoutSummary {
+    id: ID!
+    payoutNumber: String!
+    amount: Float!
+    fee: Float!
+    netAmount: Float!
+    currency: String!
+    status: String!
+    requestedAt: String!
+    completedAt: String
+}
+
+type PayoutDetail {
+    id: ID!
+    payoutNumber: String!
+    amount: Float!
+    fee: Float!
+    netAmount: Float!
+    currency: String!
+    status: String!
+    providerReference: String
+    failureReason: String
+    retryCount: Int!
+    requestedAt: String!
+    approvedAt: String
+    completedAt: String
+    payoutAccount: PayoutAccountResponse
+}
+
+type PayoutAccountResponse {
+    id: ID!
+    type: String!
+    provider: String!
+    accountName: String!
+    accountNumber: String!
+    country: String!
+    currency: String!
+    isDefault: Boolean!
+    isVerified: Boolean!
+    status: String!
+}

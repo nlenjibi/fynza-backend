@@ -149,6 +149,20 @@ fynza:
       base-url: ${FLUTTERWAVE_BASE_URL:https://api.flutterwave.com/v3}
       connect-timeout: ${FLUTTERWAVE_CONNECT_TIMEOUT:30000}
       read-timeout: ${FLUTTERWAVE_READ_TIMEOUT:30000}
+  payout:
+    provider: ${PAYOUT_PROVIDER:paystack}
+    settlement-days: ${PAYOUT_SETTLEMENT_DAYS:3}
+    minimum-amount: ${PAYOUT_MINIMUM_AMOUNT:20.00}
+    max-retry-count: ${PAYOUT_MAX_RETRY_COUNT:3}
+    scheduler:
+      process-cron: ${PAYOUT_PROCESS_CRON:0 */5 * * * *}
+      retry-cron: ${PAYOUT_RETRY_CRON:0 0 * * * *}
+    paystack:
+      secret-key: ${PAYSTACK_SECRET_KEY:}
+      webhook-secret: ${PAYSTACK_WEBHOOK_SECRET:}
+      base-url: ${PAYSTACK_BASE_URL:https://api.paystack.co}
+      connect-timeout: ${PAYSTACK_PAYOUT_CONNECT_TIMEOUT:30000}
+      read-timeout: ${PAYSTACK_PAYOUT_READ_TIMEOUT:30000}
   cache:
     redis:
       default-ttl: 15m

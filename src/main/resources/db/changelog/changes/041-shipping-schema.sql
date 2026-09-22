@@ -1,6 +1,32 @@
 --liquibase formatted sql
 
---changeset fynza:035-shipping-carriers
+--changeset fynza:041-drop-stale-shipping-if-wrong-schema
+DO $$
+BEGIN
+    -- Drop all shipping tables if shipping_zones.id is UUID (stale schema from a prior
+    -- iteration of this migration). Safe because: if id is BIGSERIAL the condition is
+    -- false; if tables don't exist the condition is false.
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'shipping_zones'
+          AND column_name = 'id'
+          AND data_type = 'uuid'
+    ) THEN
+        DROP TABLE IF EXISTS shipping_webhook_events CASCADE;
+        DROP TABLE IF EXISTS shipping_labels CASCADE;
+        DROP TABLE IF EXISTS tracking_events CASCADE;
+        DROP TABLE IF EXISTS shipment_items CASCADE;
+        DROP TABLE IF EXISTS shipments CASCADE;
+        DROP TABLE IF EXISTS fulfillments CASCADE;
+        DROP TABLE IF EXISTS shipping_rates CASCADE;
+        DROP TABLE IF EXISTS shipping_zones CASCADE;
+        DROP TABLE IF EXISTS shipping_methods CASCADE;
+        DROP TABLE IF EXISTS shipping_carriers CASCADE;
+    END IF;
+END $$;
+
+--changeset fynza:041-shipping-carriers
 CREATE TABLE IF NOT EXISTS shipping_carriers (
     id                      BIGSERIAL     PRIMARY KEY,
     public_id               UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
@@ -15,7 +41,7 @@ CREATE TABLE IF NOT EXISTS shipping_carriers (
 
 CREATE INDEX IF NOT EXISTS idx_shipping_carriers_code ON shipping_carriers(code);
 
---changeset fynza:035-shipping-methods
+--changeset fynza:041-shipping-methods
 CREATE TABLE IF NOT EXISTS shipping_methods (
     id                  BIGSERIAL     PRIMARY KEY,
     public_id           UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
@@ -34,7 +60,7 @@ CREATE TABLE IF NOT EXISTS shipping_methods (
 CREATE INDEX IF NOT EXISTS idx_shipping_methods_carrier_id ON shipping_methods(carrier_id);
 CREATE INDEX IF NOT EXISTS idx_shipping_methods_code ON shipping_methods(code);
 
---changeset fynza:035-shipping-zones
+--changeset fynza:041-shipping-zones
 CREATE TABLE IF NOT EXISTS shipping_zones (
     id          BIGSERIAL     PRIMARY KEY,
     public_id   UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
@@ -46,7 +72,7 @@ CREATE TABLE IF NOT EXISTS shipping_zones (
     updated_at  TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
 
---changeset fynza:035-shipping-rates
+--changeset fynza:041-shipping-rates
 CREATE TABLE IF NOT EXISTS shipping_rates (
     id                          BIGSERIAL     PRIMARY KEY,
     public_id                   UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
@@ -65,7 +91,7 @@ CREATE TABLE IF NOT EXISTS shipping_rates (
 CREATE INDEX IF NOT EXISTS idx_shipping_rates_method_id ON shipping_rates(shipping_method_id);
 CREATE INDEX IF NOT EXISTS idx_shipping_rates_zone_id ON shipping_rates(zone_id);
 
---changeset fynza:035-fulfillments
+--changeset fynza:041-fulfillments
 CREATE TABLE IF NOT EXISTS fulfillments (
     id              BIGSERIAL     PRIMARY KEY,
     public_id       UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
@@ -88,7 +114,7 @@ CREATE INDEX IF NOT EXISTS idx_fulfillments_seller_order_id ON fulfillments(sell
 CREATE INDEX IF NOT EXISTS idx_fulfillments_seller_id ON fulfillments(seller_id);
 CREATE INDEX IF NOT EXISTS idx_fulfillments_status ON fulfillments(status);
 
---changeset fynza:035-shipments
+--changeset fynza:041-shipments
 CREATE TABLE IF NOT EXISTS shipments (
     id                      BIGSERIAL     PRIMARY KEY,
     public_id               UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
@@ -136,7 +162,7 @@ CREATE INDEX IF NOT EXISTS idx_shipments_status ON shipments(status);
 CREATE INDEX IF NOT EXISTS idx_shipments_tracking_number ON shipments(tracking_number);
 CREATE INDEX IF NOT EXISTS idx_shipments_carrier_id ON shipments(carrier_id);
 
---changeset fynza:035-shipment-items
+--changeset fynza:041-shipment-items
 CREATE TABLE IF NOT EXISTS shipment_items (
     id              BIGSERIAL     PRIMARY KEY,
     public_id       UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
@@ -152,7 +178,7 @@ CREATE TABLE IF NOT EXISTS shipment_items (
 
 CREATE INDEX IF NOT EXISTS idx_shipment_items_shipment_id ON shipment_items(shipment_id);
 
---changeset fynza:035-tracking-events
+--changeset fynza:041-tracking-events
 CREATE TABLE IF NOT EXISTS tracking_events (
     id          BIGSERIAL     PRIMARY KEY,
     public_id   UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
@@ -167,7 +193,7 @@ CREATE TABLE IF NOT EXISTS tracking_events (
 CREATE INDEX IF NOT EXISTS idx_tracking_events_shipment_id ON tracking_events(shipment_id);
 CREATE INDEX IF NOT EXISTS idx_tracking_events_occurred_at ON tracking_events(shipment_id, occurred_at DESC);
 
---changeset fynza:035-shipping-labels
+--changeset fynza:041-shipping-labels
 CREATE TABLE IF NOT EXISTS shipping_labels (
     id                  BIGSERIAL     PRIMARY KEY,
     public_id           UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
@@ -179,7 +205,7 @@ CREATE TABLE IF NOT EXISTS shipping_labels (
     created_at          TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
 
---changeset fynza:035-shipping-webhook-events
+--changeset fynza:041-shipping-webhook-events
 CREATE TABLE IF NOT EXISTS shipping_webhook_events (
     id                  BIGSERIAL     PRIMARY KEY,
     public_id           UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
