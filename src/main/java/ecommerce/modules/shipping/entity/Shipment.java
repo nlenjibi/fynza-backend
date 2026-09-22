@@ -106,6 +106,10 @@ public class Shipment {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
     @PrePersist
     protected void onCreate() {
         publicId  = UUID.randomUUID();
