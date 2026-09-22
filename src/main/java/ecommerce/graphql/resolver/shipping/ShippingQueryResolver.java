@@ -61,9 +61,7 @@ public class ShippingQueryResolver {
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public List<ShipmentResponse> orderShipments(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @Argument String orderId) {
+    public List<ShipmentResponse> orderShipments(@Argument String orderId) {
         return shipmentService.getShipmentsForOrder(UUID.fromString(orderId));
     }
 

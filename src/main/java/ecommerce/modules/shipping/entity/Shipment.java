@@ -22,7 +22,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = {"fulfillment", "carrier", "shippingMethod"})
+@ToString(exclude = {"fulfillment", "carrier", "shippingMethod", "address"})
 public class Shipment {
 
     @Id

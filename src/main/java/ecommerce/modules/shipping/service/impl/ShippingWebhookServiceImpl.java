@@ -21,7 +21,7 @@ public class ShippingWebhookServiceImpl implements ShippingWebhookService {
     @Transactional
     public boolean ingest(String provider, String eventId, String eventType, String rawPayload) {
         if (eventId != null && webhookEventRepository.existsByProviderAndProviderEventId(provider, eventId)) {
-            log.debug("Duplicate shipping webhook ignored: provider={} eventId={}", provider, eventId);
+            log.debug("Duplicate shipping webhook ignored: provider={} eventId={}", sanitize(provider), sanitize(eventId));
             return false;
         }
 
@@ -32,7 +32,11 @@ public class ShippingWebhookServiceImpl implements ShippingWebhookService {
                 .payload(rawPayload)
                 .build();
         webhookEventRepository.save(event);
-        log.info("Ingested shipping webhook: provider={} eventType={}", provider, eventType);
+        log.info("Ingested shipping webhook: provider={} eventType={}", sanitize(provider), sanitize(eventType));
         return true;
+    }
+
+    private static String sanitize(String value) {
+        return value == null ? "" : value.replace('\r', '_').replace('\n', '_');
     }
 }

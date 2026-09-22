@@ -88,7 +88,7 @@ public class CarrierAdminServiceImpl implements CarrierAdminService {
                 .estimatedDaysMax(request.getEstimatedDaysMax())
                 .build();
         method = shippingMethodRepository.save(method);
-        log.info("Created shipping method code={} for carrier={}", method.getCode(), carrier.getCode());
+        log.info("Created shipping method code={} for carrier={}", sanitize(method.getCode()), sanitize(carrier.getCode()));
         return ShippingMethodResponse.from(method);
     }
 
@@ -125,7 +125,7 @@ public class CarrierAdminServiceImpl implements CarrierAdminService {
                 .regions(request.getRegions())
                 .build();
         zone = shippingZoneRepository.save(zone);
-        log.info("Created shipping zone name={}", zone.getName());
+        log.info("Created shipping zone name={}", sanitize(zone.getName()));
         return ShippingZoneResponse.from(zone);
     }
 
@@ -186,6 +186,10 @@ public class CarrierAdminServiceImpl implements CarrierAdminService {
     // =========================================================================
     // Helpers
     // =========================================================================
+
+    private static String sanitize(String value) {
+        return value == null ? "" : value.replace('\r', '_').replace('\n', '_');
+    }
 
     private Carrier findCarrierOrThrow(UUID publicId) {
         return carrierRepository.findByPublicId(publicId)
