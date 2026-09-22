@@ -187,7 +187,8 @@ public class PaystackPaymentProvider implements PaymentProvider {
     }
 
     private static String sanitize(String value) {
-        return value == null ? "" : value.replaceAll("[\\r\\n\\t]", "_");
+        if (value == null) return "";
+        return value.replace('\r', '_').replace('\n', '_').replace('\t', '_');
     }
 
     private String hmacSha256Hex(String data, String secret) {
