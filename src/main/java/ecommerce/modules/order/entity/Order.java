@@ -25,6 +25,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(exclude = {"sellerOrders", "orderItems"})
 public class Order {
 
     @Id

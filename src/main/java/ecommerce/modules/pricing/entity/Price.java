@@ -28,6 +28,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(exclude = {"tiers", "overrides", "history", "priceList"})
 public class Price {
 
     @Id

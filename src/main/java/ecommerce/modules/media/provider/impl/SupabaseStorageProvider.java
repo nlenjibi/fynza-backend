@@ -102,7 +102,6 @@ public class SupabaseStorageProvider implements MediaStorageProvider {
     @Override
     public void deleteObject(StorageObject object) {
         MediaProperties.SupabaseConfig cfg = props.getProvider().getSupabase();
-        String url = cfg.getUrl() + "/storage/v1/object/" + cfg.getBucket();
         String bodyJson = "{\"prefixes\":[\"" + object.objectKey() + "\"]}";
 
         try {

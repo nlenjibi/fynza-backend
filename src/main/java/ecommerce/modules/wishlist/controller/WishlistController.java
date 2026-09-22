@@ -82,7 +82,6 @@ public class WishlistController {
     @Operation(summary = "Remove item from wishlist")
     public ResponseEntity<ApiResponse<Void>> removeItem(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable UUID wishlistId,
             @PathVariable UUID itemId) {
         wishlistService.removeItem(principal.getId(), itemId);
         return ResponseEntity.ok(ApiResponse.success("Item removed from wishlist", null));
@@ -93,7 +92,6 @@ public class WishlistController {
     @Operation(summary = "Add wishlist item to cart (keep in wishlist)")
     public ResponseEntity<ApiResponse<Void>> addToCart(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable UUID wishlistId,
             @PathVariable UUID itemId) {
         wishlistService.addToCart(principal.getId(), itemId);
         return ResponseEntity.ok(ApiResponse.success("Item added to cart", null));
@@ -104,7 +102,6 @@ public class WishlistController {
     @Operation(summary = "Move wishlist item to cart (removes from wishlist)")
     public ResponseEntity<ApiResponse<Void>> moveToCart(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable UUID wishlistId,
             @PathVariable UUID itemId) {
         wishlistService.moveToCart(principal.getId(), itemId);
         return ResponseEntity.ok(ApiResponse.success("Item moved to cart", null));
@@ -115,7 +112,6 @@ public class WishlistController {
     @Operation(summary = "Update notification preferences for a wishlist item")
     public ResponseEntity<ApiResponse<WishlistItemResponse>> updateNotifications(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable UUID wishlistId,
             @PathVariable UUID itemId,
             @RequestBody NotificationPreferenceRequest request) {
         WishlistItemResponse response = wishlistService.updateNotificationPreferences(
