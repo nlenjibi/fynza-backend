@@ -31,7 +31,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.Year;
 import java.util.Optional;
 import java.util.UUID;
@@ -76,8 +75,8 @@ public class PayoutServiceImpl implements PayoutService {
             throw new PayoutAccountException("Payout account is not verified");
         }
 
-        // 4. Get or create financial account
-        SellerFinancialAccount financialAccount = walletService.getOrCreateWallet(sellerId);
+        // 4. Ensure financial account exists before locking
+        walletService.getOrCreateWallet(sellerId);
 
         // 5. Calculate fee and net amount
         String provider = payoutProperties.getProvider();
@@ -237,6 +236,12 @@ public class PayoutServiceImpl implements PayoutService {
     }
 
     private static String sanitize(String value) {
-        return value == null ? "" : value.replaceAll("[\\r\\n\\t]", "_");
+        if (value == null) return "";
+        StringBuilder sb = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            sb.append(Character.isISOControl(c) ? '_' : c);
+        }
+        return sb.toString();
     }
 }

@@ -180,6 +180,12 @@ public class PayoutWebhookController {
     }
 
     private static String sanitize(String value) {
-        return value == null ? "" : value.replaceAll("[\\r\\n\\t]", "_");
+        if (value == null) return "";
+        StringBuilder sb = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            sb.append(Character.isISOControl(c) ? '_' : c);
+        }
+        return sb.toString();
     }
 }
