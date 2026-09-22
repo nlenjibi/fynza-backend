@@ -1,7 +1,7 @@
 --liquibase formatted sql
 
 --changeset fynza:035-shipping-carriers
-CREATE TABLE shipping_carriers (
+CREATE TABLE IF NOT EXISTS shipping_carriers (
     id                      BIGSERIAL     PRIMARY KEY,
     public_id               UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     name                    VARCHAR(100)  NOT NULL,
@@ -13,10 +13,10 @@ CREATE TABLE shipping_carriers (
     updated_at              TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_shipping_carriers_code ON shipping_carriers(code);
+CREATE INDEX IF NOT EXISTS idx_shipping_carriers_code ON shipping_carriers(code);
 
 --changeset fynza:035-shipping-methods
-CREATE TABLE shipping_methods (
+CREATE TABLE IF NOT EXISTS shipping_methods (
     id                  BIGSERIAL     PRIMARY KEY,
     public_id           UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     carrier_id          BIGINT        NOT NULL REFERENCES shipping_carriers(id) ON DELETE RESTRICT,
@@ -31,11 +31,11 @@ CREATE TABLE shipping_methods (
     CONSTRAINT uq_shipping_method_carrier_code UNIQUE (carrier_id, code)
 );
 
-CREATE INDEX idx_shipping_methods_carrier_id ON shipping_methods(carrier_id);
-CREATE INDEX idx_shipping_methods_code ON shipping_methods(code);
+CREATE INDEX IF NOT EXISTS idx_shipping_methods_carrier_id ON shipping_methods(carrier_id);
+CREATE INDEX IF NOT EXISTS idx_shipping_methods_code ON shipping_methods(code);
 
 --changeset fynza:035-shipping-zones
-CREATE TABLE shipping_zones (
+CREATE TABLE IF NOT EXISTS shipping_zones (
     id          BIGSERIAL     PRIMARY KEY,
     public_id   UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     name        VARCHAR(100)  NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE shipping_zones (
 );
 
 --changeset fynza:035-shipping-rates
-CREATE TABLE shipping_rates (
+CREATE TABLE IF NOT EXISTS shipping_rates (
     id                          BIGSERIAL     PRIMARY KEY,
     public_id                   UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     shipping_method_id          BIGINT        NOT NULL REFERENCES shipping_methods(id) ON DELETE RESTRICT,
@@ -62,11 +62,11 @@ CREATE TABLE shipping_rates (
     CONSTRAINT uq_shipping_rate_method_zone UNIQUE (shipping_method_id, zone_id)
 );
 
-CREATE INDEX idx_shipping_rates_method_id ON shipping_rates(shipping_method_id);
-CREATE INDEX idx_shipping_rates_zone_id ON shipping_rates(zone_id);
+CREATE INDEX IF NOT EXISTS idx_shipping_rates_method_id ON shipping_rates(shipping_method_id);
+CREATE INDEX IF NOT EXISTS idx_shipping_rates_zone_id ON shipping_rates(zone_id);
 
 --changeset fynza:035-fulfillments
-CREATE TABLE fulfillments (
+CREATE TABLE IF NOT EXISTS fulfillments (
     id              BIGSERIAL     PRIMARY KEY,
     public_id       UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     order_id        UUID          NOT NULL,
@@ -83,13 +83,13 @@ CREATE TABLE fulfillments (
     updated_at      TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_fulfillments_order_id ON fulfillments(order_id);
-CREATE INDEX idx_fulfillments_seller_order_id ON fulfillments(seller_order_id);
-CREATE INDEX idx_fulfillments_seller_id ON fulfillments(seller_id);
-CREATE INDEX idx_fulfillments_status ON fulfillments(status);
+CREATE INDEX IF NOT EXISTS idx_fulfillments_order_id ON fulfillments(order_id);
+CREATE INDEX IF NOT EXISTS idx_fulfillments_seller_order_id ON fulfillments(seller_order_id);
+CREATE INDEX IF NOT EXISTS idx_fulfillments_seller_id ON fulfillments(seller_id);
+CREATE INDEX IF NOT EXISTS idx_fulfillments_status ON fulfillments(status);
 
 --changeset fynza:035-shipments
-CREATE TABLE shipments (
+CREATE TABLE IF NOT EXISTS shipments (
     id                      BIGSERIAL     PRIMARY KEY,
     public_id               UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     shipment_number         VARCHAR(30)   NOT NULL UNIQUE,
@@ -131,13 +131,13 @@ CREATE TABLE shipments (
     updated_at              TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_shipments_fulfillment_id ON shipments(fulfillment_id);
-CREATE INDEX idx_shipments_status ON shipments(status);
-CREATE INDEX idx_shipments_tracking_number ON shipments(tracking_number);
-CREATE INDEX idx_shipments_carrier_id ON shipments(carrier_id);
+CREATE INDEX IF NOT EXISTS idx_shipments_fulfillment_id ON shipments(fulfillment_id);
+CREATE INDEX IF NOT EXISTS idx_shipments_status ON shipments(status);
+CREATE INDEX IF NOT EXISTS idx_shipments_tracking_number ON shipments(tracking_number);
+CREATE INDEX IF NOT EXISTS idx_shipments_carrier_id ON shipments(carrier_id);
 
 --changeset fynza:035-shipment-items
-CREATE TABLE shipment_items (
+CREATE TABLE IF NOT EXISTS shipment_items (
     id              BIGSERIAL     PRIMARY KEY,
     public_id       UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     shipment_id     BIGINT        NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
@@ -150,10 +150,10 @@ CREATE TABLE shipment_items (
     created_at      TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_shipment_items_shipment_id ON shipment_items(shipment_id);
+CREATE INDEX IF NOT EXISTS idx_shipment_items_shipment_id ON shipment_items(shipment_id);
 
 --changeset fynza:035-tracking-events
-CREATE TABLE tracking_events (
+CREATE TABLE IF NOT EXISTS tracking_events (
     id          BIGSERIAL     PRIMARY KEY,
     public_id   UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     shipment_id BIGINT        NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
@@ -164,11 +164,11 @@ CREATE TABLE tracking_events (
     created_at  TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_tracking_events_shipment_id ON tracking_events(shipment_id);
-CREATE INDEX idx_tracking_events_occurred_at ON tracking_events(shipment_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tracking_events_shipment_id ON tracking_events(shipment_id);
+CREATE INDEX IF NOT EXISTS idx_tracking_events_occurred_at ON tracking_events(shipment_id, occurred_at DESC);
 
 --changeset fynza:035-shipping-labels
-CREATE TABLE shipping_labels (
+CREATE TABLE IF NOT EXISTS shipping_labels (
     id                  BIGSERIAL     PRIMARY KEY,
     public_id           UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     shipment_id         BIGINT        NOT NULL UNIQUE REFERENCES shipments(id) ON DELETE CASCADE,
@@ -180,7 +180,7 @@ CREATE TABLE shipping_labels (
 );
 
 --changeset fynza:035-shipping-webhook-events
-CREATE TABLE shipping_webhook_events (
+CREATE TABLE IF NOT EXISTS shipping_webhook_events (
     id                  BIGSERIAL     PRIMARY KEY,
     public_id           UUID          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     provider            VARCHAR(50)   NOT NULL,
@@ -194,5 +194,5 @@ CREATE TABLE shipping_webhook_events (
     CONSTRAINT uq_webhook_event_provider_id UNIQUE (provider, provider_event_id)
 );
 
-CREATE INDEX idx_shipping_webhook_events_provider ON shipping_webhook_events(provider);
-CREATE INDEX idx_shipping_webhook_events_processed ON shipping_webhook_events(processed) WHERE processed = FALSE;
+CREATE INDEX IF NOT EXISTS idx_shipping_webhook_events_provider ON shipping_webhook_events(provider);
+CREATE INDEX IF NOT EXISTS idx_shipping_webhook_events_processed ON shipping_webhook_events(processed) WHERE processed = FALSE;
