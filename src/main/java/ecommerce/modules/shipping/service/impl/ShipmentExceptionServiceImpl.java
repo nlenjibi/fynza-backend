@@ -89,8 +89,4 @@ public class ShipmentExceptionServiceImpl implements ShipmentExceptionService {
         return exceptionRepository.findByStatusOrderByCreatedAtDesc(ExceptionStatus.OPEN)
                 .stream().map(ShipmentExceptionResponse::from).toList();
     }
-
-    private static String sanitize(String value) {
-        return value == null ? "" : value.replace('\r', '_').replace('\n', '_');
-    }
 }
