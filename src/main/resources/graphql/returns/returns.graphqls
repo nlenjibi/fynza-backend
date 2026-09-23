@@ -11,6 +11,9 @@ extend type Query {
     returnDispositions(returnId: ID!): [ReturnDispositionResponse!]!
     returnRefund(returnId: ID!): ReturnRefundResponse
     returnReconciliations(returnId: ID!): [ReturnReconciliationResponse!]!
+    returnExchange(returnId: ID!): ReturnExchangeResponse
+    returnAnalytics: ReturnAnalyticsResponse!
+    returnFraudSignals(returnId: ID!): [ReturnFraudSignalResponse!]!
     platformReturnPolicy: ReturnPolicyResponse!
     storeReturnPolicy(storeId: ID!): ReturnPolicyResponse!
     returnPolicy(policyId: ID!): ReturnPolicyResponse!
@@ -154,6 +157,51 @@ type ReturnEligibilityResult {
     maximumReturnQuantity: Int
     conditions: [String!]
     warnings: [String!]
+}
+
+type ReturnExchangeResponse {
+    publicId: ID!
+    returnId: ID!
+    originalOrderId: ID!
+    exchangeOrderId: ID
+    status: String!
+    requestedItemsDescription: String
+    notes: String
+    requestedBy: ID
+    processedBy: ID
+    processedAt: String
+    createdAt: String!
+    updatedAt: String!
+}
+
+type ReturnAnalyticsResponse {
+    totalReturns: Int!
+    resolvedReturns: Int!
+    pendingReturns: Int!
+    failedReturns: Int!
+    countByStatus: [ReturnStatusCount!]!
+    countByReason: [ReturnReasonCount!]!
+}
+
+type ReturnStatusCount {
+    status: String!
+    count: Int!
+}
+
+type ReturnReasonCount {
+    reason: String!
+    count: Int!
+}
+
+type ReturnFraudSignalResponse {
+    id: ID!
+    returnId: ID!
+    customerId: ID!
+    signalType: String!
+    description: String
+    severity: Int!
+    detectedAt: String!
+    createdAt: String!
 }
 
 type ReturnPolicyResponse {

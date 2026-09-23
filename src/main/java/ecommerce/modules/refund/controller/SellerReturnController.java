@@ -4,9 +4,12 @@ import ecommerce.common.response.ApiResponse;
 import ecommerce.common.security.UserPrincipal;
 import ecommerce.modules.refund.dto.CompleteInspectionRequest;
 import ecommerce.modules.refund.dto.InitiateReturnShipmentRequest;
+import ecommerce.modules.refund.dto.RequestExchangeRequest;
 import ecommerce.modules.refund.dto.ReturnDecisionRequest;
-import ecommerce.modules.refund.dto.ReturnResponse;
+import ecommerce.modules.refund.dto.ReturnExchangeResponse;
 import ecommerce.modules.refund.dto.ReturnRefundResponse;
+import ecommerce.modules.refund.dto.ReturnResponse;
+import ecommerce.modules.refund.service.ReturnExchangeService;
 import ecommerce.modules.refund.service.ReturnInspectionService;
 import ecommerce.modules.refund.service.ReturnRefundService;
 import ecommerce.modules.refund.service.ReturnService;
@@ -30,6 +33,7 @@ public class SellerReturnController {
     private final ReturnService returnService;
     private final ReturnInspectionService returnInspectionService;
     private final ReturnRefundService returnRefundService;
+    private final ReturnExchangeService returnExchangeService;
 
     @PostMapping("/{returnId}/approve")
     @PreAuthorize("hasAuthority('return:approve')")
@@ -94,6 +98,17 @@ public class SellerReturnController {
             @AuthenticationPrincipal UserPrincipal principal) {
         ReturnRefundResponse response = returnRefundService.requestRefund(returnId, principal.getId());
         return ResponseEntity.ok(ApiResponse.success("Refund requested", response));
+    }
+
+    @PostMapping("/{returnId}/exchange")
+    @PreAuthorize("hasAuthority('return:resolve')")
+    @Operation(summary = "Request exchange", description = "Request a product exchange for an approved return")
+    public ResponseEntity<ApiResponse<ReturnExchangeResponse>> requestExchange(
+            @PathVariable UUID returnId,
+            @Valid @RequestBody RequestExchangeRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        ReturnExchangeResponse response = returnExchangeService.requestExchange(returnId, request, principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Exchange requested", response));
     }
 
     @PostMapping("/{returnId}/initiate-shipment")

@@ -1,16 +1,22 @@
 package ecommerce.graphql.resolver.returns;
 
 import ecommerce.common.security.UserPrincipal;
+import ecommerce.modules.refund.dto.ReturnAnalyticsResponse;
 import ecommerce.modules.refund.dto.ReturnAuditResponse;
 import ecommerce.modules.refund.dto.ReturnDispositionResponse;
 import ecommerce.modules.refund.dto.ReturnEligibilityResult;
 import ecommerce.modules.refund.dto.ReturnEvidenceResponse;
+import ecommerce.modules.refund.dto.ReturnExchangeResponse;
+import ecommerce.modules.refund.dto.ReturnFraudSignalResponse;
 import ecommerce.modules.refund.dto.ReturnInspectionResponse;
 import ecommerce.modules.refund.dto.ReturnPolicyResponse;
 import ecommerce.modules.refund.dto.ReturnReconciliationResponse;
 import ecommerce.modules.refund.dto.ReturnRefundResponse;
 import ecommerce.modules.refund.dto.ReturnResponse;
+import ecommerce.modules.refund.service.ReturnAnalyticsService;
 import ecommerce.modules.refund.service.ReturnEvidenceService;
+import ecommerce.modules.refund.service.ReturnExchangeService;
+import ecommerce.modules.refund.service.ReturnFraudSignalService;
 import ecommerce.modules.refund.service.ReturnInspectionService;
 import ecommerce.modules.refund.service.ReturnPolicyService;
 import ecommerce.modules.refund.service.ReturnRefundService;
@@ -37,6 +43,9 @@ public class ReturnQueryResolver {
     private final ReturnEvidenceService returnEvidenceService;
     private final ReturnInspectionService returnInspectionService;
     private final ReturnRefundService returnRefundService;
+    private final ReturnExchangeService returnExchangeService;
+    private final ReturnAnalyticsService returnAnalyticsService;
+    private final ReturnFraudSignalService returnFraudSignalService;
 
     @QueryMapping
     @PreAuthorize("hasAuthority('return:read')")
@@ -125,6 +134,24 @@ public class ReturnQueryResolver {
     @PreAuthorize("hasAuthority('return:admin.read')")
     public List<ReturnReconciliationResponse> returnReconciliations(@Argument String returnId) {
         return returnRefundService.getReconciliations(UUID.fromString(returnId));
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasAuthority('return:read')")
+    public ReturnExchangeResponse returnExchange(@Argument String returnId) {
+        return returnExchangeService.getExchange(UUID.fromString(returnId)).orElse(null);
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasAuthority('return:admin.read')")
+    public ReturnAnalyticsResponse returnAnalytics() {
+        return returnAnalyticsService.getAnalytics();
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasAuthority('return:admin.read')")
+    public List<ReturnFraudSignalResponse> returnFraudSignals(@Argument String returnId) {
+        return returnFraudSignalService.getSignals(UUID.fromString(returnId));
     }
 
     @QueryMapping

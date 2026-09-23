@@ -9,7 +9,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,4 +36,14 @@ public interface ReturnRepository extends JpaRepository<Return, Long> {
     Optional<Return> findByReturnShipmentId(UUID returnShipmentId);
 
     boolean existsByOrderIdAndStatusNotIn(UUID orderId, List<ReturnStatus> statuses);
+
+    List<Return> findByStatusInAndReturnDeadlineBefore(List<ReturnStatus> statuses, Instant deadline);
+
+    @Query("SELECT r.status as status, COUNT(r) as count FROM Return r GROUP BY r.status")
+    List<Map<String, Object>> countGroupByStatus();
+
+    @Query("SELECT r.reason as reason, COUNT(r) as count FROM Return r GROUP BY r.reason")
+    List<Map<String, Object>> countGroupByReason();
+
+    long countByStatus(ReturnStatus status);
 }

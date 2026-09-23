@@ -19,6 +19,7 @@ import ecommerce.modules.refund.exception.ReturnNotEligibleException;
 import ecommerce.modules.refund.exception.ReturnNotFoundException;
 import ecommerce.modules.refund.repository.ReturnItemRepository;
 import ecommerce.modules.refund.repository.ReturnRepository;
+import ecommerce.modules.refund.service.ReturnFraudSignalService;
 import ecommerce.modules.refund.service.ReturnPolicyService;
 import ecommerce.modules.refund.service.ReturnService;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +50,7 @@ public class ReturnServiceImpl implements ReturnService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final ReturnPolicyService returnPolicyService;
+    private final ReturnFraudSignalService returnFraudSignalService;
     private final ReturnAuditRecorder auditRecorder;
 
     @Override
@@ -148,6 +150,8 @@ public class ReturnServiceImpl implements ReturnService {
 
         auditRecorder.record(returnPublicId, ReturnAuditAction.CREATED,
                 null, ReturnStatus.REQUESTED, customerId, "Return request submitted");
+
+        returnFraudSignalService.analyzeAndRecord(returnEntity);
 
         log.info("Return {} created for order {} by customer {}", returnNumber, request.getOrderId(), customerId);
         return toResponse(returnEntity, items);
