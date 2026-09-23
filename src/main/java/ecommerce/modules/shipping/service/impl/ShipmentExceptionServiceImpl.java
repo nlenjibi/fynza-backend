@@ -68,7 +68,7 @@ public class ShipmentExceptionServiceImpl implements ShipmentExceptionService {
         exception.setResolutionNotes(request.getResolutionNotes());
 
         exception = exceptionRepository.save(exception);
-        log.info("Resolved exception={} by={}", exceptionPublicId, request.getResolvedBy());
+        log.info("Resolved exception={} by={}", exceptionPublicId, sanitize(request.getResolvedBy()));
         return ShipmentExceptionResponse.from(exception);
     }
 
@@ -84,5 +84,9 @@ public class ShipmentExceptionServiceImpl implements ShipmentExceptionService {
     public List<ShipmentExceptionResponse> getOpenExceptions() {
         return exceptionRepository.findByStatusOrderByCreatedAtDesc(ExceptionStatus.OPEN)
                 .stream().map(ShipmentExceptionResponse::from).toList();
+    }
+
+    private static String sanitize(String value) {
+        return value == null ? "" : value.replace('\r', '_').replace('\n', '_');
     }
 }
