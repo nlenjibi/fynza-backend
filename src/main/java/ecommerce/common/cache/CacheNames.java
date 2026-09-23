@@ -94,4 +94,9 @@ public final class CacheNames {
 
     // Inventory
     public static final String INVENTORY_AVAILABILITY = "inventory-availability";
+
+    // Shipping
+    public static final String SHIPPING_CARRIERS = "shipping-carriers";
+    public static final String SHIPPING_METHODS  = "shipping-methods";
+    public static final String SHIPPING_ZONES    = "shipping-zones";
 }

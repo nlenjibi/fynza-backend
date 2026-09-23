@@ -26,7 +26,7 @@ public class PaymentRefundServiceImpl implements PaymentRefundService {
     private final List<PaymentProvider> providers;
 
     @Override
-    public RefundExecutionResult executeRefund(UUID orderId, BigDecimal amount, String reason, String idempotencyKey) {
+    public RefundExecutionResult executeRefund(UUID orderId, BigDecimal amount, String reason) {
         Optional<PaymentTransaction> txOpt =
                 transactionRepository.findTopByOrder_PublicIdAndStatusOrderByCreatedAtDesc(orderId, PaymentStatus.COMPLETED);
 

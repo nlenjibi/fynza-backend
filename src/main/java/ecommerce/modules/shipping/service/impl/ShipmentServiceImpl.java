@@ -2,6 +2,7 @@ package ecommerce.modules.shipping.service.impl;
 
 import ecommerce.common.event.FynzaEventPublisher;
 import ecommerce.common.exception.ForbiddenException;
+import ecommerce.modules.shipping.ShipmentStateMachine;
 import ecommerce.modules.shipping.dto.request.CreateShipmentRequest;
 import ecommerce.modules.shipping.dto.request.RecordTrackingEventRequest;
 import ecommerce.modules.shipping.dto.request.UpdateShipmentStatusRequest;
@@ -14,7 +15,6 @@ import ecommerce.modules.shipping.event.ShipmentCreatedEvent;
 import ecommerce.modules.shipping.event.ShipmentDeliveredEvent;
 import ecommerce.modules.shipping.event.ShipmentStatusChangedEvent;
 import ecommerce.modules.shipping.exception.FulfillmentNotFoundException;
-import ecommerce.modules.shipping.exception.InvalidShipmentTransitionException;
 import ecommerce.modules.shipping.exception.ShipmentNotFoundException;
 import ecommerce.modules.shipping.provider.ShipmentProviderRequest;
 import ecommerce.modules.shipping.provider.ShipmentProviderResult;
@@ -30,7 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -38,13 +37,6 @@ import java.util.UUID;
 @Slf4j
 @Transactional(readOnly = true)
 public class ShipmentServiceImpl implements ShipmentService {
-
-    private static final Set<ShipmentStatus> CANCELLABLE_STATUSES = Set.of(
-            ShipmentStatus.DRAFT,
-            ShipmentStatus.READY,
-            ShipmentStatus.LABEL_CREATED,
-            ShipmentStatus.PICKUP_SCHEDULED
-    );
 
     private final ShipmentRepository shipmentRepository;
     private final ShipmentItemRepository shipmentItemRepository;
@@ -135,9 +127,7 @@ public class ShipmentServiceImpl implements ShipmentService {
         ShipmentStatus prev = shipment.getStatus();
         ShipmentStatus next = request.getStatus();
 
-        if (prev == next) {
-            throw new InvalidShipmentTransitionException("Shipment is already in status: " + next);
-        }
+        ShipmentStateMachine.validate(prev, next);
 
         shipment.setStatus(next);
         if (request.getTrackingNumber() != null) shipment.setTrackingNumber(request.getTrackingNumber());
@@ -226,10 +216,7 @@ public class ShipmentServiceImpl implements ShipmentService {
         Shipment shipment = findOrThrow(shipmentPublicId);
         assertSellerOwns(shipment, sellerId);
 
-        if (!CANCELLABLE_STATUSES.contains(shipment.getStatus())) {
-            throw new InvalidShipmentTransitionException(
-                    "Shipment cannot be cancelled in status: " + shipment.getStatus());
-        }
+        ShipmentStateMachine.validate(shipment.getStatus(), ShipmentStatus.CANCELLED);
 
         if (shipment.getTrackingNumber() != null) {
             shippingProvider.cancelShipment(shipment.getTrackingNumber());

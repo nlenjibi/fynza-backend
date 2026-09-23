@@ -95,7 +95,7 @@ public class ReturnPolicyServiceImpl implements ReturnPolicyService {
                         : RefundMethod.ORIGINAL_PAYMENT)
                 .build();
         policy = policyRepository.save(policy);
-        log.info("Return policy created: {} (scope={})", policy.getName(), policy.getScope());
+        log.info("Return policy created: {} (scope={})", sanitizeForLog(policy.getName()), policy.getScope());
         return toResponse(policy);
     }
 
@@ -150,6 +150,11 @@ public class ReturnPolicyServiceImpl implements ReturnPolicyService {
                 .refundMethod(RefundMethod.ORIGINAL_PAYMENT)
                 .isActive(true)
                 .build();
+    }
+
+    private static String sanitizeForLog(String value) {
+        if (value == null) return null;
+        return value.replace('\n', ' ').replace('\r', ' ');
     }
 
     private String serializeReasons(List<ReturnReason> reasons) {

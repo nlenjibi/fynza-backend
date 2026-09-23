@@ -1,7 +1,6 @@
 package ecommerce.common.monitoring;
 
 import ecommerce.common.response.ApiResponse;
-import ecommerce.common.cache.CacheStatisticsService;
 import ecommerce.common.util.DatabaseMetricsService;
 import ecommerce.common.util.MetricsService;
 import ecommerce.common.util.SecurityEventService;
@@ -9,6 +8,7 @@ import ecommerce.common.security.TokenBlacklistService;
 import ecommerce.common.audit.QueryPerformanceAspect;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -29,7 +29,6 @@ import java.util.Map;
 public class PerformanceController {
 
     private final CacheManager cacheManager;
-    private final CacheStatisticsService cacheStatisticsService;
     private final MetricsService metricsService;
     private final SecurityEventService securityEventService;
     private final TokenBlacklistService tokenBlacklistService;
@@ -52,7 +51,7 @@ public class PerformanceController {
                     "processors", runtime.availableProcessors(),
                     "uptime", System.currentTimeMillis()));
 
-            dashboard.put("cache", cacheStatisticsService.getAllCacheStatistics());
+            dashboard.put("cache", Map.of());
 
             var securityStats = securityEventService.getStats();
             dashboard.put("security", Map.of(
@@ -93,8 +92,6 @@ public class PerformanceController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getPerformanceMetrics() {
         Map<String, Object> metrics = new HashMap<>();
         try {
-            metrics.put("cache_stats", cacheStatisticsService.getAllCacheStatistics());
-
             Runtime runtime = Runtime.getRuntime();
             long maxMemory = runtime.maxMemory() / (1024 * 1024);
             long usedMemory = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024);
@@ -119,11 +116,7 @@ public class PerformanceController {
         Map<String, Object> stats = new HashMap<>();
         try {
             stats.put("cache_name", cacheName);
-            boolean available = cacheManager.getCacheNames().contains(cacheName);
-            stats.put("available", available);
-            if (available) {
-                stats.put("stats", cacheStatisticsService.getCacheStats(cacheManager.getCache(cacheName)));
-            }
+            stats.put("available", cacheManager.getCacheNames().contains(cacheName));
             return ResponseEntity.ok(ApiResponse.<Map<String, Object>>builder().data(stats).build());
         } catch (Exception e) {
             log.error("Error retrieving cache stats for {}: {}", cacheName.replace('\n', '_').replace('\r', '_'), e.getMessage(), e);
@@ -135,7 +128,7 @@ public class PerformanceController {
     @PostMapping("/cache/clear")
     public ResponseEntity<ApiResponse<String>> clearAllCaches() {
         try {
-            cacheStatisticsService.clearAllCaches();
+            doClearAllCaches();
             return ResponseEntity.ok(ApiResponse.<String>builder()
                     .message("All caches cleared successfully").build());
         } catch (Exception e) {
@@ -152,7 +145,8 @@ public class PerformanceController {
                 return ResponseEntity.badRequest().body(ApiResponse.<String>builder()
                         .message("Cache '" + cacheName + "' not found").build());
             }
-            cacheStatisticsService.clearCache(cacheName);
+            Cache cache = cacheManager.getCache(cacheName);
+            if (cache != null) cache.clear();
             return ResponseEntity.ok(ApiResponse.<String>builder()
                     .message("Cache '" + cacheName + "' cleared successfully").build());
         } catch (Exception e) {
@@ -319,7 +313,6 @@ public class PerformanceController {
             allData.put("blacklist", Map.of(
                     "size",    blacklistStats.currentSize(),
                     "hitRate", formatPercent(blacklistStats.hitRate())));
-            allData.put("cache", cacheStatisticsService.getAllCacheStatistics());
 
             String filename = "performance-metrics-" +
                     LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss"));
@@ -360,7 +353,7 @@ public class PerformanceController {
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<Map<String, Object>>> refreshMetrics() {
         try {
-            cacheStatisticsService.clearAllCaches();
+            doClearAllCaches();
             Map<String, Object> result = new HashMap<>();
             result.put("timestamp",    LocalDateTime.now().toString());
             result.put("cacheCleared", true);
@@ -379,9 +372,9 @@ public class PerformanceController {
     public ResponseEntity<ApiResponse<String>> refreshSpecificMetric(@PathVariable String metricType) {
         try {
             String message = switch (metricType.toLowerCase()) {
-                case "cache"     -> { cacheStatisticsService.clearAllCaches();        yield "Cache metrics refreshed"; }
-                case "security"  -> { securityEventService.clearExpiredAttempts();    yield "Security metrics refreshed"; }
-                case "blacklist" -> { tokenBlacklistService.clearExpiredTokens();     yield "Blacklist metrics refreshed"; }
+                case "cache"     -> { doClearAllCaches();                           yield "Cache metrics refreshed"; }
+                case "security"  -> { securityEventService.clearExpiredAttempts();  yield "Security metrics refreshed"; }
+                case "blacklist" -> { tokenBlacklistService.clearExpiredTokens();   yield "Blacklist metrics refreshed"; }
                 case "system"    -> "System metrics refreshed (always live)";
                 default          -> "Unknown metric type: " + metricType;
             };
@@ -436,7 +429,7 @@ public class PerformanceController {
     @PostMapping("/clear/all")
     public ResponseEntity<ApiResponse<Map<String, String>>> clearAll() {
         try {
-            cacheStatisticsService.clearAllCaches();
+            doClearAllCaches();
             securityEventService.clearExpiredAttempts();
             tokenBlacklistService.clearExpiredTokens();
             Map<String, String> result = new HashMap<>();
@@ -456,7 +449,7 @@ public class PerformanceController {
     @PostMapping("/clear/cache")
     public ResponseEntity<ApiResponse<String>> clearCaches() {
         try {
-            cacheStatisticsService.clearAllCaches();
+            doClearAllCaches();
             return ResponseEntity.ok(ApiResponse.<String>builder()
                     .message("All caches cleared successfully").build());
         } catch (Exception e) {
@@ -497,7 +490,7 @@ public class PerformanceController {
         try {
             tokenBlacklistService.clearExpiredTokens();
             securityEventService.clearExpiredAttempts();
-            cacheStatisticsService.clearAllCaches();
+            doClearAllCaches();
             Map<String, Object> result = new HashMap<>();
             result.put("expiredTokens",    "cleaned");
             result.put("securityAttempts", "cleaned");
@@ -524,6 +517,14 @@ public class PerformanceController {
             return ResponseEntity.internalServerError().body(ApiResponse.<String>builder()
                     .message("Failed to cleanup: " + e.getMessage()).build());
         }
+    }
+
+    private void doClearAllCaches() {
+        cacheManager.getCacheNames().forEach(name -> {
+            Cache cache = cacheManager.getCache(name);
+            if (cache != null) cache.clear();
+        });
+        log.info("All caches cleared");
     }
 
     private String formatPercent(double rate) {

@@ -158,7 +158,7 @@ public class ReturnServiceImpl implements ReturnService {
     }
 
     @Override
-    public ReturnResponse getReturn(UUID returnPublicId, UUID requestingUserId) {
+    public ReturnResponse getReturn(UUID returnPublicId) {
         Return returnEntity = findByPublicId(returnPublicId);
         List<ReturnItem> items = returnItemRepository.findByReturnId(returnPublicId);
         return toResponse(returnEntity, items);
@@ -340,8 +340,13 @@ public class ReturnServiceImpl implements ReturnService {
         auditRecorder.record(returnPublicId, ReturnAuditAction.ESCALATED,
                 returnEntity.getStatus(), returnEntity.getStatus(), escalatedBy, reason);
 
-        log.info("Return {} escalated by {} — {}", returnEntity.getReturnNumber(), escalatedBy, reason);
+        log.info("Return {} escalated by {} — {}", returnEntity.getReturnNumber(), escalatedBy, sanitizeForLog(reason));
         return toResponse(returnEntity, returnItemRepository.findByReturnId(returnPublicId));
+    }
+
+    private static String sanitizeForLog(String value) {
+        if (value == null) return null;
+        return value.replace('\n', ' ').replace('\r', ' ');
     }
 
     private Return findByPublicId(UUID publicId) {

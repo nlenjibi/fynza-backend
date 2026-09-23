@@ -1,4 +1,17 @@
+extend type Mutation {
+    createShipment(input: CreateShipmentInput!): Shipment!
+    updateShipmentStatus(id: ID!, status: ShipmentStatusGql!): Shipment!
+    cancelShipment(id: ID!): Shipment!
+    generateShipmentLabel(id: ID!): Shipment!
+    recordTrackingEvent(shipmentId: ID!, status: ShipmentStatusGql!, description: String, location: String): TrackingEvent!
+    createShipmentException(shipmentId: ID!, type: String!, severity: String!, description: String): ShipmentException!
+    resolveShipmentException(id: ID!, resolutionNotes: String, resolvedBy: String): ShipmentException!
+}
+
 extend type Query {
+    shipmentExceptions(shipmentId: ID!): [ShipmentException]
+    openShipmentExceptions: [ShipmentException]
+
     # Public tracking — no auth required
     shipmentTracking(trackingNumber: String!): ShipmentTracking
 
@@ -157,4 +170,56 @@ enum ShipmentStatusGql {
     CANCELLED
     LOST
     DAMAGED
+}
+
+# -------------------------------------------------------------------------
+# Mutation inputs
+# -------------------------------------------------------------------------
+
+input CreateShipmentInput {
+    fulfillmentId: ID!
+    carrierId: ID
+    shippingMethodId: ID
+    items: [ShipmentItemInput!]!
+    address: ShipmentAddressInput
+    weightKg: BigDecimal
+    lengthCm: BigDecimal
+    widthCm: BigDecimal
+    heightCm: BigDecimal
+    shippingCost: BigDecimal
+    estimatedDeliveryDate: String
+}
+
+input ShipmentItemInput {
+    orderItemId: ID!
+    productId: ID!
+    variantId: ID
+    productName: String!
+    productSku: String
+    quantity: Int!
+}
+
+input ShipmentAddressInput {
+    recipientName: String
+    recipientPhone: String
+    addressLine1: String
+    addressLine2: String
+    city: String
+    state: String
+    country: String
+    postalCode: String
+}
+
+type ShipmentException {
+    id: ID!
+    shipmentId: ID!
+    type: String!
+    severity: String!
+    description: String
+    status: String!
+    detectedAt: DateTime!
+    resolvedAt: DateTime
+    resolvedBy: String
+    resolutionNotes: String
+    createdAt: DateTime!
 }

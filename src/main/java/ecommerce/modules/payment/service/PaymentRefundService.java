@@ -11,5 +11,5 @@ public interface PaymentRefundService {
      * provider, and returns the execution result. Never throws — failures are
      * surfaced as RefundExecutionResult.success = false.
      */
-    RefundExecutionResult executeRefund(UUID orderId, BigDecimal amount, String reason, String idempotencyKey);
+    RefundExecutionResult executeRefund(UUID orderId, BigDecimal amount, String reason);
 }

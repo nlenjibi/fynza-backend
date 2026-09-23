@@ -72,7 +72,6 @@ public class ReturnRefundServiceImpl implements ReturnRefundService {
         }
 
         BigDecimal refundAmount = calculateRefundAmount(returnPublicId);
-        String idempotencyKey = "RETURN-REFUND-" + returnPublicId;
 
         ReturnRefund refund = existing
                 .filter(r -> r.getStatus() == RefundStatus.FAILED)
@@ -101,7 +100,7 @@ public class ReturnRefundServiceImpl implements ReturnRefundService {
 
         // Execute payment refund synchronously
         RefundExecutionResult result = paymentRefundService.executeRefund(
-                returnEntity.getOrderId(), refundAmount, refund.getReason(), idempotencyKey);
+                returnEntity.getOrderId(), refundAmount, refund.getReason());
 
         if (result.isSuccess()) {
             refund.setApprovedAmount(result.getRefundedAmount() != null ? result.getRefundedAmount() : refundAmount);

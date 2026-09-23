@@ -13,7 +13,7 @@ public interface ReturnService {
 
     ReturnResponse createReturn(CreateReturnRequest request, UUID customerId);
 
-    ReturnResponse getReturn(UUID returnPublicId, UUID requestingUserId);
+    ReturnResponse getReturn(UUID returnPublicId);
 
     Page<ReturnResponse> getReturnsByCustomer(UUID customerId, Pageable pageable);
 

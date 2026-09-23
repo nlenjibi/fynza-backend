@@ -1,5 +1,6 @@
 package ecommerce.modules.shipping.service.impl;
 
+import ecommerce.common.cache.CacheNames;
 import ecommerce.common.exception.ConflictException;
 import ecommerce.modules.shipping.dto.request.*;
 import ecommerce.modules.shipping.dto.response.*;
@@ -12,6 +13,8 @@ import ecommerce.modules.shipping.repository.*;
 import ecommerce.modules.shipping.service.CarrierAdminService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +38,7 @@ public class CarrierAdminServiceImpl implements CarrierAdminService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.SHIPPING_CARRIERS, allEntries = true)
     public CarrierResponse createCarrier(CreateCarrierRequest request) {
         if (carrierRepository.existsByCode(request.getCode().toUpperCase())) {
             throw new ConflictException("Carrier with code '" + request.getCode() + "' already exists");
@@ -56,12 +60,14 @@ public class CarrierAdminServiceImpl implements CarrierAdminService {
     }
 
     @Override
+    @Cacheable(CacheNames.SHIPPING_CARRIERS)
     public List<CarrierResponse> getAllCarriers() {
         return carrierRepository.findAll().stream().map(CarrierResponse::from).toList();
     }
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.SHIPPING_CARRIERS, allEntries = true)
     public CarrierResponse toggleCarrier(UUID carrierPublicId, boolean active) {
         Carrier carrier = findCarrierOrThrow(carrierPublicId);
         carrier.setIsActive(active);
@@ -74,6 +80,7 @@ public class CarrierAdminServiceImpl implements CarrierAdminService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.SHIPPING_METHODS, allEntries = true)
     public ShippingMethodResponse createShippingMethod(CreateShippingMethodRequest request) {
         Carrier carrier = findCarrierOrThrow(request.getCarrierId());
         if (shippingMethodRepository.existsByCarrier_IdAndCode(carrier.getId(), request.getCode())) {
@@ -99,6 +106,7 @@ public class CarrierAdminServiceImpl implements CarrierAdminService {
     }
 
     @Override
+    @Cacheable(CacheNames.SHIPPING_METHODS)
     public List<ShippingMethodResponse> getAllActiveMethods() {
         return shippingMethodRepository.findByIsActiveTrue()
                 .stream().map(ShippingMethodResponse::from).toList();
@@ -106,6 +114,7 @@ public class CarrierAdminServiceImpl implements CarrierAdminService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.SHIPPING_METHODS, allEntries = true)
     public ShippingMethodResponse toggleMethod(UUID methodPublicId, boolean active) {
         ShippingMethod method = findMethodOrThrow(methodPublicId);
         method.setIsActive(active);
@@ -118,6 +127,7 @@ public class CarrierAdminServiceImpl implements CarrierAdminService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.SHIPPING_ZONES, allEntries = true)
     public ShippingZoneResponse createZone(CreateShippingZoneRequest request) {
         ShippingZone zone = ShippingZone.builder()
                 .name(request.getName())
@@ -130,12 +140,14 @@ public class CarrierAdminServiceImpl implements CarrierAdminService {
     }
 
     @Override
+    @Cacheable(CacheNames.SHIPPING_ZONES)
     public List<ShippingZoneResponse> getAllZones() {
         return shippingZoneRepository.findAll().stream().map(ShippingZoneResponse::from).toList();
     }
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.SHIPPING_ZONES, allEntries = true)
     public ShippingZoneResponse toggleZone(UUID zonePublicId, boolean active) {
         ShippingZone zone = findZoneOrThrow(zonePublicId);
         zone.setIsActive(active);

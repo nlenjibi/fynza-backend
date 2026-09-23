@@ -63,7 +63,7 @@ public class ReturnQueryResolver {
     public ReturnResponse myReturn(
             @AuthenticationPrincipal UserPrincipal principal,
             @Argument String returnId) {
-        return returnService.getReturn(UUID.fromString(returnId), principal.getId());
+        return returnService.getReturn(UUID.fromString(returnId));
     }
 
     @QueryMapping

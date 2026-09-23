@@ -254,6 +254,19 @@ springdoc:
     tags-sorter: alpha
     persist-authorization: true
 
+shipping:
+  tracking-sync:
+    cron: ${SHIPPING_TRACKING_SYNC_CRON:0 0/30 * * * *}
+  stale-detection:
+    cron: ${SHIPPING_STALE_DETECTION_CRON:0 0 3 * * *}
+  webhook-retry:
+    cron: ${SHIPPING_WEBHOOK_RETRY_CRON:0 0/15 * * * *}
+  webhook:
+    secrets:
+      mock:  ${SHIPPING_WEBHOOK_SECRET_MOCK:}
+      dhl:   ${SHIPPING_WEBHOOK_SECRET_DHL:}
+      fedex: ${SHIPPING_WEBHOOK_SECRET_FEDEX:}
+
 logging:
   file:
     name: ${LOG_FILE_NAME:}

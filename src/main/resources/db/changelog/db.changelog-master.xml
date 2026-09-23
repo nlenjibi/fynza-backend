@@ -47,6 +47,13 @@
     <include file="changes/040-payout-permissions.sql"               relativeToChangelogFile="true"/>
     <include file="changes/041-shipping-schema.sql"                  relativeToChangelogFile="true"/>
     <include file="changes/042-shipping-permissions.sql"             relativeToChangelogFile="true"/>
+    <include file="changes/043-drop-delivery-module-tables.sql"      relativeToChangelogFile="true"/>
+    <include file="changes/044-shipment-version-and-packages.sql"    relativeToChangelogFile="true"/>
+    <include file="changes/045-delivery-attempts-table.sql"          relativeToChangelogFile="true"/>
+    <include file="changes/046-shipment-exceptions-table.sql"        relativeToChangelogFile="true"/>
+    <include file="changes/047-return-shipments-table.sql"           relativeToChangelogFile="true"/>
+    <include file="changes/048-shipping-reconciliation-table.sql"    relativeToChangelogFile="true"/>
+    <include file="changes/049-shipping-views.sql"                   relativeToChangelogFile="true"/>
     <include file="changes/050-returns-schema.sql"                   relativeToChangelogFile="true"/>
     <include file="changes/051-returns-permissions.sql"              relativeToChangelogFile="true"/>
     <include file="changes/052-return-policy-schema.sql"             relativeToChangelogFile="true"/>
