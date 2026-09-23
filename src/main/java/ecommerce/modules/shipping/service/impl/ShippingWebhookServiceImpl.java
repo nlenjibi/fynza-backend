@@ -8,12 +8,14 @@ import ecommerce.modules.shipping.enums.ExceptionType;
 import ecommerce.modules.shipping.repository.ShipmentRepository;
 import ecommerce.modules.shipping.repository.ShippingWebhookEventRepository;
 import ecommerce.modules.shipping.service.ShipmentExceptionService;
+import ecommerce.modules.shipping.service.ShippingMetricsService;
 import ecommerce.modules.shipping.service.ShippingWebhookService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -24,6 +26,7 @@ public class ShippingWebhookServiceImpl implements ShippingWebhookService {
     private final ShippingWebhookEventRepository webhookEventRepository;
     private final ShipmentRepository shipmentRepository;
     private final ShipmentExceptionService exceptionService;
+    private final ShippingMetricsService metricsService;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -40,10 +43,19 @@ public class ShippingWebhookServiceImpl implements ShippingWebhookService {
                 .eventType(eventType)
                 .payload(rawPayload)
                 .build();
-        webhookEventRepository.save(event);
+        event = webhookEventRepository.save(event);
         log.info("Ingested shipping webhook: provider={} eventType={}", sanitize(provider), sanitize(eventType));
+        metricsService.recordWebhookReceived();
 
-        detectAndCreateException(eventType, rawPayload);
+        try {
+            detectAndCreateException(eventType, rawPayload);
+            event.setProcessed(true);
+            event.setProcessedAt(Instant.now());
+        } catch (Exception e) {
+            log.warn("Webhook processing failed, will be retried: eventId={} error={}", sanitize(eventId), e.getMessage());
+            event.setErrorMessage(e.getMessage());
+        }
+        webhookEventRepository.save(event);
         return true;
     }
 

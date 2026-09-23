@@ -72,6 +72,10 @@ public class ShipmentExceptionServiceImpl implements ShipmentExceptionService {
         return ShipmentExceptionResponse.from(exception);
     }
 
+    private static String sanitize(String value) {
+        return value == null ? "" : value.replace('\r', '_').replace('\n', '_');
+    }
+
     @Override
     public List<ShipmentExceptionResponse> getExceptionsForShipment(UUID shipmentPublicId) {
         shipmentRepository.findByPublicId(shipmentPublicId)
