@@ -2,6 +2,7 @@ package ecommerce.modules.refund.entity;
 
 import ecommerce.modules.refund.enums.ReturnItemCondition;
 import ecommerce.modules.refund.enums.ReturnReason;
+import ecommerce.modules.refund.enums.ReturnResolution;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -57,6 +58,16 @@ public class ReturnItem {
 
     @Column(name = "unit_price", precision = 19, scale = 4)
     private BigDecimal unitPrice;
+
+    @Column(name = "approved_quantity")
+    private Integer approvedQuantity;
+
+    @Column(name = "received_quantity")
+    private Integer receivedQuantity;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "resolution", length = 20)
+    private ReturnResolution resolution;
 
     @Column(name = "is_active", nullable = false)
     @Builder.Default

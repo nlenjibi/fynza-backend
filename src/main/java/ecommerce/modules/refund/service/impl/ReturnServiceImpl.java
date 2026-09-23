@@ -260,6 +260,22 @@ public class ReturnServiceImpl implements ReturnService {
 
     @Override
     @Transactional
+    public ReturnResponse startInspection(UUID returnPublicId, UUID inspectedBy) {
+        Return returnEntity = findByPublicId(returnPublicId);
+        ReturnStatus prev = returnEntity.getStatus();
+        ReturnStateMachine.validate(prev, ReturnStatus.INSPECTION);
+        returnEntity.setStatus(ReturnStatus.INSPECTION);
+        returnEntity = returnRepository.save(returnEntity);
+
+        auditRecorder.record(returnPublicId, ReturnAuditAction.INSPECTION_STARTED,
+                prev, ReturnStatus.INSPECTION, inspectedBy, "Inspection started");
+
+        log.info("Return {} inspection started by {}", returnEntity.getReturnNumber(), inspectedBy);
+        return toResponse(returnEntity, returnItemRepository.findByReturnId(returnPublicId));
+    }
+
+    @Override
+    @Transactional
     public ReturnResponse initiateReturnShipment(UUID returnPublicId, InitiateReturnShipmentRequest request, UUID initiatedBy) {
         Return returnEntity = findByPublicId(returnPublicId);
         ReturnStatus prev = returnEntity.getStatus();
@@ -394,6 +410,9 @@ public class ReturnServiceImpl implements ReturnService {
                 .reason(i.getReason())
                 .condition(i.getCondition())
                 .unitPrice(i.getUnitPrice())
+                .approvedQuantity(i.getApprovedQuantity())
+                .receivedQuantity(i.getReceivedQuantity())
+                .resolution(i.getResolution())
                 .createdAt(i.getCreatedAt())
                 .build();
     }

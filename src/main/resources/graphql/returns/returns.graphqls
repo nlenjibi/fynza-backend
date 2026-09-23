@@ -7,6 +7,8 @@ extend type Query {
     adminReturns(page: Int = 0, size: Int = 20): ReturnPage!
     returnEvidence(returnId: ID!): [ReturnEvidenceResponse!]!
     returnAuditTrail(returnId: ID!): [ReturnAuditResponse!]!
+    returnInspections(returnId: ID!): [ReturnInspectionResponse!]!
+    returnDispositions(returnId: ID!): [ReturnDispositionResponse!]!
     platformReturnPolicy: ReturnPolicyResponse!
     storeReturnPolicy(storeId: ID!): ReturnPolicyResponse!
     returnPolicy(policyId: ID!): ReturnPolicyResponse!
@@ -56,6 +58,34 @@ type ReturnItemResponse {
     reason: String!
     condition: String
     unitPrice: Float
+    approvedQuantity: Int
+    receivedQuantity: Int
+    resolution: String
+    createdAt: String!
+}
+
+type ReturnInspectionResponse {
+    publicId: ID!
+    returnId: ID!
+    returnItemId: ID
+    inspectedBy: ID
+    condition: String!
+    result: String!
+    notes: String
+    inspectedAt: String!
+    createdAt: String!
+}
+
+type ReturnDispositionResponse {
+    publicId: ID!
+    returnId: ID!
+    returnItemId: ID!
+    type: String!
+    quantity: Int!
+    locationId: String
+    reason: String
+    processedBy: ID
+    processedAt: String!
     createdAt: String!
 }
 

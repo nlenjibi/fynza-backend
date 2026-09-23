@@ -33,6 +33,8 @@ public interface ReturnService {
 
     ReturnResponse escalateReturn(UUID returnPublicId, UUID escalatedBy, String reason);
 
+    ReturnResponse startInspection(UUID returnPublicId, UUID inspectedBy);
+
     ReturnResponse initiateReturnShipment(UUID returnPublicId, InitiateReturnShipmentRequest request, UUID initiatedBy);
 
     ReturnResponse markInTransit(UUID returnPublicId, UUID triggeredBy);

@@ -11,4 +11,6 @@ import java.util.UUID;
 public interface ReturnItemRepository extends JpaRepository<ReturnItem, Long> {
 
     List<ReturnItem> findByReturnId(UUID returnId);
+
+    java.util.Optional<ReturnItem> findByPublicId(UUID publicId);
 }

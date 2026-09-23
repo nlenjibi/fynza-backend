@@ -2,9 +2,11 @@ package ecommerce.modules.refund.controller;
 
 import ecommerce.common.response.ApiResponse;
 import ecommerce.common.security.UserPrincipal;
+import ecommerce.modules.refund.dto.CompleteInspectionRequest;
 import ecommerce.modules.refund.dto.InitiateReturnShipmentRequest;
 import ecommerce.modules.refund.dto.ReturnDecisionRequest;
 import ecommerce.modules.refund.dto.ReturnResponse;
+import ecommerce.modules.refund.service.ReturnInspectionService;
 import ecommerce.modules.refund.service.ReturnService;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,6 +26,7 @@ import java.util.UUID;
 public class SellerReturnController {
 
     private final ReturnService returnService;
+    private final ReturnInspectionService returnInspectionService;
 
     @PostMapping("/{returnId}/approve")
     @PreAuthorize("hasAuthority('return:approve')")
@@ -57,6 +60,27 @@ public class SellerReturnController {
             @AuthenticationPrincipal UserPrincipal principal) {
         ReturnResponse response = returnService.markUnderReview(returnId, principal.getId());
         return ResponseEntity.ok(ApiResponse.success("Return under review", response));
+    }
+
+    @PostMapping("/{returnId}/inspect")
+    @PreAuthorize("hasAuthority('return:inspect')")
+    @Operation(summary = "Start inspection", description = "Move return to INSPECTION status")
+    public ResponseEntity<ApiResponse<ReturnResponse>> startInspection(
+            @PathVariable UUID returnId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        ReturnResponse response = returnService.startInspection(returnId, principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Return inspection started", response));
+    }
+
+    @PostMapping("/{returnId}/complete-inspection")
+    @PreAuthorize("hasAuthority('return:inspect')")
+    @Operation(summary = "Complete inspection", description = "Record per-item inspection results and determine resolution")
+    public ResponseEntity<ApiResponse<ReturnResponse>> completeInspection(
+            @PathVariable UUID returnId,
+            @Valid @RequestBody CompleteInspectionRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        ReturnResponse response = returnInspectionService.completeInspection(returnId, request, principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Inspection completed", response));
     }
 
     @PostMapping("/{returnId}/initiate-shipment")
