@@ -60,9 +60,7 @@ public class ReturnQueryResolver {
 
     @QueryMapping
     @PreAuthorize("hasAuthority('return:read')")
-    public ReturnResponse myReturn(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @Argument String returnId) {
+    public ReturnResponse myReturn(@Argument String returnId) {
         return returnService.getReturn(UUID.fromString(returnId));
     }
 
