@@ -4,9 +4,14 @@ extend type Mutation {
     cancelShipment(id: ID!): Shipment!
     generateShipmentLabel(id: ID!): Shipment!
     recordTrackingEvent(shipmentId: ID!, status: ShipmentStatusGql!, description: String, location: String): TrackingEvent!
+    createShipmentException(shipmentId: ID!, type: String!, severity: String!, description: String): ShipmentException!
+    resolveShipmentException(id: ID!, resolutionNotes: String, resolvedBy: String): ShipmentException!
 }
 
 extend type Query {
+    shipmentExceptions(shipmentId: ID!): [ShipmentException]
+    openShipmentExceptions: [ShipmentException]
+
     # Public tracking — no auth required
     shipmentTracking(trackingNumber: String!): ShipmentTracking
 
@@ -203,4 +208,18 @@ input ShipmentAddressInput {
     state: String
     country: String
     postalCode: String
+}
+
+type ShipmentException {
+    id: ID!
+    shipmentId: ID!
+    type: String!
+    severity: String!
+    description: String
+    status: String!
+    detectedAt: DateTime!
+    resolvedAt: DateTime
+    resolvedBy: String
+    resolutionNotes: String
+    createdAt: DateTime!
 }

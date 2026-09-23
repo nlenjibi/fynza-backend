@@ -50,5 +50,7 @@
     <include file="changes/043-drop-delivery-module-tables.sql"      relativeToChangelogFile="true"/>
     <include file="changes/044-shipment-version-and-packages.sql"    relativeToChangelogFile="true"/>
     <include file="changes/045-delivery-attempts-table.sql"          relativeToChangelogFile="true"/>
+    <include file="changes/046-shipment-exceptions-table.sql"        relativeToChangelogFile="true"/>
+    <include file="changes/047-return-shipments-table.sql"           relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

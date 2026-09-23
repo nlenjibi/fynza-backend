@@ -2,9 +2,11 @@ package ecommerce.graphql.resolver.shipping;
 
 import ecommerce.common.security.UserPrincipal;
 import ecommerce.modules.shipping.dto.response.*;
+import ecommerce.modules.shipping.enums.ExceptionStatus;
 import ecommerce.modules.shipping.enums.FulfillmentStatus;
 import ecommerce.modules.shipping.service.CarrierAdminService;
 import ecommerce.modules.shipping.service.FulfillmentService;
+import ecommerce.modules.shipping.service.ShipmentExceptionService;
 import ecommerce.modules.shipping.service.ShipmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,6 +28,7 @@ public class ShippingQueryResolver {
     private final ShipmentService shipmentService;
     private final FulfillmentService fulfillmentService;
     private final CarrierAdminService carrierAdminService;
+    private final ShipmentExceptionService exceptionService;
 
     @QueryMapping
     public ShipmentResponse shipmentTracking(@Argument String trackingNumber) {
@@ -73,5 +76,17 @@ public class ShippingQueryResolver {
     @QueryMapping
     public List<CarrierResponse> carriers() {
         return carrierAdminService.getAllCarriers();
+    }
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
+    public List<ShipmentExceptionResponse> shipmentExceptions(@Argument String shipmentId) {
+        return exceptionService.getExceptionsForShipment(UUID.fromString(shipmentId));
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    public List<ShipmentExceptionResponse> openShipmentExceptions() {
+        return exceptionService.getOpenExceptions();
     }
 }
