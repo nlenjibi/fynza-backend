@@ -3,10 +3,16 @@ package ecommerce.graphql.resolver.shipping;
 import ecommerce.common.security.UserPrincipal;
 import ecommerce.modules.shipping.dto.request.CreateShipmentRequest;
 import ecommerce.modules.shipping.dto.request.RecordTrackingEventRequest;
+import ecommerce.modules.shipping.dto.request.ResolveExceptionRequest;
+import ecommerce.modules.shipping.dto.request.ShipmentExceptionRequest;
 import ecommerce.modules.shipping.dto.request.UpdateShipmentStatusRequest;
+import ecommerce.modules.shipping.dto.response.ShipmentExceptionResponse;
 import ecommerce.modules.shipping.dto.response.ShipmentResponse;
 import ecommerce.modules.shipping.dto.response.TrackingEventResponse;
+import ecommerce.modules.shipping.enums.ExceptionSeverity;
+import ecommerce.modules.shipping.enums.ExceptionType;
 import ecommerce.modules.shipping.enums.ShipmentStatus;
+import ecommerce.modules.shipping.service.ShipmentExceptionService;
 import ecommerce.modules.shipping.service.ShipmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -23,6 +29,7 @@ import java.util.UUID;
 public class ShippingMutationResolver {
 
     private final ShipmentService shipmentService;
+    private final ShipmentExceptionService exceptionService;
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
@@ -71,5 +78,31 @@ public class ShippingMutationResolver {
         request.setDescription(description);
         request.setLocation(location);
         return shipmentService.recordTrackingEvent(UUID.fromString(shipmentId), request);
+    }
+
+    @MutationMapping
+    @PreAuthorize("isAuthenticated()")
+    public ShipmentExceptionResponse createShipmentException(
+            @Argument String shipmentId,
+            @Argument String type,
+            @Argument String severity,
+            @Argument String description) {
+        ShipmentExceptionRequest request = new ShipmentExceptionRequest();
+        request.setType(ExceptionType.valueOf(type));
+        request.setSeverity(ExceptionSeverity.valueOf(severity));
+        request.setDescription(description);
+        return exceptionService.createException(UUID.fromString(shipmentId), request);
+    }
+
+    @MutationMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    public ShipmentExceptionResponse resolveShipmentException(
+            @Argument String id,
+            @Argument String resolutionNotes,
+            @Argument String resolvedBy) {
+        ResolveExceptionRequest request = new ResolveExceptionRequest();
+        request.setResolutionNotes(resolutionNotes);
+        request.setResolvedBy(resolvedBy);
+        return exceptionService.resolveException(UUID.fromString(id), request);
     }
 }
