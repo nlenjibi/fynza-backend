@@ -1,6 +1,7 @@
 package ecommerce.modules.shipping.service.impl;
 
 import ecommerce.common.exception.ForbiddenException;
+import ecommerce.modules.shipping.FulfillmentStateMachine;
 import ecommerce.modules.shipping.dto.request.CreateFulfillmentRequest;
 import ecommerce.modules.shipping.dto.response.FulfillmentResponse;
 import ecommerce.modules.shipping.dto.response.ShipmentItemResponse;
@@ -32,8 +33,6 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class FulfillmentServiceImpl implements FulfillmentService {
 
-    private static final List<FulfillmentStatus> TERMINAL_STATUSES =
-            List.of(FulfillmentStatus.COMPLETED, FulfillmentStatus.CANCELLED);
 
     private final FulfillmentRepository fulfillmentRepository;
     private final ShipmentRepository shipmentRepository;
@@ -100,11 +99,8 @@ public class FulfillmentServiceImpl implements FulfillmentService {
         if (!fulfillment.getSellerId().equals(sellerId)) {
             throw new ForbiddenException("You do not own this fulfillment");
         }
-        if (TERMINAL_STATUSES.contains(fulfillment.getStatus())) {
-            throw new IllegalStateException("Fulfillment is already in terminal status: " + fulfillment.getStatus());
-        }
-
         FulfillmentStatus prev = fulfillment.getStatus();
+        FulfillmentStateMachine.validate(prev, newStatus);
         fulfillment.setStatus(newStatus);
         if (notes != null) fulfillment.setNotes(notes);
 
