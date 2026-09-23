@@ -5,7 +5,6 @@ import ecommerce.modules.refund.dto.CreateReturnPolicyRequest;
 import ecommerce.modules.refund.dto.ReturnPolicyResponse;
 import ecommerce.modules.refund.entity.ReturnPolicy;
 import ecommerce.modules.refund.enums.RefundMethod;
-import ecommerce.modules.refund.enums.ReturnPolicyExclusionType;
 import ecommerce.modules.refund.enums.ReturnPolicyScope;
 import ecommerce.modules.refund.enums.ReturnReason;
 import ecommerce.modules.refund.enums.ReturnShippingResponsibility;
