@@ -32,4 +32,10 @@ public interface ReturnService {
     ReturnResponse markUnderReview(UUID returnPublicId, UUID reviewedBy);
 
     ReturnResponse escalateReturn(UUID returnPublicId, UUID escalatedBy, String reason);
+
+    ReturnResponse initiateReturnShipment(UUID returnPublicId, InitiateReturnShipmentRequest request, UUID initiatedBy);
+
+    ReturnResponse markInTransit(UUID returnPublicId, UUID triggeredBy);
+
+    ReturnResponse markReceived(UUID returnPublicId, UUID triggeredBy);
 }

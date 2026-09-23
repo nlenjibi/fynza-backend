@@ -2,9 +2,11 @@ package ecommerce.modules.refund.controller;
 
 import ecommerce.common.response.ApiResponse;
 import ecommerce.common.security.UserPrincipal;
+import ecommerce.modules.refund.dto.InitiateReturnShipmentRequest;
 import ecommerce.modules.refund.dto.ReturnDecisionRequest;
 import ecommerce.modules.refund.dto.ReturnResponse;
 import ecommerce.modules.refund.service.ReturnService;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -55,5 +57,16 @@ public class SellerReturnController {
             @AuthenticationPrincipal UserPrincipal principal) {
         ReturnResponse response = returnService.markUnderReview(returnId, principal.getId());
         return ResponseEntity.ok(ApiResponse.success("Return under review", response));
+    }
+
+    @PostMapping("/{returnId}/initiate-shipment")
+    @PreAuthorize("hasAuthority('return:approve')")
+    @Operation(summary = "Initiate return shipment", description = "Link a Shipping module shipment to this return and move to RETURN_SHIPPING")
+    public ResponseEntity<ApiResponse<ReturnResponse>> initiateShipment(
+            @PathVariable UUID returnId,
+            @Valid @RequestBody InitiateReturnShipmentRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        ReturnResponse response = returnService.initiateReturnShipment(returnId, request, principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Return shipment initiated", response));
     }
 }

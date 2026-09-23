@@ -82,6 +82,13 @@ public class Return {
     @Column(name = "resolved_at")
     private Instant resolvedAt;
 
+    /** Reference to the Shipment entity in the Shipping module for the return trip */
+    @Column(name = "return_shipment_id")
+    private UUID returnShipmentId;
+
+    @Column(name = "return_label_reference", length = 500)
+    private String returnLabelReference;
+
     @Column(name = "is_escalated", nullable = false)
     @Builder.Default
     private Boolean isEscalated = false;

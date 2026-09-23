@@ -34,6 +34,8 @@ public class ReturnResponse {
     private Instant receivedAt;
     private Instant rejectedAt;
     private Instant resolvedAt;
+    private UUID returnShipmentId;
+    private String returnLabelReference;
     private Boolean isEscalated;
     private Instant escalatedAt;
     private List<ReturnItemResponse> items;

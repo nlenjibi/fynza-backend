@@ -260,6 +260,57 @@ public class ReturnServiceImpl implements ReturnService {
 
     @Override
     @Transactional
+    public ReturnResponse initiateReturnShipment(UUID returnPublicId, InitiateReturnShipmentRequest request, UUID initiatedBy) {
+        Return returnEntity = findByPublicId(returnPublicId);
+        ReturnStatus prev = returnEntity.getStatus();
+        ReturnStateMachine.validate(prev, ReturnStatus.RETURN_SHIPPING);
+        returnEntity.setStatus(ReturnStatus.RETURN_SHIPPING);
+        returnEntity.setReturnShipmentId(request.getReturnShipmentId());
+        returnEntity.setReturnLabelReference(request.getReturnLabelReference());
+        returnEntity = returnRepository.save(returnEntity);
+
+        auditRecorder.record(returnPublicId, ReturnAuditAction.SHIPMENT_INITIATED,
+                prev, ReturnStatus.RETURN_SHIPPING, initiatedBy, "Return shipment initiated");
+
+        log.info("Return {} shipment initiated, shipmentId={}", returnEntity.getReturnNumber(), request.getReturnShipmentId());
+        return toResponse(returnEntity, returnItemRepository.findByReturnId(returnPublicId));
+    }
+
+    @Override
+    @Transactional
+    public ReturnResponse markInTransit(UUID returnPublicId, UUID triggeredBy) {
+        Return returnEntity = findByPublicId(returnPublicId);
+        ReturnStatus prev = returnEntity.getStatus();
+        ReturnStateMachine.validate(prev, ReturnStatus.IN_TRANSIT);
+        returnEntity.setStatus(ReturnStatus.IN_TRANSIT);
+        returnEntity = returnRepository.save(returnEntity);
+
+        auditRecorder.record(returnPublicId, ReturnAuditAction.IN_TRANSIT,
+                prev, ReturnStatus.IN_TRANSIT, triggeredBy, "Return package in transit");
+
+        log.info("Return {} marked IN_TRANSIT", returnEntity.getReturnNumber());
+        return toResponse(returnEntity, returnItemRepository.findByReturnId(returnPublicId));
+    }
+
+    @Override
+    @Transactional
+    public ReturnResponse markReceived(UUID returnPublicId, UUID triggeredBy) {
+        Return returnEntity = findByPublicId(returnPublicId);
+        ReturnStatus prev = returnEntity.getStatus();
+        ReturnStateMachine.validate(prev, ReturnStatus.RECEIVED);
+        returnEntity.setStatus(ReturnStatus.RECEIVED);
+        returnEntity.setReceivedAt(Instant.now());
+        returnEntity = returnRepository.save(returnEntity);
+
+        auditRecorder.record(returnPublicId, ReturnAuditAction.RECEIVED,
+                prev, ReturnStatus.RECEIVED, triggeredBy, "Return package received");
+
+        log.info("Return {} marked RECEIVED", returnEntity.getReturnNumber());
+        return toResponse(returnEntity, returnItemRepository.findByReturnId(returnPublicId));
+    }
+
+    @Override
+    @Transactional
     public ReturnResponse escalateReturn(UUID returnPublicId, UUID escalatedBy, String reason) {
         Return returnEntity = findByPublicId(returnPublicId);
         returnEntity.setIsEscalated(true);
@@ -314,6 +365,8 @@ public class ReturnServiceImpl implements ReturnService {
                 .receivedAt(r.getReceivedAt())
                 .rejectedAt(r.getRejectedAt())
                 .resolvedAt(r.getResolvedAt())
+                .returnShipmentId(r.getReturnShipmentId())
+                .returnLabelReference(r.getReturnLabelReference())
                 .isEscalated(r.getIsEscalated())
                 .escalatedAt(r.getEscalatedAt())
                 .items(items.stream().map(this::toItemResponse).collect(Collectors.toList()))

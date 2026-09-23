@@ -38,6 +38,8 @@ type ReturnResponse {
     receivedAt: String
     rejectedAt: String
     resolvedAt: String
+    returnShipmentId: ID
+    returnLabelReference: String
     isEscalated: Boolean!
     escalatedAt: String
     items: [ReturnItemResponse!]!

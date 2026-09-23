@@ -68,4 +68,24 @@ public class AdminReturnController {
         ReturnResponse response = returnService.escalateReturn(returnId, principal.getId(), request.getReason());
         return ResponseEntity.ok(ApiResponse.success("Return escalated", response));
     }
+
+    @PostMapping("/{returnId}/in-transit")
+    @PreAuthorize("hasAuthority('return:admin.manage')")
+    @Operation(summary = "Mark in transit", description = "Manually mark return package as in transit (admin override)")
+    public ResponseEntity<ApiResponse<ReturnResponse>> markInTransit(
+            @PathVariable UUID returnId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        ReturnResponse response = returnService.markInTransit(returnId, principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Return marked in transit", response));
+    }
+
+    @PostMapping("/{returnId}/received")
+    @PreAuthorize("hasAuthority('return:admin.manage')")
+    @Operation(summary = "Mark received", description = "Mark return package as received at warehouse")
+    public ResponseEntity<ApiResponse<ReturnResponse>> markReceived(
+            @PathVariable UUID returnId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        ReturnResponse response = returnService.markReceived(returnId, principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Return package received", response));
+    }
 }

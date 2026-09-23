@@ -31,5 +31,7 @@ public interface ReturnRepository extends JpaRepository<Return, Long> {
     @Query("SELECT r FROM Return r WHERE r.orderId = :orderId AND r.status NOT IN ('CANCELLED','REJECTED','EXPIRED')")
     List<Return> findActiveByOrderId(@Param("orderId") UUID orderId);
 
+    Optional<Return> findByReturnShipmentId(UUID returnShipmentId);
+
     boolean existsByOrderIdAndStatusNotIn(UUID orderId, List<ReturnStatus> statuses);
 }
