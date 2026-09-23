@@ -40,11 +40,11 @@ public class WebhookSignatureService {
     public boolean verify(String provider, String rawPayload, String signatureHeader) {
         String secret = providerSecrets.getOrDefault(provider.toLowerCase(), "");
         if (secret == null || secret.isBlank()) {
-            log.debug("No webhook secret configured for provider={}, skipping signature check", provider);
+            log.debug("No webhook secret configured for provider={}, skipping signature check", sanitize(provider));
             return true;
         }
         if (signatureHeader == null || signatureHeader.isBlank()) {
-            log.warn("Missing X-Signature header for provider={}", provider);
+            log.warn("Missing X-Signature header for provider={}", sanitize(provider));
             return false;
         }
 
@@ -59,13 +59,17 @@ public class WebhookSignatureService {
                     hexSig.getBytes(StandardCharsets.UTF_8),
                     computed.getBytes(StandardCharsets.UTF_8));
             if (!valid) {
-                log.warn("Invalid webhook signature for provider={}", provider);
+                log.warn("Invalid webhook signature for provider={}", sanitize(provider));
             }
             return valid;
         } catch (Exception e) {
-            log.error("Webhook signature verification error for provider={}: {}", provider, e.getMessage());
+            log.error("Webhook signature verification error for provider={}: {}", sanitize(provider), e.getMessage());
             return false;
         }
+    }
+
+    private static String sanitize(String value) {
+        return value == null ? "" : value.replace('\r', '_').replace('\n', '_');
     }
 
     private String computeHmac(String secret, String payload) throws NoSuchAlgorithmException, InvalidKeyException {

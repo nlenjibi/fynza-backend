@@ -2,7 +2,6 @@ package ecommerce.graphql.resolver.shipping;
 
 import ecommerce.common.security.UserPrincipal;
 import ecommerce.modules.shipping.dto.response.*;
-import ecommerce.modules.shipping.enums.ExceptionStatus;
 import ecommerce.modules.shipping.enums.FulfillmentStatus;
 import ecommerce.modules.shipping.service.CarrierAdminService;
 import ecommerce.modules.shipping.service.FulfillmentService;
