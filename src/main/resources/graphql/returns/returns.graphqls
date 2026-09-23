@@ -1,0 +1,62 @@
+extend type Query {
+    myReturns(page: Int = 0, size: Int = 20): ReturnPage!
+    myReturn(returnId: ID!): ReturnResponse
+    returnEligibility(orderId: ID!): ReturnEligibilityResult!
+    orderReturns(orderId: ID!): [ReturnResponse!]!
+    sellerReturns(page: Int = 0, size: Int = 20): ReturnPage!
+    adminReturns(page: Int = 0, size: Int = 20): ReturnPage!
+}
+
+type ReturnPage {
+    content: [ReturnResponse!]!
+    totalElements: Int!
+    totalPages: Int!
+    currentPage: Int!
+    hasNextPage: Boolean!
+}
+
+type ReturnResponse {
+    publicId: ID!
+    returnNumber: String!
+    orderId: ID!
+    customerId: ID!
+    sellerId: ID
+    storeId: ID
+    status: String!
+    reason: String!
+    customerNote: String
+    adminNote: String
+    rejectionReason: String
+    returnDeadline: String
+    requestedAt: String!
+    approvedAt: String
+    receivedAt: String
+    rejectedAt: String
+    resolvedAt: String
+    items: [ReturnItemResponse!]!
+    createdAt: String!
+    updatedAt: String!
+}
+
+type ReturnItemResponse {
+    publicId: ID!
+    orderItemId: ID!
+    productId: ID
+    productName: String!
+    quantity: Int!
+    reason: String!
+    condition: String
+    unitPrice: Float
+    createdAt: String!
+}
+
+type ReturnEligibilityResult {
+    eligible: Boolean!
+    deadline: String
+    remainingDays: Int
+    reason: String
+    allowedReasons: [String!]
+    maximumReturnQuantity: Int
+    conditions: [String!]
+    warnings: [String!]
+}

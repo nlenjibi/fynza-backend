@@ -47,5 +47,7 @@
     <include file="changes/040-payout-permissions.sql"               relativeToChangelogFile="true"/>
     <include file="changes/041-shipping-schema.sql"                  relativeToChangelogFile="true"/>
     <include file="changes/042-shipping-permissions.sql"             relativeToChangelogFile="true"/>
+    <include file="changes/050-returns-schema.sql"                   relativeToChangelogFile="true"/>
+    <include file="changes/051-returns-permissions.sql"              relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

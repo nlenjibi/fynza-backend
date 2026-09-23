@@ -1,0 +1,59 @@
+package ecommerce.modules.refund.controller;
+
+import ecommerce.common.response.ApiResponse;
+import ecommerce.common.security.UserPrincipal;
+import ecommerce.modules.refund.dto.ReturnDecisionRequest;
+import ecommerce.modules.refund.dto.ReturnResponse;
+import ecommerce.modules.refund.service.ReturnService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/v1/seller/returns")
+@RequiredArgsConstructor
+@Tag(name = "Seller Returns", description = "Seller return management endpoints")
+public class SellerReturnController {
+
+    private final ReturnService returnService;
+
+    @PostMapping("/{returnId}/approve")
+    @PreAuthorize("hasAuthority('return:approve')")
+    @Operation(summary = "Approve return", description = "Approve a customer return request")
+    public ResponseEntity<ApiResponse<ReturnResponse>> approveReturn(
+            @PathVariable UUID returnId,
+            @RequestBody(required = false) ReturnDecisionRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        String note = request != null ? request.getNote() : null;
+        ReturnResponse response = returnService.approveReturn(returnId, principal.getId(), note);
+        return ResponseEntity.ok(ApiResponse.success("Return approved", response));
+    }
+
+    @PostMapping("/{returnId}/reject")
+    @PreAuthorize("hasAuthority('return:reject')")
+    @Operation(summary = "Reject return", description = "Reject a customer return request with a reason")
+    public ResponseEntity<ApiResponse<ReturnResponse>> rejectReturn(
+            @PathVariable UUID returnId,
+            @RequestBody ReturnDecisionRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        ReturnResponse response = returnService.rejectReturn(
+                returnId, principal.getId(), request.getRejectionReason());
+        return ResponseEntity.ok(ApiResponse.success("Return rejected", response));
+    }
+
+    @PostMapping("/{returnId}/review")
+    @PreAuthorize("hasAuthority('return:review')")
+    @Operation(summary = "Start review", description = "Begin reviewing a return request")
+    public ResponseEntity<ApiResponse<ReturnResponse>> startReview(
+            @PathVariable UUID returnId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        ReturnResponse response = returnService.markUnderReview(returnId, principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Return under review", response));
+    }
+}

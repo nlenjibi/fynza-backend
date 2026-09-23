@@ -13,6 +13,8 @@ import java.util.UUID;
 @Repository
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
+    java.util.Optional<OrderItem> findByPublicId(UUID publicId);
+
     List<OrderItem> findByOrder_PublicId(UUID orderPublicId);
 
     List<OrderItem> findBySellerOrder_PublicId(UUID sellerOrderPublicId);

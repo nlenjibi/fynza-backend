@@ -1,0 +1,18 @@
+package ecommerce.modules.refund.enums;
+
+public enum ReturnReason {
+    DAMAGED_IN_TRANSIT,
+    DEFECTIVE_PRODUCT,
+    WRONG_ITEM_RECEIVED,
+    MISSING_ITEM,
+    NOT_AS_DESCRIBED,
+    WRONG_SIZE,
+    WRONG_COLOR,
+    QUALITY_ISSUE,
+    CHANGED_MIND,
+    NO_LONGER_NEEDED,
+    DUPLICATE_ORDER,
+    COUNTERFEIT_SUSPECTED,
+    LATE_DELIVERY,
+    OTHER
+}
