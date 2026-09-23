@@ -5,6 +5,9 @@ extend type Query {
     orderReturns(orderId: ID!): [ReturnResponse!]!
     sellerReturns(page: Int = 0, size: Int = 20): ReturnPage!
     adminReturns(page: Int = 0, size: Int = 20): ReturnPage!
+    platformReturnPolicy: ReturnPolicyResponse!
+    storeReturnPolicy(storeId: ID!): ReturnPolicyResponse!
+    returnPolicy(policyId: ID!): ReturnPolicyResponse!
 }
 
 type ReturnPage {
@@ -59,4 +62,23 @@ type ReturnEligibilityResult {
     maximumReturnQuantity: Int
     conditions: [String!]
     warnings: [String!]
+}
+
+type ReturnPolicyResponse {
+    publicId: ID
+    name: String
+    scope: String
+    storeId: ID
+    productId: ID
+    categoryId: ID
+    returnWindowDays: Int!
+    isReturnable: Boolean!
+    conditionRequired: Boolean!
+    eligibleReasons: [String!]!
+    returnShippingResponsibility: String!
+    restockingFeePercent: Float
+    refundMethod: String!
+    isActive: Boolean
+    createdAt: String
+    updatedAt: String
 }

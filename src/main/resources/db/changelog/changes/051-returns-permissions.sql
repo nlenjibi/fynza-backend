@@ -10,8 +10,10 @@ INSERT INTO permissions (code, resource, action, description) VALUES
     ('return:reject',      'RETURN', 'EXECUTE', 'Reject a return request'),
     ('return:inspect',     'RETURN', 'EXECUTE', 'Inspect returned items'),
     ('return:resolve',     'RETURN', 'EXECUTE', 'Resolve a return case'),
-    ('return:admin.read',  'RETURN', 'READ',    'Admin read access to all returns'),
-    ('return:admin.manage','RETURN', 'EXECUTE', 'Full admin management of returns')
+    ('return:admin.read',   'RETURN', 'READ',    'Admin read access to all returns'),
+    ('return:admin.manage', 'RETURN', 'EXECUTE', 'Full admin management of returns'),
+    ('return:policy.read',  'RETURN', 'READ',    'View return policies'),
+    ('return:policy.manage','RETURN', 'EXECUTE', 'Create and manage return policies')
 ON CONFLICT (code) DO NOTHING;
 
 --changeset fynza:051-returns-role-grants
@@ -34,7 +36,8 @@ SELECT r.id, p.id
 FROM roles r
 JOIN permissions p ON p.code IN (
     'return:read', 'return:review', 'return:approve', 'return:reject',
-    'return:inspect', 'return:resolve', 'return:admin.read', 'return:admin.manage'
+    'return:inspect', 'return:resolve', 'return:admin.read', 'return:admin.manage',
+    'return:policy.read', 'return:policy.manage'
 )
 WHERE r.code IN ('ADMIN', 'MANAGER')
 ON CONFLICT DO NOTHING;

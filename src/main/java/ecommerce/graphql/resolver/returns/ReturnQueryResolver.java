@@ -2,7 +2,9 @@ package ecommerce.graphql.resolver.returns;
 
 import ecommerce.common.security.UserPrincipal;
 import ecommerce.modules.refund.dto.ReturnEligibilityResult;
+import ecommerce.modules.refund.dto.ReturnPolicyResponse;
 import ecommerce.modules.refund.dto.ReturnResponse;
+import ecommerce.modules.refund.service.ReturnPolicyService;
 import ecommerce.modules.refund.service.ReturnService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,6 +24,7 @@ import java.util.UUID;
 public class ReturnQueryResolver {
 
     private final ReturnService returnService;
+    private final ReturnPolicyService returnPolicyService;
 
     @QueryMapping
     @PreAuthorize("hasAuthority('return:read')")
@@ -74,5 +77,22 @@ public class ReturnQueryResolver {
             @Argument int size) {
         return returnService.getAllReturns(
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+    }
+
+    @QueryMapping
+    public ReturnPolicyResponse platformReturnPolicy() {
+        return returnPolicyService.getPlatformPolicy();
+    }
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
+    public ReturnPolicyResponse storeReturnPolicy(@Argument String storeId) {
+        return returnPolicyService.getStorePolicy(UUID.fromString(storeId));
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasAuthority('return:policy.read')")
+    public ReturnPolicyResponse returnPolicy(@Argument String policyId) {
+        return returnPolicyService.getPolicy(UUID.fromString(policyId));
     }
 }

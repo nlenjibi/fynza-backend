@@ -2,6 +2,7 @@ package ecommerce.modules.refund.service.impl;
 
 import ecommerce.common.enums.OrderStatus;
 import ecommerce.common.exception.ResourceNotFoundException;
+import ecommerce.modules.order.entity.Order;
 import ecommerce.modules.order.entity.OrderItem;
 import ecommerce.modules.order.repository.OrderItemRepository;
 import ecommerce.modules.order.repository.OrderRepository;
@@ -9,12 +10,14 @@ import ecommerce.modules.refund.ReturnStateMachine;
 import ecommerce.modules.refund.dto.*;
 import ecommerce.modules.refund.entity.Return;
 import ecommerce.modules.refund.entity.ReturnItem;
+import ecommerce.modules.refund.entity.ReturnPolicy;
 import ecommerce.modules.refund.enums.ReturnReason;
 import ecommerce.modules.refund.enums.ReturnStatus;
 import ecommerce.modules.refund.exception.ReturnNotEligibleException;
 import ecommerce.modules.refund.exception.ReturnNotFoundException;
 import ecommerce.modules.refund.repository.ReturnItemRepository;
 import ecommerce.modules.refund.repository.ReturnRepository;
+import ecommerce.modules.refund.service.ReturnPolicyService;
 import ecommerce.modules.refund.service.ReturnService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +39,6 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ReturnServiceImpl implements ReturnService {
 
-    private static final int DEFAULT_RETURN_WINDOW_DAYS = 14;
     private static final List<ReturnStatus> TERMINAL_STATUSES =
             Arrays.asList(ReturnStatus.CANCELLED, ReturnStatus.REJECTED, ReturnStatus.EXPIRED, ReturnStatus.RESOLVED);
 
@@ -44,6 +46,7 @@ public class ReturnServiceImpl implements ReturnService {
     private final ReturnItemRepository returnItemRepository;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final ReturnPolicyService returnPolicyService;
 
     @Override
     public ReturnEligibilityResult checkEligibility(UUID orderId, UUID customerId) {
@@ -64,8 +67,17 @@ public class ReturnServiceImpl implements ReturnService {
                     .build();
         }
 
+        ReturnPolicy policy = returnPolicyService.resolvePolicy(null, null, null);
+
+        if (Boolean.FALSE.equals(policy.getIsReturnable())) {
+            return ReturnEligibilityResult.builder()
+                    .eligible(false)
+                    .reason("Returns are not permitted under the current policy")
+                    .build();
+        }
+
         Instant deliveredAt = order.getUpdatedAt();
-        Instant deadline = deliveredAt.plus(DEFAULT_RETURN_WINDOW_DAYS, ChronoUnit.DAYS);
+        Instant deadline = deliveredAt.plus(policy.getReturnWindowDays(), ChronoUnit.DAYS);
         long remainingDays = ChronoUnit.DAYS.between(Instant.now(), deadline);
 
         if (remainingDays < 0) {
@@ -73,7 +85,7 @@ public class ReturnServiceImpl implements ReturnService {
                     .eligible(false)
                     .deadline(deadline)
                     .remainingDays(0L)
-                    .reason("Return window has expired")
+                    .reason("Return window of " + policy.getReturnWindowDays() + " days has expired")
                     .build();
         }
 
@@ -87,11 +99,12 @@ public class ReturnServiceImpl implements ReturnService {
                     .build();
         }
 
+        List<ReturnReason> allowed = resolveAllowedReasons(policy);
         return ReturnEligibilityResult.builder()
                 .eligible(true)
                 .deadline(deadline)
                 .remainingDays(remainingDays)
-                .allowedReasons(List.of(ReturnReason.values()))
+                .allowedReasons(allowed)
                 .build();
     }
 
@@ -101,6 +114,12 @@ public class ReturnServiceImpl implements ReturnService {
         ReturnEligibilityResult eligibility = checkEligibility(request.getOrderId(), customerId);
         if (!eligibility.isEligible()) {
             throw new ReturnNotEligibleException(eligibility.getReason());
+        }
+
+        if (eligibility.getAllowedReasons() != null
+                && !eligibility.getAllowedReasons().contains(request.getReason())) {
+            throw new ReturnNotEligibleException(
+                    "Reason " + request.getReason() + " is not permitted under the current return policy");
         }
 
         String returnNumber = Return.generateReturnNumber();
@@ -115,6 +134,7 @@ public class ReturnServiceImpl implements ReturnService {
                 .status(ReturnStatus.REQUESTED)
                 .reason(request.getReason())
                 .customerNote(request.getCustomerNote())
+                .returnDeadline(eligibility.getDeadline())
                 .build();
 
         returnEntity = returnRepository.save(returnEntity);
@@ -261,6 +281,15 @@ public class ReturnServiceImpl implements ReturnService {
                 .createdAt(r.getCreatedAt())
                 .updatedAt(r.getUpdatedAt())
                 .build();
+    }
+
+    private List<ReturnReason> resolveAllowedReasons(ReturnPolicy policy) {
+        String serialized = policy.getEligibleReasons();
+        if (serialized == null || serialized.isBlank()) return List.of(ReturnReason.values());
+        return Arrays.stream(serialized.split(","))
+                .map(String::trim)
+                .map(ReturnReason::valueOf)
+                .collect(Collectors.toList());
     }
 
     private ReturnItemResponse toItemResponse(ReturnItem i) {
