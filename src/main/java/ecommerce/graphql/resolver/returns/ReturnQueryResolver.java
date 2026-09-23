@@ -1,9 +1,12 @@
 package ecommerce.graphql.resolver.returns;
 
 import ecommerce.common.security.UserPrincipal;
+import ecommerce.modules.refund.dto.ReturnAuditResponse;
 import ecommerce.modules.refund.dto.ReturnEligibilityResult;
+import ecommerce.modules.refund.dto.ReturnEvidenceResponse;
 import ecommerce.modules.refund.dto.ReturnPolicyResponse;
 import ecommerce.modules.refund.dto.ReturnResponse;
+import ecommerce.modules.refund.service.ReturnEvidenceService;
 import ecommerce.modules.refund.service.ReturnPolicyService;
 import ecommerce.modules.refund.service.ReturnService;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +28,7 @@ public class ReturnQueryResolver {
 
     private final ReturnService returnService;
     private final ReturnPolicyService returnPolicyService;
+    private final ReturnEvidenceService returnEvidenceService;
 
     @QueryMapping
     @PreAuthorize("hasAuthority('return:read')")
@@ -77,6 +81,18 @@ public class ReturnQueryResolver {
             @Argument int size) {
         return returnService.getAllReturns(
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+    }
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
+    public List<ReturnEvidenceResponse> returnEvidence(@Argument String returnId) {
+        return returnEvidenceService.getEvidence(UUID.fromString(returnId));
+    }
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
+    public List<ReturnAuditResponse> returnAuditTrail(@Argument String returnId) {
+        return returnEvidenceService.getAuditTrail(UUID.fromString(returnId));
     }
 
     @QueryMapping

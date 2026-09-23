@@ -82,6 +82,13 @@ public class Return {
     @Column(name = "resolved_at")
     private Instant resolvedAt;
 
+    @Column(name = "is_escalated", nullable = false)
+    @Builder.Default
+    private Boolean isEscalated = false;
+
+    @Column(name = "escalated_at")
+    private Instant escalatedAt;
+
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;

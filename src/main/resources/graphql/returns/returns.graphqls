@@ -5,6 +5,8 @@ extend type Query {
     orderReturns(orderId: ID!): [ReturnResponse!]!
     sellerReturns(page: Int = 0, size: Int = 20): ReturnPage!
     adminReturns(page: Int = 0, size: Int = 20): ReturnPage!
+    returnEvidence(returnId: ID!): [ReturnEvidenceResponse!]!
+    returnAuditTrail(returnId: ID!): [ReturnAuditResponse!]!
     platformReturnPolicy: ReturnPolicyResponse!
     storeReturnPolicy(storeId: ID!): ReturnPolicyResponse!
     returnPolicy(policyId: ID!): ReturnPolicyResponse!
@@ -36,6 +38,8 @@ type ReturnResponse {
     receivedAt: String
     rejectedAt: String
     resolvedAt: String
+    isEscalated: Boolean!
+    escalatedAt: String
     items: [ReturnItemResponse!]!
     createdAt: String!
     updatedAt: String!
@@ -50,6 +54,28 @@ type ReturnItemResponse {
     reason: String!
     condition: String
     unitPrice: Float
+    createdAt: String!
+}
+
+type ReturnEvidenceResponse {
+    publicId: ID!
+    returnId: ID!
+    returnItemId: ID
+    mediaReference: String!
+    evidenceType: String!
+    description: String
+    uploadedBy: ID!
+    createdAt: String!
+}
+
+type ReturnAuditResponse {
+    id: ID!
+    returnId: ID!
+    action: String!
+    previousStatus: String
+    newStatus: String
+    performedBy: ID
+    reason: String
     createdAt: String!
 }
 

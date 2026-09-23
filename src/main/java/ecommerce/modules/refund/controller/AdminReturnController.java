@@ -2,6 +2,7 @@ package ecommerce.modules.refund.controller;
 
 import ecommerce.common.response.ApiResponse;
 import ecommerce.common.security.UserPrincipal;
+import ecommerce.modules.refund.dto.EscalateReturnRequest;
 import ecommerce.modules.refund.dto.ReturnDecisionRequest;
 import ecommerce.modules.refund.dto.ReturnResponse;
 import ecommerce.modules.refund.service.ReturnService;
@@ -55,5 +56,16 @@ public class AdminReturnController {
         ReturnResponse response = returnService.rejectReturn(
                 returnId, principal.getId(), request.getRejectionReason());
         return ResponseEntity.ok(ApiResponse.success("Return rejected", response));
+    }
+
+    @PostMapping("/{returnId}/escalate")
+    @PreAuthorize("hasAuthority('return:admin.manage')")
+    @Operation(summary = "Escalate return", description = "Flag a return for escalated review")
+    public ResponseEntity<ApiResponse<ReturnResponse>> escalateReturn(
+            @PathVariable UUID returnId,
+            @jakarta.validation.Valid @RequestBody EscalateReturnRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        ReturnResponse response = returnService.escalateReturn(returnId, principal.getId(), request.getReason());
+        return ResponseEntity.ok(ApiResponse.success("Return escalated", response));
     }
 }

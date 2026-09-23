@@ -10,7 +10,9 @@ import ecommerce.modules.refund.ReturnStateMachine;
 import ecommerce.modules.refund.dto.*;
 import ecommerce.modules.refund.entity.Return;
 import ecommerce.modules.refund.entity.ReturnItem;
+import ecommerce.modules.refund.ReturnAuditRecorder;
 import ecommerce.modules.refund.entity.ReturnPolicy;
+import ecommerce.modules.refund.enums.ReturnAuditAction;
 import ecommerce.modules.refund.enums.ReturnReason;
 import ecommerce.modules.refund.enums.ReturnStatus;
 import ecommerce.modules.refund.exception.ReturnNotEligibleException;
@@ -47,6 +49,7 @@ public class ReturnServiceImpl implements ReturnService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final ReturnPolicyService returnPolicyService;
+    private final ReturnAuditRecorder auditRecorder;
 
     @Override
     public ReturnEligibilityResult checkEligibility(UUID orderId, UUID customerId) {
@@ -143,6 +146,9 @@ public class ReturnServiceImpl implements ReturnService {
         List<ReturnItem> items = buildReturnItems(request.getItems(), returnPublicId);
         returnItemRepository.saveAll(items);
 
+        auditRecorder.record(returnPublicId, ReturnAuditAction.CREATED,
+                null, ReturnStatus.REQUESTED, customerId, "Return request submitted");
+
         log.info("Return {} created for order {} by customer {}", returnNumber, request.getOrderId(), customerId);
         return toResponse(returnEntity, items);
     }
@@ -188,9 +194,13 @@ public class ReturnServiceImpl implements ReturnService {
             throw new ReturnNotEligibleException("You do not own this return request");
         }
 
-        ReturnStateMachine.validate(returnEntity.getStatus(), ReturnStatus.CANCELLED);
+        ReturnStatus prev = returnEntity.getStatus();
+        ReturnStateMachine.validate(prev, ReturnStatus.CANCELLED);
         returnEntity.setStatus(ReturnStatus.CANCELLED);
         returnEntity = returnRepository.save(returnEntity);
+
+        auditRecorder.record(returnPublicId, ReturnAuditAction.CANCELLED,
+                prev, ReturnStatus.CANCELLED, customerId, "Cancelled by customer");
 
         log.info("Return {} cancelled by customer {}", returnEntity.getReturnNumber(), customerId);
         return toResponse(returnEntity, returnItemRepository.findByReturnId(returnPublicId));
@@ -200,11 +210,15 @@ public class ReturnServiceImpl implements ReturnService {
     @Transactional
     public ReturnResponse approveReturn(UUID returnPublicId, UUID approvedBy, String adminNote) {
         Return returnEntity = findByPublicId(returnPublicId);
-        ReturnStateMachine.validate(returnEntity.getStatus(), ReturnStatus.APPROVED);
+        ReturnStatus prev = returnEntity.getStatus();
+        ReturnStateMachine.validate(prev, ReturnStatus.APPROVED);
         returnEntity.setStatus(ReturnStatus.APPROVED);
         returnEntity.setApprovedAt(Instant.now());
         returnEntity.setAdminNote(adminNote);
         returnEntity = returnRepository.save(returnEntity);
+
+        auditRecorder.record(returnPublicId, ReturnAuditAction.APPROVED,
+                prev, ReturnStatus.APPROVED, approvedBy, adminNote);
 
         log.info("Return {} approved by {}", returnEntity.getReturnNumber(), approvedBy);
         return toResponse(returnEntity, returnItemRepository.findByReturnId(returnPublicId));
@@ -214,11 +228,15 @@ public class ReturnServiceImpl implements ReturnService {
     @Transactional
     public ReturnResponse rejectReturn(UUID returnPublicId, UUID rejectedBy, String rejectionReason) {
         Return returnEntity = findByPublicId(returnPublicId);
-        ReturnStateMachine.validate(returnEntity.getStatus(), ReturnStatus.REJECTED);
+        ReturnStatus prev = returnEntity.getStatus();
+        ReturnStateMachine.validate(prev, ReturnStatus.REJECTED);
         returnEntity.setStatus(ReturnStatus.REJECTED);
         returnEntity.setRejectedAt(Instant.now());
         returnEntity.setRejectionReason(rejectionReason);
         returnEntity = returnRepository.save(returnEntity);
+
+        auditRecorder.record(returnPublicId, ReturnAuditAction.REJECTED,
+                prev, ReturnStatus.REJECTED, rejectedBy, rejectionReason);
 
         log.info("Return {} rejected by {}", returnEntity.getReturnNumber(), rejectedBy);
         return toResponse(returnEntity, returnItemRepository.findByReturnId(returnPublicId));
@@ -228,11 +246,30 @@ public class ReturnServiceImpl implements ReturnService {
     @Transactional
     public ReturnResponse markUnderReview(UUID returnPublicId, UUID reviewedBy) {
         Return returnEntity = findByPublicId(returnPublicId);
-        ReturnStateMachine.validate(returnEntity.getStatus(), ReturnStatus.UNDER_REVIEW);
+        ReturnStatus prev = returnEntity.getStatus();
+        ReturnStateMachine.validate(prev, ReturnStatus.UNDER_REVIEW);
         returnEntity.setStatus(ReturnStatus.UNDER_REVIEW);
         returnEntity = returnRepository.save(returnEntity);
 
+        auditRecorder.record(returnPublicId, ReturnAuditAction.REVIEW_STARTED,
+                prev, ReturnStatus.UNDER_REVIEW, reviewedBy, "Review started");
+
         log.info("Return {} moved to UNDER_REVIEW by {}", returnEntity.getReturnNumber(), reviewedBy);
+        return toResponse(returnEntity, returnItemRepository.findByReturnId(returnPublicId));
+    }
+
+    @Override
+    @Transactional
+    public ReturnResponse escalateReturn(UUID returnPublicId, UUID escalatedBy, String reason) {
+        Return returnEntity = findByPublicId(returnPublicId);
+        returnEntity.setIsEscalated(true);
+        returnEntity.setEscalatedAt(Instant.now());
+        returnEntity = returnRepository.save(returnEntity);
+
+        auditRecorder.record(returnPublicId, ReturnAuditAction.ESCALATED,
+                returnEntity.getStatus(), returnEntity.getStatus(), escalatedBy, reason);
+
+        log.info("Return {} escalated by {} — {}", returnEntity.getReturnNumber(), escalatedBy, reason);
         return toResponse(returnEntity, returnItemRepository.findByReturnId(returnPublicId));
     }
 
@@ -277,6 +314,8 @@ public class ReturnServiceImpl implements ReturnService {
                 .receivedAt(r.getReceivedAt())
                 .rejectedAt(r.getRejectedAt())
                 .resolvedAt(r.getResolvedAt())
+                .isEscalated(r.getIsEscalated())
+                .escalatedAt(r.getEscalatedAt())
                 .items(items.stream().map(this::toItemResponse).collect(Collectors.toList()))
                 .createdAt(r.getCreatedAt())
                 .updatedAt(r.getUpdatedAt())

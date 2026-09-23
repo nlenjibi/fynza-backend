@@ -30,4 +30,6 @@ public interface ReturnService {
     ReturnResponse rejectReturn(UUID returnPublicId, UUID rejectedBy, String rejectionReason);
 
     ReturnResponse markUnderReview(UUID returnPublicId, UUID reviewedBy);
+
+    ReturnResponse escalateReturn(UUID returnPublicId, UUID escalatedBy, String reason);
 }

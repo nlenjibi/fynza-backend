@@ -2,8 +2,11 @@ package ecommerce.modules.refund.controller;
 
 import ecommerce.common.response.ApiResponse;
 import ecommerce.common.security.UserPrincipal;
+import ecommerce.modules.refund.dto.AddReturnEvidenceRequest;
 import ecommerce.modules.refund.dto.CreateReturnRequest;
+import ecommerce.modules.refund.dto.ReturnEvidenceResponse;
 import ecommerce.modules.refund.dto.ReturnResponse;
+import ecommerce.modules.refund.service.ReturnEvidenceService;
 import ecommerce.modules.refund.service.ReturnService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 public class CustomerReturnController {
 
     private final ReturnService returnService;
+    private final ReturnEvidenceService returnEvidenceService;
 
     @PostMapping
     @PreAuthorize("hasAuthority('return:create')")
@@ -32,6 +36,18 @@ public class CustomerReturnController {
         ReturnResponse response = returnService.createReturn(request, principal.getId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Return request submitted successfully", response));
+    }
+
+    @PostMapping("/{returnId}/evidence")
+    @PreAuthorize("hasAuthority('return:create')")
+    @Operation(summary = "Add evidence", description = "Attach a media reference to a return request")
+    public ResponseEntity<ApiResponse<ReturnEvidenceResponse>> addEvidence(
+            @PathVariable java.util.UUID returnId,
+            @Valid @RequestBody AddReturnEvidenceRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        ReturnEvidenceResponse response = returnEvidenceService.addEvidence(returnId, request, principal.getId());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Evidence added", response));
     }
 
     @PostMapping("/{returnId}/cancel")
