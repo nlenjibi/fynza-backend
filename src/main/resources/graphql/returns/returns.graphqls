@@ -1,0 +1,224 @@
+extend type Query {
+    myReturns(page: Int = 0, size: Int = 20): ReturnPage!
+    myReturn(returnId: ID!): ReturnResponse
+    returnEligibility(orderId: ID!): ReturnEligibilityResult!
+    orderReturns(orderId: ID!): [ReturnResponse!]!
+    sellerReturns(page: Int = 0, size: Int = 20): ReturnPage!
+    adminReturns(page: Int = 0, size: Int = 20): ReturnPage!
+    returnEvidence(returnId: ID!): [ReturnEvidenceResponse!]!
+    returnAuditTrail(returnId: ID!): [ReturnAuditResponse!]!
+    returnInspections(returnId: ID!): [ReturnInspectionResponse!]!
+    returnDispositions(returnId: ID!): [ReturnDispositionResponse!]!
+    returnRefund(returnId: ID!): ReturnRefundResponse
+    returnReconciliations(returnId: ID!): [ReturnReconciliationResponse!]!
+    returnExchange(returnId: ID!): ReturnExchangeResponse
+    returnAnalytics: ReturnAnalyticsResponse!
+    returnFraudSignals(returnId: ID!): [ReturnFraudSignalResponse!]!
+    platformReturnPolicy: ReturnPolicyResponse!
+    storeReturnPolicy(storeId: ID!): ReturnPolicyResponse!
+    returnPolicy(policyId: ID!): ReturnPolicyResponse!
+}
+
+type ReturnPage {
+    content: [ReturnResponse!]!
+    totalElements: Int!
+    totalPages: Int!
+    currentPage: Int!
+    hasNextPage: Boolean!
+}
+
+type ReturnResponse {
+    publicId: ID!
+    returnNumber: String!
+    orderId: ID!
+    customerId: ID!
+    sellerId: ID
+    storeId: ID
+    status: String!
+    reason: String!
+    customerNote: String
+    adminNote: String
+    rejectionReason: String
+    returnDeadline: String
+    requestedAt: String!
+    approvedAt: String
+    receivedAt: String
+    rejectedAt: String
+    resolvedAt: String
+    returnShipmentId: ID
+    returnLabelReference: String
+    isEscalated: Boolean!
+    escalatedAt: String
+    items: [ReturnItemResponse!]!
+    createdAt: String!
+    updatedAt: String!
+}
+
+type ReturnItemResponse {
+    publicId: ID!
+    orderItemId: ID!
+    productId: ID
+    productName: String!
+    quantity: Int!
+    reason: String!
+    condition: String
+    unitPrice: Float
+    approvedQuantity: Int
+    receivedQuantity: Int
+    resolution: String
+    createdAt: String!
+}
+
+type ReturnInspectionResponse {
+    publicId: ID!
+    returnId: ID!
+    returnItemId: ID
+    inspectedBy: ID
+    condition: String!
+    result: String!
+    notes: String
+    inspectedAt: String!
+    createdAt: String!
+}
+
+type ReturnDispositionResponse {
+    publicId: ID!
+    returnId: ID!
+    returnItemId: ID!
+    type: String!
+    quantity: Int!
+    locationId: String
+    reason: String
+    processedBy: ID
+    processedAt: String!
+    createdAt: String!
+}
+
+type ReturnEvidenceResponse {
+    publicId: ID!
+    returnId: ID!
+    returnItemId: ID
+    mediaReference: String!
+    evidenceType: String!
+    description: String
+    uploadedBy: ID!
+    createdAt: String!
+}
+
+type ReturnRefundResponse {
+    publicId: ID!
+    returnId: ID!
+    orderId: ID!
+    paymentId: ID
+    requestedAmount: Float!
+    approvedAmount: Float
+    currency: String!
+    reason: String
+    status: String!
+    providerRefundId: String
+    providerReference: String
+    failureReason: String
+    requestedAt: String!
+    approvedAt: String
+    processedAt: String
+    createdAt: String!
+}
+
+type ReturnReconciliationResponse {
+    id: ID!
+    returnId: ID!
+    returnStatus: String
+    shipmentStatus: String
+    refundStatus: String
+    inventoryStatus: String
+    result: String!
+    resolvedBy: ID
+    resolvedAt: String
+    createdAt: String!
+}
+
+type ReturnAuditResponse {
+    id: ID!
+    returnId: ID!
+    action: String!
+    previousStatus: String
+    newStatus: String
+    performedBy: ID
+    reason: String
+    createdAt: String!
+}
+
+type ReturnEligibilityResult {
+    eligible: Boolean!
+    deadline: String
+    remainingDays: Int
+    reason: String
+    allowedReasons: [String!]
+    maximumReturnQuantity: Int
+    conditions: [String!]
+    warnings: [String!]
+}
+
+type ReturnExchangeResponse {
+    publicId: ID!
+    returnId: ID!
+    originalOrderId: ID!
+    exchangeOrderId: ID
+    status: String!
+    requestedItemsDescription: String
+    notes: String
+    requestedBy: ID
+    processedBy: ID
+    processedAt: String
+    createdAt: String!
+    updatedAt: String!
+}
+
+type ReturnAnalyticsResponse {
+    totalReturns: Int!
+    resolvedReturns: Int!
+    pendingReturns: Int!
+    failedReturns: Int!
+    countByStatus: [ReturnStatusCount!]!
+    countByReason: [ReturnReasonCount!]!
+}
+
+type ReturnStatusCount {
+    status: String!
+    count: Int!
+}
+
+type ReturnReasonCount {
+    reason: String!
+    count: Int!
+}
+
+type ReturnFraudSignalResponse {
+    id: ID!
+    returnId: ID!
+    customerId: ID!
+    signalType: String!
+    description: String
+    severity: Int!
+    detectedAt: String!
+    createdAt: String!
+}
+
+type ReturnPolicyResponse {
+    publicId: ID
+    name: String
+    scope: String
+    storeId: ID
+    productId: ID
+    categoryId: ID
+    returnWindowDays: Int!
+    isReturnable: Boolean!
+    conditionRequired: Boolean!
+    eligibleReasons: [String!]!
+    returnShippingResponsibility: String!
+    restockingFeePercent: Float
+    refundMethod: String!
+    isActive: Boolean
+    createdAt: String
+    updatedAt: String
+}
