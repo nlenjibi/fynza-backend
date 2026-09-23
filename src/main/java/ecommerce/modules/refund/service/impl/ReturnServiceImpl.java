@@ -346,7 +346,7 @@ public class ReturnServiceImpl implements ReturnService {
 
     private static String sanitizeForLog(String value) {
         if (value == null) return null;
-        return value.replace('\n', ' ').replace('\r', ' ');
+        return value.replace('\r', '_').replace('\n', '_');
     }
 
     private Return findByPublicId(UUID publicId) {
