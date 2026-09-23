@@ -1,249 +1,160 @@
 package ecommerce.modules.review.controller;
 
 import ecommerce.common.response.ApiResponse;
-import ecommerce.common.response.PaginatedResponse;
-import ecommerce.modules.review.dto.*;
-import ecommerce.modules.review.entity.Review;
-import ecommerce.modules.review.service.ReviewService;
-import ecommerce.modules.review.spec.ReviewSpec;
 import ecommerce.common.security.UserPrincipal;
+import ecommerce.modules.review.dto.CreateReviewRequest;
+import ecommerce.modules.review.dto.ReviewReportRequest;
+import ecommerce.modules.review.dto.ReviewReportResponse;
+import ecommerce.modules.review.dto.ReviewResponse;
+import ecommerce.modules.review.dto.ReviewVoteRequest;
+import ecommerce.modules.review.dto.ReviewVoteResponse;
+import ecommerce.modules.review.dto.UpdateReviewRequest;
+import ecommerce.modules.review.enums.ReviewMediaType;
+import ecommerce.modules.review.service.ReviewReportService;
+import ecommerce.modules.review.service.ReviewService;
+import ecommerce.modules.review.service.ReviewVoteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.format.annotation.DateTimeFormat;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.UUID;
 
+/**
+ * REST controller for review mutations.
+ * <p>
+ * READ operations (getReview, productReviews, myReviews, etc.) are handled
+ * exclusively by GraphQL — see {@link ecommerce.graphql.resolver.review.ReviewQueryResolver}.
+ * No {@code @GetMapping} handlers belong here.
+ */
+@Slf4j
 @RestController
 @RequestMapping("v1/reviews")
 @RequiredArgsConstructor
-@Tag(name = "Product Reviews", description = "APIs for managing product reviews, ratings and analytics")
+@Tag(name = "Reviews", description = "Review lifecycle mutations (create, update, delete, vote, report, media)")
 public class ReviewController {
 
     private final ReviewService reviewService;
+    private final ReviewVoteService reviewVoteService;
+    private final ReviewReportService reviewReportService;
 
-    // ─── Public reads ─────────────────────────────────────────────────────────
-
-    @GetMapping("/{reviewId}")
-    @Operation(summary = "Get review by ID")
-    public ResponseEntity<ApiResponse<ReviewResponse>> getReview(@PathVariable UUID reviewId) {
-        return ResponseEntity.ok(ApiResponse.success(reviewService.getReview(reviewId)));
-    }
-
-    @GetMapping("/admin")
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    @Operation(summary = "Get all reviews with filtering")
-    public ResponseEntity<ApiResponse<PaginatedResponse<ReviewResponse>>> getAllReviews(
-            @RequestParam(defaultValue = "0")         int           page,
-            @RequestParam(defaultValue = "10")        int           size,
-            @RequestParam(defaultValue = "createdAt") String        sortBy,
-            @RequestParam(defaultValue = "DESC")      String        direction,
-            @RequestParam(required = false) UUID      productId,
-            @RequestParam(required = false) UUID      userId,
-            @RequestParam(required = false) Integer   rating,
-            @RequestParam(required = false) Integer   minRating,
-            @RequestParam(required = false) Integer   maxRating,
-            @RequestParam(required = false) Boolean   verifiedPurchase,
-            @RequestParam(required = false) Boolean   approved,
-            @RequestParam(required = false) Boolean   withImages,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime createdAfter,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime createdBefore
-    ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(direction), sortBy));
-
-        Specification<Review> spec = Specification.where(ReviewSpec.hasProductPublicId(productId))
-                .and(ReviewSpec.hasCustomerPublicId(userId))
-                .and(rating != null ? ReviewSpec.hasRating(rating) : ReviewSpec.ratingBetween(minRating, maxRating))
-                .and(ReviewSpec.isVerifiedPurchase(verifiedPurchase))
-                .and(ReviewSpec.isApproved(approved))
-                .and(ReviewSpec.withImages(withImages))
-                .and(createdAfter != null ? ReviewSpec.createdAfter(createdAfter.toInstant(ZoneOffset.UTC)) : null)
-                .and(createdBefore != null ? ReviewSpec.createdBefore(createdBefore.toInstant(ZoneOffset.UTC)) : null)
-                .and(ReviewSpec.isActive());
-
-        Page<ReviewResponse> reviews = reviewService.findReviewsWithPredicate(spec, pageable);
-        return ResponseEntity.ok(ApiResponse.success("Reviews fetched successfully", PaginatedResponse.from(reviews)));
-    }
-
-    @GetMapping("/admin/search")
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    @Operation(summary = "Search reviews by text")
-    public ResponseEntity<ApiResponse<PaginatedResponse<ReviewResponse>>> searchReviews(
-            @RequestParam(defaultValue = "0")         int    page,
-            @RequestParam(defaultValue = "10")        int    size,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "DESC")      String direction,
-            @RequestParam(required = false) String    searchText
-    ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(direction), sortBy));
-        Specification<Review> spec = Specification.where(ReviewSpec.textContains(searchText)).and(ReviewSpec.isActive());
-        Page<ReviewResponse> reviews = reviewService.findReviewsWithPredicate(spec, pageable);
-        return ResponseEntity.ok(ApiResponse.success("Reviews search successful", PaginatedResponse.from(reviews)));
-    }
-
-    @GetMapping("/product/{productId}")
-    @Operation(summary = "Get reviews for a product")
-    public ResponseEntity<ApiResponse<PaginatedResponse<ReviewResponse>>> getProductReviews(
-            @PathVariable UUID productId,
-            @RequestParam(defaultValue = "0")         int    page,
-            @RequestParam(defaultValue = "10")        int    size,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "DESC")      String direction) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(direction), sortBy));
-        return ResponseEntity.ok(ApiResponse.success(PaginatedResponse.from(reviewService.getProductReviews(productId, pageable))));
-    }
-
-    @PostMapping("/product/{productId}/filter")
-    @Operation(summary = "Get filtered reviews for a product")
-    public ResponseEntity<ApiResponse<PaginatedResponse<ReviewResponse>>> getFilteredReviews(
-            @PathVariable UUID productId,
-            @Valid @RequestBody ReviewFilterRequest filters,
-            @RequestParam(defaultValue = "0")         int    page,
-            @RequestParam(defaultValue = "10")        int    size,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "DESC")      String direction) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(direction), sortBy));
-        return ResponseEntity.ok(ApiResponse.success(PaginatedResponse.from(
-                reviewService.getProductReviewsWithFilters(productId, filters, pageable))));
-    }
-
-    @GetMapping("/product/{productId}/stats")
-    @Operation(summary = "Get product rating statistics")
-    public ResponseEntity<ApiResponse<ReviewSummaryResponse>> getProductStats(@PathVariable UUID productId) {
-        return ResponseEntity.ok(ApiResponse.success(reviewService.getProductRatingStats(productId)));
-    }
-
-    // ─── Authenticated user writes ────────────────────────────────────────────
+    // ─── Review CRUD ──────────────────────────────────────────────────────────
 
     @PostMapping
-    @Operation(summary = "Create a product review")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Submit a new review")
     public ResponseEntity<ApiResponse<ReviewResponse>> createReview(
-            @Valid @RequestBody ReviewCreateRequest request,
+            @Valid @RequestBody CreateReviewRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        UUID userId = principal.getId();
-        if (userId == null) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("User ID is required to create a review"));
-        }
+        log.info("createReview: user={}", principal.getId());
+        ReviewResponse response = reviewService.createReview(request, principal.getId());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Review created successfully", reviewService.createReview(request, userId)));
+                .body(ApiResponse.success("Review submitted successfully", response));
     }
 
-    @PutMapping("/{reviewId}")
-    @Operation(summary = "Update your review")
+    @PatchMapping("/{reviewId}")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Update an existing review")
     public ResponseEntity<ApiResponse<ReviewResponse>> updateReview(
             @PathVariable UUID reviewId,
-            @Valid @RequestBody ReviewUpdateRequest request,
+            @Valid @RequestBody UpdateReviewRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(ApiResponse.success("Review updated successfully",
-                reviewService.updateReview(reviewId, request, principal.getId())));
+        log.info("updateReview: reviewId={}, user={}", reviewId, principal.getId());
+        ReviewResponse response = reviewService.updateReview(reviewId, request, principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Review updated successfully", response));
     }
 
     @DeleteMapping("/{reviewId}")
-    @PreAuthorize("hasAnyRole('CUSTOMER')")
-    @Operation(summary = "Delete your review")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Delete a review")
     public ResponseEntity<ApiResponse<Void>> deleteReview(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable UUID reviewId) {
+            @PathVariable UUID reviewId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("deleteReview: reviewId={}, user={}", reviewId, principal.getId());
         reviewService.deleteReview(reviewId, principal.getId());
         return ResponseEntity.ok(ApiResponse.success("Review deleted successfully", null));
     }
 
-    @PutMapping("/{reviewId}/restore")
-    @PreAuthorize("hasAnyRole('CUSTOMER')")
-    @Operation(summary = "Restore a soft-deleted review")
-    public ResponseEntity<ApiResponse<ReviewResponse>> restoreReview(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable UUID reviewId) {
-        return ResponseEntity.ok(ApiResponse.success("Review restored successfully",
-                reviewService.restoreReview(reviewId, principal.getId())));
+    // ─── Votes ────────────────────────────────────────────────────────────────
+
+    @PostMapping("/{reviewId}/votes")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Vote on a review (helpful / not helpful)")
+    public ResponseEntity<ApiResponse<ReviewVoteResponse>> voteOnReview(
+            @PathVariable UUID reviewId,
+            @Valid @RequestBody ReviewVoteRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("voteOnReview: reviewId={}, user={}, vote={}", reviewId, principal.getId(), request.getVoteType());
+        ReviewVoteResponse response = reviewVoteService.vote(reviewId, request, principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Vote recorded", response));
     }
 
-    // ─── Admin endpoints ──────────────────────────────────────────────────────
-
-    @PostMapping("/{reviewId}/admin-response")
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    @Operation(summary = "Add admin response to a review")
-    public ResponseEntity<ApiResponse<ReviewResponse>> addAdminResponse(
-            @PathVariable @Positive UUID reviewId,
-            @Valid @RequestBody AdminResponseRequest request) {
-        return ResponseEntity.ok(ApiResponse.success("Admin response added successfully",
-                reviewService.addAdminResponse(reviewId, request)));
+    @DeleteMapping("/{reviewId}/votes")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Remove vote from a review")
+    public ResponseEntity<ApiResponse<Void>> removeVote(
+            @PathVariable UUID reviewId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("removeVote: reviewId={}, user={}", reviewId, principal.getId());
+        reviewVoteService.removeVote(reviewId, principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Vote removed successfully", null));
     }
 
-    @DeleteMapping("/admin/{reviewId}/admin-response")
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    @Operation(summary = "Remove admin response from a review")
-    public ResponseEntity<ApiResponse<ReviewResponse>> removeAdminResponse(@PathVariable @Positive UUID reviewId) {
-        return ResponseEntity.ok(ApiResponse.success("Admin response removed successfully",
-                reviewService.removeAdminResponse(reviewId)));
+    // ─── Reports ──────────────────────────────────────────────────────────────
+
+    @PostMapping("/{reviewId}/reports")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Report a review for moderation")
+    public ResponseEntity<ApiResponse<ReviewReportResponse>> reportReview(
+            @PathVariable UUID reviewId,
+            @Valid @RequestBody ReviewReportRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("reportReview: reviewId={}, user={}, reason={}", reviewId, principal.getId(), request.getReason());
+        ReviewReportResponse response = reviewReportService.reportReview(reviewId, request, principal.getId());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Review reported successfully", response));
     }
 
-    @PutMapping("/admin/{reviewId}/approve")
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    @Operation(summary = "Approve a review")
-    public ResponseEntity<ApiResponse<ReviewResponse>> approveReview(@PathVariable @Positive UUID reviewId) {
-        return ResponseEntity.ok(ApiResponse.success("Review approved successfully", reviewService.approveReview(reviewId)));
+    // ─── Media ────────────────────────────────────────────────────────────────
+    // Media storage and retrieval is handled by the Media module.
+    // These endpoints acknowledge the intent and delegate actual storage to that module.
+
+    @PostMapping("/{reviewId}/media")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Attach media to a review (media upload handled by Media module)")
+    public ResponseEntity<ApiResponse<Void>> addMedia(
+            @PathVariable UUID reviewId,
+            @RequestParam String mediaReference,
+            @RequestParam ReviewMediaType mediaType,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        // TODO: Delegate to Media module when the media-attachment integration is implemented.
+        // The Media module owns actual upload, transcoding, and CDN storage.
+        log.info("addMedia: reviewId={}, user={}, mediaType={}", reviewId, principal.getId(), mediaType);
+        return ResponseEntity.ok(ApiResponse.success("Media operation acknowledged", null));
     }
 
-    @PutMapping("/admin/{reviewId}/reject")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    @Operation(summary = "Reject a review")
-    public ResponseEntity<ApiResponse<ReviewResponse>> rejectReview(
-            @PathVariable @Positive UUID reviewId,
-            @RequestBody RejectionRequest request) {
-        return ResponseEntity.ok(ApiResponse.success("Review rejected successfully",
-                reviewService.rejectReview(reviewId, request.getReason())));
-    }
-
-    @PostMapping("/admin/bulk-approve")
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    @Operation(summary = "Bulk approve reviews")
-    public ResponseEntity<ApiResponse<Integer>> bulkApproveReviews(@RequestBody BulkReviewActionRequest request) {
-        int count = reviewService.bulkApproveReviews(request.getIds());
-        return ResponseEntity.ok(ApiResponse.success(count + " reviews approved successfully", count));
-    }
-
-    @PostMapping("/admin/bulk-reject")
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    @Operation(summary = "Bulk reject reviews")
-    public ResponseEntity<ApiResponse<Integer>> bulkRejectReviews(@RequestBody BulkReviewActionRequest request) {
-        int count = reviewService.bulkRejectReviews(request.getIds(), request.getReason());
-        return ResponseEntity.ok(ApiResponse.success(count + " reviews rejected successfully", count));
-    }
-
-    @PostMapping("/admin/bulk-delete")
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    @Operation(summary = "Bulk delete reviews")
-    public ResponseEntity<ApiResponse<Integer>> bulkDeleteReviews(@RequestBody BulkReviewActionRequest request) {
-        int count = reviewService.bulkDeleteReviews(request.getIds());
-        return ResponseEntity.ok(ApiResponse.success(count + " reviews deleted successfully", count));
-    }
-
-    @GetMapping("/admin/stats")
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    @Operation(summary = "Get admin review statistics")
-    public ResponseEntity<ApiResponse<ReviewStatsResponse>> getAdminReviewStats() {
-        return ResponseEntity.ok(ApiResponse.success(reviewService.getAdminReviewStats()));
-    }
-
-    @PutMapping("/{reviewId}/helpful")
-    @Operation(summary = "Mark review as helpful")
-    public ResponseEntity<ApiResponse<Void>> markHelpful(@PathVariable UUID reviewId) {
-        reviewService.markHelpful(reviewId);
-        return ResponseEntity.ok(ApiResponse.success("Review marked as helpful", null));
+    @DeleteMapping("/{reviewId}/media/{mediaId}")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Remove media from a review (media deletion handled by Media module)")
+    public ResponseEntity<ApiResponse<Void>> removeMedia(
+            @PathVariable UUID reviewId,
+            @PathVariable UUID mediaId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        // TODO: Delegate to Media module when the media-removal integration is implemented.
+        log.info("removeMedia: reviewId={}, mediaId={}, user={}", reviewId, mediaId, principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Media operation acknowledged", null));
     }
 }

@@ -1,53 +1,109 @@
 package ecommerce.modules.review.entity;
 
-import ecommerce.modules.product.entity.Product;
-import ecommerce.modules.user.entity.User;
+import ecommerce.modules.review.enums.ReviewStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "reviews", indexes = {
-        @Index(name = "idx_review_product", columnList = "product_id"),
-        @Index(name = "idx_review_customer", columnList = "customer_id"),
-        @Index(name = "idx_review_rating", columnList = "rating")
-}, uniqueConstraints = {
-        @UniqueConstraint(name = "uk_product_customer", columnNames = {"product_id", "customer_id"})
-})
+@Table(
+        name = "reviews",
+        indexes = {
+                @Index(name = "idx_reviews_customer_id",            columnList = "customer_id"),
+                @Index(name = "idx_reviews_product_status_created", columnList = "product_id, status, created_at"),
+                @Index(name = "idx_reviews_seller_status_created",  columnList = "seller_id, status, created_at"),
+                @Index(name = "idx_reviews_status_created",         columnList = "status, created_at"),
+                @Index(name = "idx_reviews_order_item_id",          columnList = "order_item_id")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_reviews_product_customer_order_item",
+                        columnNames = {"product_id", "customer_id", "order_item_id"}
+                )
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EqualsAndHashCode
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Review {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @EqualsAndHashCode.Include
     @Column(name = "public_id", nullable = false, unique = true, updatable = false)
     private UUID publicId;
 
-    @Column(nullable = false)
+    @Column(name = "customer_id", nullable = false)
+    private UUID customerId;
+
+    @Column(name = "product_id")
+    private UUID productId;
+
+    @Column(name = "variant_id")
+    private UUID variantId;
+
+    @Column(name = "store_id")
+    private UUID storeId;
+
+    @Column(name = "seller_id")
+    private UUID sellerId;
+
+    @Column(name = "order_id")
+    private UUID orderId;
+
+    @Column(name = "order_item_id")
+    private UUID orderItemId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 30)
+    @Builder.Default
+    private ReviewStatus status = ReviewStatus.PENDING_MODERATION;
+
+    @Column(name = "rating", columnDefinition = "SMALLINT")
+    private Integer rating;
+
+    @Column(name = "title", length = 150)
+    private String title;
+
+    @Column(name = "body", columnDefinition = "TEXT")
+    private String body;
+
+    @Column(name = "verified_purchase", nullable = false)
+    @Builder.Default
+    private Boolean verifiedPurchase = false;
+
+    @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
+
+    @Column(name = "edited_at")
+    private Instant editedAt;
+
+    @Column(name = "published_at")
+    private Instant publishedAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 
     @PrePersist
     protected void onCreate() {
-        publicId = UUID.randomUUID();
+        publicId  = UUID.randomUUID();
         createdAt = Instant.now();
         updatedAt = Instant.now();
-        if (isActive == null) isActive = true;
     }
 
     @PreUpdate
@@ -55,119 +111,42 @@ public class Review {
         updatedAt = Instant.now();
     }
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
-    private User customer;
-
-    @Column(name = "rating", nullable = false)
-    private Integer rating;
-
-    @Column(name = "title", length = 200)
-    private String title;
-
-    @Column(name = "comment", columnDefinition = "TEXT")
-    private String comment;
-
-    @Column(name = "has_images")
-    @Builder.Default
-    private Boolean hasImages = false;
-
-    @Column(name = "pros")
-    private String pros;
-
-    @Column(name = "cons")
-    private String cons;
-
-    @Column(name = "helpful")
-    @Builder.Default
-    private Integer helpful = 0;
-
-    @Column(name = "unhelpful")
-    @Builder.Default
-    private Integer unhelpful = 0;
-
-    @Column(name = "verified_purchase", nullable = false)
-    @Builder.Default
-    private Boolean verifiedPurchase = false;
-
-    @Column(name = "approved")
-    @Builder.Default
-    private Boolean approved = false;
-
-    @Column(name = "admin_response", columnDefinition = "TEXT")
-    private String adminResponse;
-
-    @Column(name = "admin_response_at")
-    private LocalDateTime adminResponseAt;
-
-    @Column(name = "admin_response_by")
-    private UUID adminResponseBy;
-
-    @Column(name = "seller_reply", columnDefinition = "TEXT")
-    private String sellerReply;
-
-    @Column(name = "seller_replied_at")
-    private LocalDateTime sellerRepliedAt;
-
-    @Column(name = "rejection_reason")
-    private String rejectionReason;
-
-    @Column(name = "deleted")
-    @Builder.Default
-    private Boolean deleted = false;
-
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
-
     public boolean canBeEditedBy(UUID userId) {
-        return customer.getPublicId().equals(userId) && !Boolean.TRUE.equals(deleted);
+        return customerId.equals(userId)
+                && status != ReviewStatus.DELETED
+                && status != ReviewStatus.REJECTED
+                && status != ReviewStatus.HIDDEN;
     }
 
     public boolean canBeDeletedBy(UUID userId) {
-        return customer.getPublicId().equals(userId);
+        return customerId.equals(userId) && status != ReviewStatus.DELETED;
     }
 
-    public void softDelete() {
-        this.deleted = true;
-        this.deletedAt = LocalDateTime.now();
+    public boolean isOwnedBy(UUID userId) {
+        return customerId.equals(userId);
     }
 
-    public void restore() {
-        this.deleted = false;
-        this.deletedAt = null;
+    public void markPublished() {
+        this.status      = ReviewStatus.PUBLISHED;
+        this.publishedAt = Instant.now();
     }
 
-    public void approve() {
-        this.approved = true;
-        this.rejectionReason = null;
+    public void markDeleted() {
+        this.status = ReviewStatus.DELETED;
     }
 
-    public void reject(String reason) {
-        this.approved = false;
-        this.rejectionReason = reason;
+    public void markHidden() {
+        this.status = ReviewStatus.HIDDEN;
     }
 
-    public void incrementHelpful() {
-        if (this.helpful == null) {
-            this.helpful = 0;
+    public void markFlagged() {
+        this.status = ReviewStatus.FLAGGED;
+    }
+
+    public void markPendingModeration() {
+        if (this.status != ReviewStatus.PUBLISHED) {
+            this.publishedAt = null;
         }
-        this.helpful++;
-    }
-
-    public void incrementUnhelpful() {
-        if (this.unhelpful == null) {
-            this.unhelpful = 0;
-        }
-        this.unhelpful++;
-    }
-
-    public void addAdminResponse(String response, UUID adminId) {
-        this.adminResponse = response;
-        this.adminResponseAt = LocalDateTime.now();
-        this.adminResponseBy = adminId;
+        this.status = ReviewStatus.PENDING_MODERATION;
     }
 }

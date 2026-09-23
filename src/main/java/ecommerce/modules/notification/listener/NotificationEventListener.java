@@ -9,7 +9,7 @@ import ecommerce.modules.order.event.OrderPlacedEvent;
 import ecommerce.modules.order.event.OrderStatusChangedEvent;
 import ecommerce.modules.payment.event.PaymentConfirmedEvent;
 import ecommerce.modules.payment.event.PaymentFailedEvent;
-import ecommerce.modules.review.event.ProductReviewSubmittedEvent;
+import ecommerce.modules.review.event.ReviewCreatedEvent;
 import ecommerce.modules.user.event.UserRegisteredEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -125,14 +125,13 @@ public class NotificationEventListener {
 
     @Async("notificationTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onReviewSubmitted(ProductReviewSubmittedEvent event) {
+    public void onReviewSubmitted(ReviewCreatedEvent event) {
         log.debug("[NotificationEvent] REVIEW_RECEIVED productId={}", event.productId());
         notificationService.send(
             NotificationType.PRODUCT_REVIEW_RECEIVED,
             event.sellerId(),
             event.sellerId(),
             Map.of(
-                "productName", event.productName(),
                 "rating", String.valueOf(event.rating())
             ),
             "/products/" + event.productId() + "/reviews",
