@@ -6,7 +6,10 @@ import ecommerce.modules.refund.dto.CompleteInspectionRequest;
 import ecommerce.modules.refund.dto.EscalateReturnRequest;
 import ecommerce.modules.refund.dto.ReturnDecisionRequest;
 import ecommerce.modules.refund.dto.ReturnResponse;
+import ecommerce.modules.refund.dto.ReturnReconciliationResponse;
+import ecommerce.modules.refund.dto.ReturnRefundResponse;
 import ecommerce.modules.refund.service.ReturnInspectionService;
+import ecommerce.modules.refund.service.ReturnRefundService;
 import ecommerce.modules.refund.service.ReturnService;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +30,7 @@ public class AdminReturnController {
 
     private final ReturnService returnService;
     private final ReturnInspectionService returnInspectionService;
+    private final ReturnRefundService returnRefundService;
 
     @PostMapping("/{returnId}/review")
     @PreAuthorize("hasAuthority('return:review')")
@@ -92,6 +96,26 @@ public class AdminReturnController {
             @AuthenticationPrincipal UserPrincipal principal) {
         ReturnResponse response = returnInspectionService.completeInspection(returnId, request, principal.getId());
         return ResponseEntity.ok(ApiResponse.success("Inspection completed", response));
+    }
+
+    @PostMapping("/{returnId}/request-refund")
+    @PreAuthorize("hasAuthority('return:admin.manage')")
+    @Operation(summary = "Request refund (admin)", description = "Admin-triggered refund request — calculates amount server-side")
+    public ResponseEntity<ApiResponse<ReturnRefundResponse>> requestRefund(
+            @PathVariable UUID returnId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        ReturnRefundResponse response = returnRefundService.requestRefund(returnId, principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Refund requested", response));
+    }
+
+    @PostMapping("/{returnId}/reconcile")
+    @PreAuthorize("hasAuthority('return:admin.manage')")
+    @Operation(summary = "Reconcile return", description = "Run reconciliation check on return/shipment/refund/inventory state")
+    public ResponseEntity<ApiResponse<ReturnReconciliationResponse>> reconcile(
+            @PathVariable UUID returnId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        ReturnReconciliationResponse response = returnRefundService.reconcile(returnId, principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Reconciliation complete — result: " + response.getResult(), response));
     }
 
     @PostMapping("/{returnId}/in-transit")

@@ -53,5 +53,6 @@
     <include file="changes/053-return-evidence-audit-schema.sql"     relativeToChangelogFile="true"/>
     <include file="changes/054-return-shipping-columns.sql"          relativeToChangelogFile="true"/>
     <include file="changes/055-return-inspection-disposition-schema.sql" relativeToChangelogFile="true"/>
+    <include file="changes/056-return-refund-reconciliation-schema.sql"  relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

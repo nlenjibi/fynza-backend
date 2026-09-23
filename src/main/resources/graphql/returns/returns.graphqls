@@ -9,6 +9,8 @@ extend type Query {
     returnAuditTrail(returnId: ID!): [ReturnAuditResponse!]!
     returnInspections(returnId: ID!): [ReturnInspectionResponse!]!
     returnDispositions(returnId: ID!): [ReturnDispositionResponse!]!
+    returnRefund(returnId: ID!): ReturnRefundResponse
+    returnReconciliations(returnId: ID!): [ReturnReconciliationResponse!]!
     platformReturnPolicy: ReturnPolicyResponse!
     storeReturnPolicy(storeId: ID!): ReturnPolicyResponse!
     returnPolicy(policyId: ID!): ReturnPolicyResponse!
@@ -97,6 +99,38 @@ type ReturnEvidenceResponse {
     evidenceType: String!
     description: String
     uploadedBy: ID!
+    createdAt: String!
+}
+
+type ReturnRefundResponse {
+    publicId: ID!
+    returnId: ID!
+    orderId: ID!
+    paymentId: ID
+    requestedAmount: Float!
+    approvedAmount: Float
+    currency: String!
+    reason: String
+    status: String!
+    providerRefundId: String
+    providerReference: String
+    failureReason: String
+    requestedAt: String!
+    approvedAt: String
+    processedAt: String
+    createdAt: String!
+}
+
+type ReturnReconciliationResponse {
+    id: ID!
+    returnId: ID!
+    returnStatus: String
+    shipmentStatus: String
+    refundStatus: String
+    inventoryStatus: String
+    result: String!
+    resolvedBy: ID
+    resolvedAt: String
     createdAt: String!
 }
 

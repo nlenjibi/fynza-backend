@@ -7,10 +7,13 @@ import ecommerce.modules.refund.dto.ReturnEligibilityResult;
 import ecommerce.modules.refund.dto.ReturnEvidenceResponse;
 import ecommerce.modules.refund.dto.ReturnInspectionResponse;
 import ecommerce.modules.refund.dto.ReturnPolicyResponse;
+import ecommerce.modules.refund.dto.ReturnReconciliationResponse;
+import ecommerce.modules.refund.dto.ReturnRefundResponse;
 import ecommerce.modules.refund.dto.ReturnResponse;
 import ecommerce.modules.refund.service.ReturnEvidenceService;
 import ecommerce.modules.refund.service.ReturnInspectionService;
 import ecommerce.modules.refund.service.ReturnPolicyService;
+import ecommerce.modules.refund.service.ReturnRefundService;
 import ecommerce.modules.refund.service.ReturnService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -33,6 +36,7 @@ public class ReturnQueryResolver {
     private final ReturnPolicyService returnPolicyService;
     private final ReturnEvidenceService returnEvidenceService;
     private final ReturnInspectionService returnInspectionService;
+    private final ReturnRefundService returnRefundService;
 
     @QueryMapping
     @PreAuthorize("hasAuthority('return:read')")
@@ -109,6 +113,18 @@ public class ReturnQueryResolver {
     @PreAuthorize("hasAuthority('return:inspect')")
     public List<ReturnDispositionResponse> returnDispositions(@Argument String returnId) {
         return returnInspectionService.getDispositions(UUID.fromString(returnId));
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasAuthority('return:read')")
+    public ReturnRefundResponse returnRefund(@Argument String returnId) {
+        return returnRefundService.getRefund(UUID.fromString(returnId)).orElse(null);
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasAuthority('return:admin.read')")
+    public List<ReturnReconciliationResponse> returnReconciliations(@Argument String returnId) {
+        return returnRefundService.getReconciliations(UUID.fromString(returnId));
     }
 
     @QueryMapping

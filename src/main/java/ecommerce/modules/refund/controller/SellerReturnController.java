@@ -6,7 +6,9 @@ import ecommerce.modules.refund.dto.CompleteInspectionRequest;
 import ecommerce.modules.refund.dto.InitiateReturnShipmentRequest;
 import ecommerce.modules.refund.dto.ReturnDecisionRequest;
 import ecommerce.modules.refund.dto.ReturnResponse;
+import ecommerce.modules.refund.dto.ReturnRefundResponse;
 import ecommerce.modules.refund.service.ReturnInspectionService;
+import ecommerce.modules.refund.service.ReturnRefundService;
 import ecommerce.modules.refund.service.ReturnService;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +29,7 @@ public class SellerReturnController {
 
     private final ReturnService returnService;
     private final ReturnInspectionService returnInspectionService;
+    private final ReturnRefundService returnRefundService;
 
     @PostMapping("/{returnId}/approve")
     @PreAuthorize("hasAuthority('return:approve')")
@@ -81,6 +84,16 @@ public class SellerReturnController {
             @AuthenticationPrincipal UserPrincipal principal) {
         ReturnResponse response = returnInspectionService.completeInspection(returnId, request, principal.getId());
         return ResponseEntity.ok(ApiResponse.success("Inspection completed", response));
+    }
+
+    @PostMapping("/{returnId}/request-refund")
+    @PreAuthorize("hasAuthority('return:resolve')")
+    @Operation(summary = "Request refund", description = "Trigger refund for an approved return — calculates amount server-side and calls Payment Management")
+    public ResponseEntity<ApiResponse<ReturnRefundResponse>> requestRefund(
+            @PathVariable UUID returnId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        ReturnRefundResponse response = returnRefundService.requestRefund(returnId, principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Refund requested", response));
     }
 
     @PostMapping("/{returnId}/initiate-shipment")

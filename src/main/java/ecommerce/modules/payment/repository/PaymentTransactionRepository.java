@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface PaymentTransactionRepository extends JpaRepository<PaymentTransaction, Long> {
     Optional<PaymentTransaction> findByTransactionId(String transactionId);
     Optional<PaymentTransaction> findByPublicId(UUID publicId);
+    Optional<PaymentTransaction> findTopByOrder_PublicIdAndStatusOrderByCreatedAtDesc(UUID publicId, ecommerce.common.enums.PaymentStatus status);
 }
