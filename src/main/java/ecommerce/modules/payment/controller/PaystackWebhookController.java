@@ -100,6 +100,7 @@ public class PaystackWebhookController {
     }
 
     private static String sanitize(String value) {
-        return value == null ? "" : value.replaceAll("[\\r\\n\\t]", "_");
+        if (value == null) return "";
+        return value.replace('\r', '_').replace('\n', '_').replace('\t', '_');
     }
 }
