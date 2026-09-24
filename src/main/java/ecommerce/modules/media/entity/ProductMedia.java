@@ -6,7 +6,7 @@ import lombok.*;
 import java.time.Instant;
 import java.util.UUID;
 
-@Entity
+@Entity(name = "MediaProductMedia")
 @Table(name = "product_media", indexes = {
         @Index(name = "idx_product_media_product_id",     columnList = "product_id"),
         @Index(name = "idx_product_media_media_asset_id", columnList = "media_asset_id"),

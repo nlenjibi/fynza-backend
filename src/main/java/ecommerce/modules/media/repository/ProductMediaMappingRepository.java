@@ -19,6 +19,6 @@ public interface ProductMediaMappingRepository extends JpaRepository<ProductMedi
     Optional<ProductMedia> findByProductIdAndIsPrimaryTrue(UUID productId);
 
     @Modifying
-    @Query("UPDATE ProductMedia pm SET pm.isPrimary = false WHERE pm.productId = :productId")
+    @Query("UPDATE MediaProductMedia pm SET pm.isPrimary = false WHERE pm.productId = :productId")
     void clearPrimaryForProduct(@Param("productId") UUID productId);
 }

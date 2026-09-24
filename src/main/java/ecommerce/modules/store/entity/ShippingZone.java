@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-@Entity
+@Entity(name = "StoreShippingZone")
 @Table(name = "shipping_zones", indexes = {
     @Index(name = "idx_shipping_zone_seller", columnList = "seller_id"),
     @Index(name = "idx_shipping_zone_region", columnList = "region")
