@@ -142,7 +142,7 @@ public class ReviewController {
             @AuthenticationPrincipal UserPrincipal principal) {
         // TODO: Delegate to Media module when the media-attachment integration is implemented.
         // The Media module owns actual upload, transcoding, and CDN storage.
-        log.info("addMedia: reviewId={}, user={}, mediaType={}", reviewId, principal.getId(), mediaType);
+        log.info("addMedia: reviewId={}, user={}, mediaReference={}, mediaType={}", reviewId, principal.getId(), mediaReference, mediaType);
         return ResponseEntity.ok(ApiResponse.success("Media operation acknowledged", null));
     }
 

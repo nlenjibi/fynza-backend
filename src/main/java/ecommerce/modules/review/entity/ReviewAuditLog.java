@@ -13,6 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString
 public class ReviewAuditLog {
 
     @Id
@@ -21,6 +22,7 @@ public class ReviewAuditLog {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "review_id", nullable = false)
+    @ToString.Exclude
     private Review review;
 
     @Column(name = "actor_id", nullable = false)

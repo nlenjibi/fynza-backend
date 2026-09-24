@@ -145,7 +145,7 @@ class ReviewServiceImplTest {
         return order;
     }
 
-    private void stubToResponseDependencies(Review review) {
+    private void stubToResponseDependencies() {
         when(reviewVoteRepository.countByReview_IdAndVoteType(any(), eq(ReviewVoteType.HELPFUL))).thenReturn(0L);
         when(reviewVoteRepository.countByReview_IdAndVoteType(any(), eq(ReviewVoteType.NOT_HELPFUL))).thenReturn(0L);
         when(reviewMediaRepository.findByReview_IdOrderBySortOrderAsc(any())).thenReturn(Collections.emptyList());
@@ -224,12 +224,12 @@ class ReviewServiceImplTest {
             when(eligibilityPolicy.orderContainsItem(order, orderItemId)).thenReturn(true);
             when(reviewRepository.existsByProductIdAndCustomerIdAndOrderItemId(productId, customerId, orderItemId))
                     .thenReturn(false);
-            when(moderationPolicy.requiresModeration(any())).thenReturn(true);
+            when(moderationPolicy.requiresModeration()).thenReturn(true);
 
             ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
             when(reviewRepository.save(reviewCaptor.capture())).thenAnswer(i -> i.getArgument(0));
             when(reviewAuditLogRepository.save(any(ReviewAuditLog.class))).thenAnswer(i -> i.getArgument(0));
-            stubToResponseDependencies(null);
+            stubToResponseDependencies();
 
             ReviewResponse response = service.createReview(buildCreateRequest(), customerId);
 
@@ -253,12 +253,12 @@ class ReviewServiceImplTest {
             when(eligibilityPolicy.orderContainsItem(order, orderItemId)).thenReturn(true);
             when(reviewRepository.existsByProductIdAndCustomerIdAndOrderItemId(productId, customerId, orderItemId))
                     .thenReturn(false);
-            when(moderationPolicy.requiresModeration(any())).thenReturn(true);
+            when(moderationPolicy.requiresModeration()).thenReturn(true);
 
             ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
             when(reviewRepository.save(reviewCaptor.capture())).thenAnswer(i -> i.getArgument(0));
             when(reviewAuditLogRepository.save(any(ReviewAuditLog.class))).thenAnswer(i -> i.getArgument(0));
-            stubToResponseDependencies(null);
+            stubToResponseDependencies();
 
             service.createReview(buildCreateRequest(), customerId);
 
@@ -314,7 +314,7 @@ class ReviewServiceImplTest {
             ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
             when(reviewRepository.save(reviewCaptor.capture())).thenAnswer(i -> i.getArgument(0));
             when(reviewAuditLogRepository.save(any(ReviewAuditLog.class))).thenAnswer(i -> i.getArgument(0));
-            stubToResponseDependencies(review);
+            stubToResponseDependencies();
 
             service.updateReview(reviewPublicId,
                     UpdateReviewRequest.builder().body("updated body").build(), customerId);
@@ -333,7 +333,7 @@ class ReviewServiceImplTest {
             ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
             when(reviewRepository.save(reviewCaptor.capture())).thenAnswer(i -> i.getArgument(0));
             when(reviewAuditLogRepository.save(any(ReviewAuditLog.class))).thenAnswer(i -> i.getArgument(0));
-            stubToResponseDependencies(review);
+            stubToResponseDependencies();
 
             String originalTitle = review.getTitle();
             UpdateReviewRequest request = UpdateReviewRequest.builder()
@@ -419,7 +419,7 @@ class ReviewServiceImplTest {
         void getReview_found_returnsResponse() {
             Review review = buildReview();
             when(reviewRepository.findByPublicId(reviewPublicId)).thenReturn(Optional.of(review));
-            stubToResponseDependencies(review);
+            stubToResponseDependencies();
 
             ReviewResponse response = service.getReview(reviewPublicId);
 

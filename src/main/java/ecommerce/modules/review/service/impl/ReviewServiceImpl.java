@@ -168,7 +168,7 @@ public class ReviewServiceImpl implements ReviewService {
                     "A review already exists for this product and order item");
         }
 
-        OrderItem orderItem = order.getOrderItems().stream()
+        order.getOrderItems().stream()
                 .filter(i -> request.getOrderItemId().equals(i.getPublicId()))
                 .findFirst()
                 .orElseThrow(() -> new ReviewNotEligibleException("Order item not found"));
@@ -187,7 +187,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .status(ReviewStatus.PENDING_MODERATION)
                 .build();
 
-        if (!moderationPolicy.requiresModeration(review)) {
+        if (!moderationPolicy.requiresModeration()) {
             review.markPublished();
         }
 

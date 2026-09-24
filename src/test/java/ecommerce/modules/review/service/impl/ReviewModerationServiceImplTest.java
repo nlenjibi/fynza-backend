@@ -73,7 +73,7 @@ class ReviewModerationServiceImplTest {
         return review;
     }
 
-    private void stubToResponseDeps(Review review) {
+    private void stubToResponseDeps() {
         when(reviewVoteRepository.countByReview_IdAndVoteType(any(), eq(ReviewVoteType.HELPFUL))).thenReturn(0L);
         when(reviewVoteRepository.countByReview_IdAndVoteType(any(), eq(ReviewVoteType.NOT_HELPFUL))).thenReturn(0L);
         when(reviewMediaRepository.findByReview_IdOrderBySortOrderAsc(any())).thenReturn(List.of());
@@ -102,7 +102,7 @@ class ReviewModerationServiceImplTest {
             Review review = buildReview(ReviewStatus.PENDING_MODERATION);
             when(reviewRepository.findByPublicId(reviewId)).thenReturn(Optional.of(review));
             when(reviewRepository.save(review)).thenReturn(review);
-            stubToResponseDeps(review);
+            stubToResponseDeps();
 
             service.moderateReview(reviewId, requestFor(ReviewModerationAction.APPROVE), moderatorId);
 
@@ -116,7 +116,7 @@ class ReviewModerationServiceImplTest {
             Review review = buildReview(ReviewStatus.PENDING_MODERATION);
             when(reviewRepository.findByPublicId(reviewId)).thenReturn(Optional.of(review));
             when(reviewRepository.save(review)).thenReturn(review);
-            stubToResponseDeps(review);
+            stubToResponseDeps();
 
             service.moderateReview(reviewId, requestFor(ReviewModerationAction.REJECT), moderatorId);
 
@@ -129,7 +129,7 @@ class ReviewModerationServiceImplTest {
             Review review = buildReview(ReviewStatus.PUBLISHED);
             when(reviewRepository.findByPublicId(reviewId)).thenReturn(Optional.of(review));
             when(reviewRepository.save(review)).thenReturn(review);
-            stubToResponseDeps(review);
+            stubToResponseDeps();
 
             service.moderateReview(reviewId, requestFor(ReviewModerationAction.HIDE), moderatorId);
 
@@ -142,7 +142,7 @@ class ReviewModerationServiceImplTest {
             Review review = buildReview(ReviewStatus.PUBLISHED);
             when(reviewRepository.findByPublicId(reviewId)).thenReturn(Optional.of(review));
             when(reviewRepository.save(review)).thenReturn(review);
-            stubToResponseDeps(review);
+            stubToResponseDeps();
 
             service.moderateReview(reviewId, requestFor(ReviewModerationAction.FLAG), moderatorId);
 
@@ -155,7 +155,7 @@ class ReviewModerationServiceImplTest {
             Review review = buildReview(ReviewStatus.HIDDEN);
             when(reviewRepository.findByPublicId(reviewId)).thenReturn(Optional.of(review));
             when(reviewRepository.save(review)).thenReturn(review);
-            stubToResponseDeps(review);
+            stubToResponseDeps();
 
             service.moderateReview(reviewId, requestFor(ReviewModerationAction.RESTORE), moderatorId);
 
@@ -168,7 +168,7 @@ class ReviewModerationServiceImplTest {
             Review review = buildReview(ReviewStatus.FLAGGED);
             when(reviewRepository.findByPublicId(reviewId)).thenReturn(Optional.of(review));
             when(reviewRepository.save(review)).thenReturn(review);
-            stubToResponseDeps(review);
+            stubToResponseDeps();
 
             service.moderateReview(reviewId, requestFor(ReviewModerationAction.ESCALATE), moderatorId);
 
@@ -181,7 +181,7 @@ class ReviewModerationServiceImplTest {
             Review review = buildReview(ReviewStatus.PENDING_MODERATION);
             when(reviewRepository.findByPublicId(reviewId)).thenReturn(Optional.of(review));
             when(reviewRepository.save(review)).thenReturn(review);
-            stubToResponseDeps(review);
+            stubToResponseDeps();
 
             service.moderateReview(reviewId, requestFor(ReviewModerationAction.APPROVE), moderatorId);
 
@@ -211,7 +211,7 @@ class ReviewModerationServiceImplTest {
             Review review = buildReview(ReviewStatus.PUBLISHED);
             when(reviewRepository.findByPublicId(reviewId)).thenReturn(Optional.of(review));
             when(reviewRepository.save(review)).thenReturn(review);
-            stubToResponseDeps(review);
+            stubToResponseDeps();
 
             service.hideReview(reviewId, "spam content", moderatorId);
 
@@ -241,7 +241,7 @@ class ReviewModerationServiceImplTest {
             Review review = buildReview(ReviewStatus.HIDDEN);
             when(reviewRepository.findByPublicId(reviewId)).thenReturn(Optional.of(review));
             when(reviewRepository.save(review)).thenReturn(review);
-            stubToResponseDeps(review);
+            stubToResponseDeps();
 
             service.restoreReview(reviewId, moderatorId);
 

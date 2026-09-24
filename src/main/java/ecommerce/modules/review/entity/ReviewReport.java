@@ -24,6 +24,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(exclude = "review")
 public class ReviewReport {
 
     @Id
