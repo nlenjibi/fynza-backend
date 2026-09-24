@@ -1,155 +1,275 @@
 # =============================================================================
-# Review GraphQL Schema
-# Covers: Product reviews, ratings, admin moderation, seller replies
+# Review & Rating Management — GraphQL Schema
+# Covers: reviews, votes, reports, seller responses, moderation, aggregates
+# Convention: extend type Query = reads only; extend type Mutation = writes only
 # =============================================================================
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Types
+# Object types
 # ─────────────────────────────────────────────────────────────────────────────
 
 type Review {
     id: ID!
-    productId: ID!
-    productSlug: String
-    productName: String
-    user: ReviewUserInfo!
+    customerId: ID!
+    productId: ID
+    variantId: ID
+    storeId: ID
+    sellerId: ID
+    orderId: ID
+    orderItemId: ID
+    status: ReviewStatus!
     rating: Int!
     title: String
-    comment: String!
+    body: String!
     verifiedPurchase: Boolean!
-    approved: Boolean!
     helpfulCount: Int!
     notHelpfulCount: Int!
-    helpfulPercentage: Float
-    totalVotes: Int!
-    images: [String!]
-    pros: [String!]
-    cons: [String!]
-    adminResponse: String
-    adminResponseAt: DateTime
-    rejectionReason: String
+    media: [ReviewMedia!]!
+    sellerResponse: SellerReviewResponse
+    editedAt: DateTime
+    publishedAt: DateTime
     createdAt: DateTime!
     updatedAt: DateTime!
 }
 
-type ReviewUserInfo {
+type ReviewMedia {
     id: ID!
-    firstName: String!
-    lastName: String!
-    email: String
-    avatarUrl: String
-    totalReviews: Int!
+    mediaReference: String!
+    mediaType: ReviewMediaType!
+    sortOrder: Int!
+}
+
+type SellerReviewResponse {
+    id: ID!
+    sellerId: ID!
+    body: String!
+    status: SellerResponseStatus!
+    createdAt: DateTime!
+    updatedAt: DateTime!
 }
 
 type ReviewSummary {
-    totalReviews: Long!
-    averageRating: Float
-    verifiedPurchases: Long
-    verifiedPurchasePercentage: Float
-    distribution: ReviewRatingDistribution!
-    topPros: [String!]
-    topCons: [String!]
+    targetId: ID!
+    targetType: ReviewTargetType!
+    reviewCount: Int!
+    averageRating: Float!
+    rating1Count: Int!
+    rating2Count: Int!
+    rating3Count: Int!
+    rating4Count: Int!
+    rating5Count: Int!
+    verifiedCount: Int!
+    verifiedPercentage: Float!
 }
 
-type ReviewRatingDistribution {
-    fiveStars: Long!
-    fiveStarsPercentage: Float
-    fourStars: Long!
-    fourStarsPercentage: Float
-    threeStars: Long!
-    threeStarsPercentage: Float
-    twoStars: Long!
-    twoStarsPercentage: Float
-    oneStar: Long!
-    oneStarPercentage: Float
+type ReviewEligibility {
+    eligible: Boolean!
+    reason: String
+    existingReviewId: ID
+    productEligible: Boolean!
+    storeEligible: Boolean!
 }
 
-type ReviewStats {
-    totalReviews: Long!
-    pendingReviews: Long!
-    approvedReviews: Long!
-    rejectedReviews: Long!
-    averageRating: Float
-    fiveStarReviews: Long!
-    fourStarReviews: Long!
-    threeStarReviews: Long!
-    twoStarReviews: Long!
-    oneStarReviews: Long!
+type ReviewVoteResult {
+    reviewId: ID!
+    voteType: ReviewVoteType
+    helpfulCount: Int!
+    notHelpfulCount: Int!
+}
+
+type ReviewReportResult {
+    id: ID!
+    reviewId: ID!
+    reason: ReviewReportReason!
+    status: ReviewReportStatus!
+    createdAt: DateTime!
 }
 
 type ReviewPage {
     content: [Review!]!
-    pageInfo: PageInfo!
+    pageNumber: Int!
+    pageSize: Int!
+    totalElements: Int!
+    totalPages: Int!
+    hasNext: Boolean!
 }
 
-type SellerReviewStats {
-    totalReviews: Long!
-    pendingReviews: Long!
-    approvedReviews: Long!
-    rejectedReviews: Long!
-    averageRating: Float
-    fiveStarReviews: Long!
-    fourStarReviews: Long!
-    threeStarReviews: Long!
-    twoStarReviews: Long!
-    oneStarReviews: Long!
+type ReviewReportPage {
+    content: [ReviewReportResult!]!
+    pageNumber: Int!
+    pageSize: Int!
+    totalElements: Int!
+    totalPages: Int!
+    hasNext: Boolean!
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Inputs
+# Enums
 # ─────────────────────────────────────────────────────────────────────────────
 
-input ReviewFilterInput {
+enum ReviewStatus {
+    DRAFT
+    PENDING_MODERATION
+    PUBLISHED
+    REJECTED
+    HIDDEN
+    FLAGGED
+    DELETED
+}
+
+enum ReviewTargetType {
+    PRODUCT
+    STORE
+}
+
+enum ReviewVoteType {
+    HELPFUL
+    NOT_HELPFUL
+}
+
+enum ReviewReportReason {
+    SPAM
+    ABUSE
+    HARASSMENT
+    HATE
+    FRAUD
+    FALSE_REVIEW
+    OFF_TOPIC
+    PERSONAL_INFORMATION
+    ILLEGAL_CONTENT
+    OTHER
+}
+
+enum ReviewReportStatus {
+    OPEN
+    UNDER_REVIEW
+    RESOLVED
+    DISMISSED
+}
+
+enum ReviewModerationAction {
+    APPROVE
+    REJECT
+    HIDE
+    RESTORE
+    FLAG
+    ESCALATE
+}
+
+enum ReviewMediaType {
+    PHOTO
+    VIDEO
+}
+
+enum SellerResponseStatus {
+    ACTIVE
+    HIDDEN
+    DELETED
+    PENDING_MODERATION
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Input types
+# ─────────────────────────────────────────────────────────────────────────────
+
+input CreateReviewInput {
     productId: ID
-    customerId: ID
+    variantId: ID
+    storeId: ID
+    orderId: ID!
+    orderItemId: ID!
+    rating: Int!
+    title: String
+    body: String!
+}
+
+input UpdateReviewInput {
     rating: Int
-    minRating: Int
-    maxRating: Int
-    verifiedPurchase: Boolean
-    approved: Boolean
-    withImages: Boolean
-    searchText: String
-    dateFrom: DateTime
-    dateTo: DateTime
-    positiveOnly: Boolean
-    negativeOnly: Boolean
-    needsAttention: Boolean
+    title: String
+    body: String
+}
+
+input ReviewVoteInput {
+    voteType: ReviewVoteType!
+}
+
+input ReviewReportInput {
+    reason: ReviewReportReason!
+    description: String
+}
+
+input SellerResponseInput {
+    body: String!
+}
+
+input ModerateReviewInput {
+    action: ReviewModerationAction!
+    reasonCode: String
+    notes: String
+}
+
+input ResolveReportInput {
+    resolution: ReviewReportStatus!
+    notes: String
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Queries
+# Queries — reads only
 # ─────────────────────────────────────────────────────────────────────────────
 
 extend type Query {
 
-    # ── Public Review Queries ────────────────────────────────────────────
+    # ── Public / unauthenticated ─────────────────────────────────────────────
     review(id: ID!): Review
-    productReviews(productId: ID!, pagination: PageInput, filter: ReviewFilterInput): ReviewPage!
-    productRatingStats(productId: ID!): ReviewSummary!
-    mostHelpfulReviews(productId: ID!, limit: Int = 10): [Review!]!
-    recentReviews(productId: ID!, limit: Int = 10): [Review!]!
-    reviewsWithImages(productId: ID!, pagination: PageInput): ReviewPage!
-    verifiedReviews(productId: ID!, pagination: PageInput): ReviewPage!
-    reviewsByRating(productId: ID!, rating: Int!, pagination: PageInput): ReviewPage!
 
-    # ── Authenticated Review Queries ─────────────────────────────────────
+    productReviews(productId: ID!, status: ReviewStatus, pagination: PageInput): ReviewPage!
+
+    storeReviews(storeId: ID!, status: ReviewStatus, pagination: PageInput): ReviewPage!
+
+    productReviewSummary(productId: ID!): ReviewSummary!
+
+    storeReviewSummary(storeId: ID!): ReviewSummary!
+
+    # ── Authenticated ────────────────────────────────────────────────────────
     myReviews(pagination: PageInput): ReviewPage!
 
-    # ── Admin Review Queries (ADMIN) ─────────────────────────────────────
-    adminReviews(pagination: PageInput, filter: ReviewFilterInput): ReviewPage!
-    adminReviewStats: ReviewStats!
+    reviewEligibility(orderId: ID!, orderItemId: ID!): ReviewEligibility!
 
-    # ── Seller Review Queries (SELLER) ───────────────────────────────────
-    sellerReviews(pagination: PageInput): ReviewPage!
-    sellerReviewStats: SellerReviewStats!
+    # ── Admin (ADMIN / MANAGER) ──────────────────────────────────────────────
+    adminReviews(status: ReviewStatus, pagination: PageInput): ReviewPage!
+
+    adminReviewReports(status: ReviewReportStatus, pagination: PageInput): ReviewReportPage!
+
+    # ── Seller ───────────────────────────────────────────────────────────────
+    sellerReviews(status: ReviewStatus, pagination: PageInput): ReviewPage!
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Mutations
+# Mutations — writes only
 # ─────────────────────────────────────────────────────────────────────────────
 
 extend type Mutation {
 
-    # ── UX State (AUTHENTICATED) ─────────────────────────────────────────
-    markReviewHelpful(id: ID!): Review!
+    # ── Customer review lifecycle ────────────────────────────────────────────
+    createReview(input: CreateReviewInput!): Review!
+    updateReview(id: ID!, input: UpdateReviewInput!): Review!
+    deleteReview(id: ID!): Boolean!
+
+    # ── Votes ────────────────────────────────────────────────────────────────
+    voteOnReview(reviewId: ID!, input: ReviewVoteInput!): ReviewVoteResult!
+    removeReviewVote(reviewId: ID!): Boolean!
+
+    # ── Reports ──────────────────────────────────────────────────────────────
+    reportReview(reviewId: ID!, input: ReviewReportInput!): ReviewReportResult!
+
+    # ── Seller responses ─────────────────────────────────────────────────────
+    respondToReview(reviewId: ID!, input: SellerResponseInput!): Review!
+    updateReviewResponse(reviewId: ID!, input: SellerResponseInput!): Review!
+    deleteReviewResponse(reviewId: ID!): Boolean!
+
+    # ── Admin moderation ─────────────────────────────────────────────────────
+    moderateReview(reviewId: ID!, input: ModerateReviewInput!): Review!
+    hideReview(reviewId: ID!, reason: String): Review!
+    restoreReview(reviewId: ID!): Review!
+    resolveReviewReport(reportId: ID!, input: ResolveReportInput!): ReviewReportResult!
 }

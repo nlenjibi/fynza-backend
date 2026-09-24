@@ -8,7 +8,7 @@ import ecommerce.modules.media.entity.MediaAsset;
 import ecommerce.modules.media.entity.ProductMedia;
 import ecommerce.modules.media.exception.MediaAssetNotFoundException;
 import ecommerce.modules.media.repository.MediaAssetRepository;
-import ecommerce.modules.media.repository.ProductMediaRepository;
+import ecommerce.modules.media.repository.ProductMediaMappingRepository;
 import ecommerce.modules.media.service.ProductMediaService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +25,7 @@ import java.util.UUID;
 public class ProductMediaServiceImpl implements ProductMediaService {
 
     private final MediaAssetRepository   assetRepository;
-    private final ProductMediaRepository productMediaRepository;
+    private final ProductMediaMappingRepository productMediaRepository;
 
     @Override
     @Transactional

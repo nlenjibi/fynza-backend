@@ -62,5 +62,13 @@
     <include file="changes/055-return-inspection-disposition-schema.sql" relativeToChangelogFile="true"/>
     <include file="changes/056-return-refund-reconciliation-schema.sql"  relativeToChangelogFile="true"/>
     <include file="changes/057-return-advanced-schema.sql"               relativeToChangelogFile="true"/>
+    <include file="changes/058-review-schema-rework.sql"                 relativeToChangelogFile="true"/>
+    <include file="changes/059-review-votes-media.sql"                   relativeToChangelogFile="true"/>
+    <include file="changes/060-review-reports-moderation.sql"            relativeToChangelogFile="true"/>
+    <include file="changes/061-seller-review-responses.sql"              relativeToChangelogFile="true"/>
+    <include file="changes/062-review-rating-aggregates.sql"             relativeToChangelogFile="true"/>
+    <include file="changes/063-review-audit-logs.sql"                    relativeToChangelogFile="true"/>
+    <include file="changes/064-review-permissions.sql"                   relativeToChangelogFile="true"/>
+    <include file="changes/065-review-indexes.sql"                       relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

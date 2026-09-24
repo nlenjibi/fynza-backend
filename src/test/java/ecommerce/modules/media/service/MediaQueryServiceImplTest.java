@@ -12,7 +12,7 @@ import ecommerce.modules.media.entity.StorageUsage;
 import ecommerce.modules.media.enums.*;
 import ecommerce.modules.media.exception.MediaAssetNotFoundException;
 import ecommerce.modules.media.repository.MediaAssetRepository;
-import ecommerce.modules.media.repository.ProductMediaRepository;
+import ecommerce.modules.media.repository.ProductMediaMappingRepository;
 import ecommerce.modules.media.repository.StorageUsageRepository;
 import ecommerce.modules.media.service.impl.MediaQueryServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,7 +44,7 @@ import static org.mockito.Mockito.when;
 class MediaQueryServiceImplTest {
 
     @Mock private MediaAssetRepository    assetRepository;
-    @Mock private ProductMediaRepository  productMediaRepository;
+    @Mock private ProductMediaMappingRepository  productMediaRepository;
     @Mock private StorageUsageRepository  usageRepository;
     @Mock private MediaProperties         props;
 
