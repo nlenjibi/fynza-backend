@@ -2,6 +2,7 @@ package ecommerce.modules.notification.service.impl;
 
 import ecommerce.modules.notification.dto.EmailRequest;
 import ecommerce.modules.notification.dto.EntityRef;
+import ecommerce.modules.notification.dto.NotificationBadgePayload;
 import ecommerce.modules.notification.dto.NotificationResponse;
 import ecommerce.modules.notification.entity.Notification;
 import ecommerce.modules.notification.entity.NotificationChannelConfig;
@@ -221,12 +222,14 @@ public class NotificationServiceImpl implements NotificationService {
     public void markAsRead(UUID publicId, UUID recipientId) {
         int updated = notificationRepo.markAsRead(publicId, recipientId, Instant.now());
         if (updated == 0) throw new jakarta.persistence.EntityNotFoundException("Notification not found.");
+        pushBadgeUpdate(recipientId);
     }
 
     @Override
     @Transactional
     public void markAllAsRead(UUID recipientId) {
         notificationRepo.markAllReadForRecipient(recipientId, Instant.now());
+        pushBadgeUpdate(recipientId);
     }
 
     @Override
@@ -234,12 +237,14 @@ public class NotificationServiceImpl implements NotificationService {
     public void softDelete(UUID publicId, UUID recipientId) {
         int updated = notificationRepo.softDelete(publicId, recipientId, Instant.now());
         if (updated == 0) throw new jakarta.persistence.EntityNotFoundException("Notification not found.");
+        pushBadgeUpdate(recipientId);
     }
 
     @Override
     @Transactional
     public void softDeleteAll(UUID recipientId) {
         notificationRepo.softDeleteAllForRecipient(recipientId, Instant.now());
+        pushBadgeUpdate(recipientId);
     }
 
     // ── Internals ────────────────────────────────────────────────────────────
@@ -257,6 +262,7 @@ public class NotificationServiceImpl implements NotificationService {
                             .entityId(entity != null ? entity.id() : null)
                             .build());
                     pushToWebSocket(recipientId, saved);
+                    pushBadgeUpdate(recipientId);
                     log.debug("[Notification] IN_APP saved type={} recipient={}", type, recipientId);
                 }, () -> log.warn("[Notification] No IN_APP template for type={}", type));
     }
@@ -364,6 +370,20 @@ public class NotificationServiceImpl implements NotificationService {
                     NotificationResponse.from(notification));
         } catch (Exception ex) {
             log.warn("[Notification] WS push failed recipient={}", recipientId, ex);
+        }
+    }
+
+    private void pushBadgeUpdate(UUID recipientId) {
+        if (messagingTemplate == null) return;
+        try {
+            long unread = notificationRepo.countUnreadByRecipientId(recipientId);
+            messagingTemplate.convertAndSendToUser(
+                    recipientId.toString(),
+                    "/queue/notifications/badge",
+                    new NotificationBadgePayload(unread));
+            log.debug("[Notification] Badge pushed recipient={} unread={}", recipientId, unread);
+        } catch (Exception ex) {
+            log.warn("[Notification] Badge WS push failed recipient={}", recipientId, ex);
         }
     }
 
