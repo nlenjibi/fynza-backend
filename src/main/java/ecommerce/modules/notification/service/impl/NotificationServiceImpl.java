@@ -10,10 +10,14 @@ import ecommerce.modules.notification.entity.NotificationDispatch;
 import ecommerce.modules.notification.enums.NotificationChannel;
 import ecommerce.modules.notification.enums.NotificationStatus;
 import ecommerce.modules.notification.enums.NotificationType;
+import ecommerce.modules.notification.entity.NotificationDevice;
+import ecommerce.modules.notification.enums.DeviceStatus;
 import ecommerce.modules.notification.exceptions.EmailDispatchException;
 import ecommerce.modules.notification.exceptions.SlackDispatchException;
 import ecommerce.modules.notification.provider.EmailProvider;
+import ecommerce.modules.notification.provider.PushProvider;
 import ecommerce.modules.notification.provider.SlackClient;
+import ecommerce.modules.notification.provider.SmsProvider;
 import ecommerce.modules.notification.repository.*;
 import ecommerce.modules.notification.service.NotificationService;
 import ecommerce.modules.notification.service.SlackChannelResolver;
@@ -43,6 +47,9 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationChannelConfigRepository channelConfigRepo;
     private final NotificationPreferenceRepository   preferenceRepo;
     private final EmailProvider                      emailProvider;
+    private final SmsProvider                        smsProvider;
+    private final PushProvider                       pushProvider;
+    private final NotificationDeviceRepository       deviceRepository;
     private final SlackClient                        slackClient;
     private final SlackChannelResolver               slackChannelResolver;
     private final TemplateInterpolator               interpolator;
@@ -61,6 +68,9 @@ public class NotificationServiceImpl implements NotificationService {
             NotificationChannelConfigRepository channelConfigRepo,
             NotificationPreferenceRepository preferenceRepo,
             EmailProvider emailProvider,
+            SmsProvider smsProvider,
+            PushProvider pushProvider,
+            NotificationDeviceRepository deviceRepository,
             SlackClient slackClient,
             SlackChannelResolver slackChannelResolver,
             TemplateInterpolator interpolator,
@@ -71,6 +81,9 @@ public class NotificationServiceImpl implements NotificationService {
         this.channelConfigRepo    = channelConfigRepo;
         this.preferenceRepo       = preferenceRepo;
         this.emailProvider        = emailProvider;
+        this.smsProvider          = smsProvider;
+        this.pushProvider         = pushProvider;
+        this.deviceRepository     = deviceRepository;
         this.slackClient          = slackClient;
         this.slackChannelResolver = slackChannelResolver;
         this.interpolator         = interpolator;
@@ -105,6 +118,14 @@ public class NotificationServiceImpl implements NotificationService {
 
         if (config.isEmailEnabled() && isChannelEnabled(recipientId, type, NotificationChannel.EMAIL)) {
             dispatchEmail(type, recipientId, variables, eventId, config);
+        }
+
+        if (config.isSmsEnabled() && isChannelEnabled(recipientId, type, NotificationChannel.SMS)) {
+            dispatchSms(type, recipientId, variables, eventId);
+        }
+
+        if (config.isPushEnabled() && isChannelEnabled(recipientId, type, NotificationChannel.PUSH)) {
+            dispatchPush(type, recipientId, variables, eventId);
         }
     }
 
@@ -357,6 +378,92 @@ public class NotificationServiceImpl implements NotificationService {
             dispatch.setFailureReason(ex.getMessage());
             dispatch.setStatus(ex.isRetryable() ? NotificationStatus.PENDING : NotificationStatus.FAILED);
             if (ex.isRetryable()) dispatch.setScheduledAt(Instant.now().plusSeconds(60));
+            dispatchRepo.save(dispatch);
+        }
+    }
+
+    private void dispatchSms(NotificationType type, UUID recipientId,
+                             Map<String, String> variables, UUID eventId) {
+        var template = templateRepo.findByNotificationTypeAndChannel(type, NotificationChannel.SMS).orElse(null);
+        if (template == null) {
+            log.warn("[Notification] No SMS template for type={}", type);
+            return;
+        }
+        String recipientPhone = variables.get("recipientPhone");
+        if (recipientPhone == null || recipientPhone.isBlank()) {
+            log.warn("[Notification] recipientPhone missing for type={} recipient={}", type, recipientId);
+            return;
+        }
+        String body = interpolator.interpolate(template.getBody(), variables);
+        String idempotencyKey = "SMS-" + eventId;
+
+        NotificationDispatch dispatch = dispatchRepo.save(NotificationDispatch.builder()
+                .recipientId(recipientId)
+                .notificationEventId(eventId)
+                .notificationType(type)
+                .channel(NotificationChannel.SMS)
+                .status(NotificationStatus.SENDING)
+                .textBody(body)
+                .providerName(smsProvider.providerName())
+                .attemptCount(1)
+                .build());
+        try {
+            String msgId = smsProvider.send(recipientPhone, body, idempotencyKey);
+            dispatch.setStatus(NotificationStatus.SENT);
+            dispatch.setProviderMessageId(msgId);
+            dispatch.setSentAt(Instant.now());
+            log.info("[Notification] SMS sent type={} to={}", type, recipientPhone);
+        } catch (Exception ex) {
+            dispatch.setStatus(NotificationStatus.FAILED);
+            dispatch.setFailureReason(ex.getMessage());
+            log.error("[Notification] SMS failed type={}: {}", type, ex.getMessage());
+        }
+        dispatchRepo.save(dispatch);
+    }
+
+    private void dispatchPush(NotificationType type, UUID recipientId,
+                              Map<String, String> variables, UUID eventId) {
+        var template = templateRepo.findByNotificationTypeAndChannel(type, NotificationChannel.PUSH).orElse(null);
+        if (template == null) {
+            log.warn("[Notification] No PUSH template for type={}", type);
+            return;
+        }
+        List<NotificationDevice> devices = deviceRepository.findByUserIdAndStatus(recipientId, DeviceStatus.ACTIVE);
+        if (devices.isEmpty()) {
+            log.debug("[Notification] No active push devices for recipient={}", recipientId);
+            return;
+        }
+        String title = interpolator.interpolate(template.getSubject(), variables);
+        String body  = interpolator.interpolate(template.getBody(), variables);
+
+        for (NotificationDevice device : devices) {
+            NotificationDispatch dispatch = dispatchRepo.save(NotificationDispatch.builder()
+                    .recipientId(recipientId)
+                    .notificationEventId(eventId)
+                    .notificationType(type)
+                    .channel(NotificationChannel.PUSH)
+                    .status(NotificationStatus.SENDING)
+                    .subject(title)
+                    .textBody(body)
+                    .providerName(pushProvider.providerName())
+                    .attemptCount(1)
+                    .build());
+            try {
+                String msgId = pushProvider.send(device.getDeviceToken(), title, body, Map.of());
+                dispatch.setStatus(NotificationStatus.SENT);
+                dispatch.setProviderMessageId(msgId);
+                dispatch.setSentAt(Instant.now());
+                log.info("[Notification] PUSH sent type={} device={}", type, device.getPublicId());
+            } catch (Exception ex) {
+                dispatch.setStatus(NotificationStatus.FAILED);
+                dispatch.setFailureReason(ex.getMessage());
+                if (pushProvider.isInvalidToken(ex.getMessage())) {
+                    deviceRepository.invalidateByToken(device.getDeviceToken());
+                    log.warn("[Notification] PUSH invalid token deactivated device={}", device.getPublicId());
+                } else {
+                    log.error("[Notification] PUSH failed type={} device={}: {}", type, device.getPublicId(), ex.getMessage());
+                }
+            }
             dispatchRepo.save(dispatch);
         }
     }
