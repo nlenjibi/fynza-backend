@@ -54,6 +54,10 @@ public class Notification {
     @Column(name = "entity_id")
     private UUID entityId;
 
+    /** Deduplication key — format: {notificationType}:{sourceType}:{sourceId}:{recipientId} */
+    @Column(name = "idempotency_key", unique = true, length = 200)
+    private String idempotencyKey;
+
     @Builder.Default
     @Column(name = "is_read", nullable = false)
     private boolean read = false;

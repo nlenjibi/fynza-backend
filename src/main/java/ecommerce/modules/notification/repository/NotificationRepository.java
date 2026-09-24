@@ -50,4 +50,6 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Query("SELECT n FROM Notification n WHERE n.publicId = :publicId AND n.recipientId = :recipientId AND n.deletedAt IS NULL")
     Optional<Notification> findByPublicIdAndRecipientId(@Param("publicId") UUID publicId,
                                                         @Param("recipientId") UUID recipientId);
+
+    Optional<Notification> findByIdempotencyKey(String idempotencyKey);
 }

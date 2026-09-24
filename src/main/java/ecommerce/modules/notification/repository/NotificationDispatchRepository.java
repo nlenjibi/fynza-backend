@@ -28,4 +28,9 @@ public interface NotificationDispatchRepository extends JpaRepository<Notificati
 
     boolean existsByChannelAndNotificationTypeAndSourceEntityId(
             NotificationChannel channel, NotificationType notificationType, UUID sourceEntityId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE NotificationDispatch d SET d.status = 'FAILED', d.failureReason = 'EXPIRED' " +
+           "WHERE d.status = 'PENDING' AND d.scheduledAt IS NOT NULL AND d.scheduledAt < :now")
+    int cancelExpiredPendingDispatches(@Param("now") Instant now);
 }

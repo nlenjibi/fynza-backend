@@ -274,6 +274,16 @@ public class NotificationServiceImpl implements NotificationService {
                                        Map<String, String> variables, String deepLink, EntityRef entity) {
         templateRepo.findByNotificationTypeAndChannel(type, NotificationChannel.IN_APP)
                 .ifPresentOrElse(template -> {
+                    String idempotencyKey = type.name() + ":"
+                            + (entity != null ? entity.type() : "NONE") + ":"
+                            + (entity != null ? entity.id() : "NONE") + ":"
+                            + recipientId;
+
+                    if (notificationRepo.findByIdempotencyKey(idempotencyKey).isPresent()) {
+                        log.debug("[Notification] Duplicate IN_APP suppressed type={} key={}", type, idempotencyKey);
+                        return;
+                    }
+
                     String title = interpolator.interpolate(template.getSubject(), variables);
                     String body  = interpolator.interpolate(template.getBody(), variables);
                     Notification saved = notificationRepo.save(Notification.builder()
@@ -281,6 +291,7 @@ public class NotificationServiceImpl implements NotificationService {
                             .notificationType(type).title(title).body(body).deepLink(deepLink)
                             .entityType(entity != null ? entity.type() : null)
                             .entityId(entity != null ? entity.id() : null)
+                            .idempotencyKey(idempotencyKey)
                             .build());
                     pushToWebSocket(recipientId, saved);
                     pushBadgeUpdate(recipientId);
