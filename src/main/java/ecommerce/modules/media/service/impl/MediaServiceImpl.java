@@ -17,7 +17,10 @@ import ecommerce.modules.media.exception.MediaAssetNotFoundException;
 import ecommerce.modules.media.exception.StorageQuotaExceededException;
 import ecommerce.modules.media.exception.UploadSessionNotFoundException;
 import ecommerce.modules.media.provider.*;
-import ecommerce.modules.media.repository.*;
+import ecommerce.modules.media.repository.MediaAssetRepository;
+import ecommerce.modules.media.repository.MediaUploadSessionRepository;
+import ecommerce.modules.media.repository.ProductMediaMappingRepository;
+import ecommerce.modules.media.repository.StorageUsageRepository;
 import ecommerce.modules.media.service.MediaService;
 import ecommerce.common.exception.BadRequestException;
 import ecommerce.common.exception.ForbiddenException;
@@ -39,7 +42,7 @@ public class MediaServiceImpl implements MediaService {
 
     private final MediaAssetRepository       assetRepository;
     private final MediaUploadSessionRepository sessionRepository;
-    private final ProductMediaRepository     productMediaRepository;
+    private final ProductMediaMappingRepository productMediaRepository;
     private final StorageUsageRepository     usageRepository;
     private final StorageProviderRouter      providerRouter;
     private final MediaProperties            props;

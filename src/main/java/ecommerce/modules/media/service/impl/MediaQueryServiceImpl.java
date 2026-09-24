@@ -14,7 +14,7 @@ import ecommerce.modules.media.enums.MediaStatus;
 import ecommerce.modules.media.enums.MediaVisibility;
 import ecommerce.modules.media.exception.MediaAssetNotFoundException;
 import ecommerce.modules.media.repository.MediaAssetRepository;
-import ecommerce.modules.media.repository.ProductMediaRepository;
+import ecommerce.modules.media.repository.ProductMediaMappingRepository;
 import ecommerce.modules.media.repository.StorageUsageRepository;
 import ecommerce.modules.media.service.MediaQueryService;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +31,7 @@ import java.util.UUID;
 public class MediaQueryServiceImpl implements MediaQueryService {
 
     private final MediaAssetRepository    assetRepository;
-    private final ProductMediaRepository  productMediaRepository;
+    private final ProductMediaMappingRepository  productMediaRepository;
     private final StorageUsageRepository  usageRepository;
     private final MediaProperties         props;
 

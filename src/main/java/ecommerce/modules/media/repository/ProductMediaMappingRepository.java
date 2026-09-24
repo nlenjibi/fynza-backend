@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface ProductMediaRepository extends JpaRepository<ProductMedia, Long> {
+public interface ProductMediaMappingRepository extends JpaRepository<ProductMedia, Long> {
 
     List<ProductMedia> findByProductIdOrderBySortOrderAsc(UUID productId);
 

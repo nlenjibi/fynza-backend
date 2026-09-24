@@ -21,7 +21,10 @@ import ecommerce.modules.media.exception.MediaAssetNotFoundException;
 import ecommerce.modules.media.exception.StorageQuotaExceededException;
 import ecommerce.modules.media.exception.UploadSessionNotFoundException;
 import ecommerce.modules.media.provider.*;
-import ecommerce.modules.media.repository.*;
+import ecommerce.modules.media.repository.MediaAssetRepository;
+import ecommerce.modules.media.repository.MediaUploadSessionRepository;
+import ecommerce.modules.media.repository.ProductMediaMappingRepository;
+import ecommerce.modules.media.repository.StorageUsageRepository;
 import ecommerce.modules.media.service.impl.MediaServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,7 +53,7 @@ class MediaServiceImplTest {
 
     @Mock private MediaAssetRepository        assetRepository;
     @Mock private MediaUploadSessionRepository sessionRepository;
-    @Mock private ProductMediaRepository      productMediaRepository;
+    @Mock private ProductMediaMappingRepository productMediaRepository;
     @Mock private StorageUsageRepository      usageRepository;
     @Mock private StorageProviderRouter       providerRouter;
     @Mock private MediaProperties             props;
