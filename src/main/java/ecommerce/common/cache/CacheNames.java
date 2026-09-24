@@ -99,4 +99,10 @@ public final class CacheNames {
     public static final String SHIPPING_CARRIERS = "shipping-carriers";
     public static final String SHIPPING_METHODS  = "shipping-methods";
     public static final String SHIPPING_ZONES    = "shipping-zones";
+
+    // Notifications
+    public static final String NOTIFICATION_UNREAD_COUNT = "notification-unread-count";
+    public static final String NOTIFICATION_PREF         = "notification-pref";
+    public static final String NOTIFICATION_TEMPLATE     = "notification-template";
+    public static final String NOTIFICATION_QUIET_HOURS  = "notification-quiet-hours";
 }

@@ -3,6 +3,7 @@ extend type Query {
     notification(id: ID!): NotificationResponse
     unreadNotificationCount: Int!
     notificationPreferences: [NotificationPreferenceResponse!]!
+    quietHours: QuietHoursResponse
 }
 
 extend type Mutation {
@@ -15,6 +16,8 @@ extend type Mutation {
         channel: String!
         enabled: Boolean!
     ): NotificationPreferenceResponse!
+    updateQuietHours(startTime: String!, endTime: String!, timezone: String!): QuietHoursResponse!
+    deleteQuietHours: Boolean!
 }
 
 type NotificationPage {
@@ -44,4 +47,10 @@ type NotificationPreferenceResponse {
     channel: String!
     enabled: Boolean!
     updatedAt: String!
+}
+
+type QuietHoursResponse {
+    startTime: String!
+    endTime: String!
+    timezone: String!
 }

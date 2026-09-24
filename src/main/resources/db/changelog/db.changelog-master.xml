@@ -78,5 +78,6 @@
     <include file="changes/071-notification-devices-schema.sql"          relativeToChangelogFile="true"/>
     <include file="changes/072-notification-channel-config-sms-push.sql" relativeToChangelogFile="true"/>
     <include file="changes/073-notification-idempotency-webhook.sql"     relativeToChangelogFile="true"/>
+    <include file="changes/074-notification-quiet-hours-schema.sql"      relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

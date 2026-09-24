@@ -3,6 +3,7 @@ package ecommerce.graphql.resolver.notification;
 import ecommerce.common.security.UserPrincipal;
 import ecommerce.modules.notification.dto.NotificationPreferenceResponse;
 import ecommerce.modules.notification.dto.NotificationResponse;
+import ecommerce.modules.notification.dto.QuietHoursResponse;
 import ecommerce.modules.notification.repository.NotificationPreferenceRepository;
 import ecommerce.modules.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,6 @@ import org.springframework.stereotype.Controller;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -25,8 +25,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class NotificationQueryResolver {
 
-    private final NotificationService               notificationService;
-    private final NotificationPreferenceRepository  preferenceRepository;
+    private final NotificationService              notificationService;
+    private final NotificationPreferenceRepository preferenceRepository;
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
@@ -37,11 +37,11 @@ public class NotificationQueryResolver {
         Page<NotificationResponse> result =
                 notificationService.getForRecipient(principal.getId(), PageRequest.of(page, Math.min(size, 50)));
         return Map.of(
-                "content",         result.getContent(),
-                "totalElements",   (int) result.getTotalElements(),
-                "totalPages",      result.getTotalPages(),
-                "currentPage",     result.getNumber(),
-                "hasNextPage",     result.hasNext()
+                "content",       result.getContent(),
+                "totalElements", (int) result.getTotalElements(),
+                "totalPages",    result.getTotalPages(),
+                "currentPage",   result.getNumber(),
+                "hasNextPage",   result.hasNext()
         );
     }
 
@@ -50,7 +50,7 @@ public class NotificationQueryResolver {
     public NotificationResponse notification(
             @Argument String id,
             @AuthenticationPrincipal UserPrincipal principal) {
-        return notificationService.getById(UUID.fromString(id), principal.getId());
+        return notificationService.getById(java.util.UUID.fromString(id), principal.getId());
     }
 
     @QueryMapping
@@ -67,5 +67,11 @@ public class NotificationQueryResolver {
                 .stream()
                 .map(NotificationPreferenceResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
+    public QuietHoursResponse quietHours(@AuthenticationPrincipal UserPrincipal principal) {
+        return notificationService.getQuietHours(principal.getId()).orElse(null);
     }
 }
