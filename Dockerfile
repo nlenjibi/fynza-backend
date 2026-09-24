@@ -4,7 +4,7 @@ WORKDIR /app
 COPY mvnw mvnw
 COPY .mvn .mvn
 COPY pom.xml pom.xml
-RUN chmod +x mvnw && ./mvnw -q --no-transfer-progress -DskipTests dependency:go-offline
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw && ./mvnw -q --no-transfer-progress -DskipTests dependency:go-offline
 
 COPY src src
 RUN ./mvnw -q --no-transfer-progress -DskipTests package
