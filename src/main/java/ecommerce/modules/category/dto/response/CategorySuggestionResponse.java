@@ -15,7 +15,7 @@ public class CategorySuggestionResponse {
     UUID publicId;
     String name;
     String description;
-    Long parentCategoryId;
+    UUID parentCategoryId;
     String reason;
     CategorySuggestionStatus status;
     UUID requestedBy;

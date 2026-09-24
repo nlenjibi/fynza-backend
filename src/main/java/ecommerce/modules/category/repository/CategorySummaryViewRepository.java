@@ -19,6 +19,8 @@ public interface CategorySummaryViewRepository
 
     List<CategorySummaryView> findByParentIdIsNullAndIsActiveTrueOrderBySortOrderAsc();
 
+    Optional<CategorySummaryView> findByCategoryUuid(UUID categoryUuid);
+
     List<CategorySummaryView> findByParentIdOrderBySortOrderAsc(Long parentId);
 
     List<CategorySummaryView> findByTaxonomyIdAndParentIdIsNullOrderBySortOrderAsc(Long taxonomyId);

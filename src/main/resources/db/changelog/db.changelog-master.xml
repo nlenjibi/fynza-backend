@@ -80,5 +80,6 @@
     <include file="changes/073-notification-idempotency-webhook.sql"     relativeToChangelogFile="true"/>
     <include file="changes/074-notification-quiet-hours-schema.sql"      relativeToChangelogFile="true"/>
     <include file="changes/075-drop-slack-schema.sql"                    relativeToChangelogFile="true"/>
+    <include file="changes/076-category-bigserial-id.sql"               relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
