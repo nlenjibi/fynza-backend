@@ -20,10 +20,10 @@ import java.util.UUID;
 public class CategorySuggestion {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
 
-    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
+    @Column(name = "id", insertable = false, updatable = false)
     private UUID publicId;
 
     @Column(name = "requested_by", nullable = false)
@@ -36,7 +36,7 @@ public class CategorySuggestion {
     private String description;
 
     @Column(name = "parent_category_id")
-    private Long parentCategoryId;
+    private UUID parentCategoryId;
 
     @Column(name = "reason", columnDefinition = "TEXT")
     private String reason;
@@ -57,7 +57,7 @@ public class CategorySuggestion {
 
     @PrePersist
     protected void onCreate() {
-        publicId  = UUID.randomUUID();
+        if (id == null) id = UUID.randomUUID();
         createdAt = Instant.now();
         if (status == null) status = CategorySuggestionStatus.PENDING;
     }

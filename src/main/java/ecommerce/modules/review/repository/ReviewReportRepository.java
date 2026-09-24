@@ -12,13 +12,13 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface ReviewReportRepository extends JpaRepository<ReviewReport, Long> {
+public interface ReviewReportRepository extends JpaRepository<ReviewReport, UUID> {
 
     Optional<ReviewReport> findByPublicId(UUID publicId);
 
-    boolean existsByReview_IdAndReporterId(Long reviewId, UUID reporterId);
+    boolean existsByReview_IdAndReporterId(UUID reviewId, UUID reporterId);
 
     Page<ReviewReport> findByStatus(ReviewReportStatus status, Pageable pageable);
 
-    List<ReviewReport> findByReview_Id(Long reviewId);
+    List<ReviewReport> findByReview_Id(UUID reviewId);
 }

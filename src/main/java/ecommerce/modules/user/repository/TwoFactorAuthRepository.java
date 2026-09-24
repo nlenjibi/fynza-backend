@@ -10,7 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface TwoFactorAuthRepository extends JpaRepository<TwoFactorAuth, Long> {
+public interface TwoFactorAuthRepository extends JpaRepository<TwoFactorAuth, UUID> {
 
     Optional<TwoFactorAuth> findByUserId(UUID userId);
 

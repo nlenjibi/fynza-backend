@@ -22,7 +22,7 @@ public interface RefundRepository extends JpaRepository<Refund, Long> {
 
     Optional<Refund> findByRefundNumber(String refundNumber);
 
-    Optional<Refund> findByOrderId(Long orderId);
+    Optional<Refund> findByOrderId(UUID orderId);
 
     Optional<Refund> findByOrder_PublicId(UUID publicId);
 

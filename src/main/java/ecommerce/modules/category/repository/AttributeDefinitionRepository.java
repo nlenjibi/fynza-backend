@@ -9,11 +9,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface AttributeDefinitionRepository extends JpaRepository<AttributeDefinition, Long> {
+public interface AttributeDefinitionRepository extends JpaRepository<AttributeDefinition, UUID> {
 
     Optional<AttributeDefinition> findByPublicId(UUID publicId);
 
-    List<AttributeDefinition> findByCategoryIdAndIsActiveTrueOrderBySortOrderAsc(Long categoryId);
+    List<AttributeDefinition> findByCategoryIdAndIsActiveTrueOrderBySortOrderAsc(UUID categoryId);
 
-    boolean existsByCategoryIdAndCode(Long categoryId, String code);
+    boolean existsByCategoryIdAndCode(UUID categoryId, String code);
 }

@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface SellerProductTagRepository extends JpaRepository<SellerProductTag, Long> {
+public interface SellerProductTagRepository extends JpaRepository<SellerProductTag, UUID> {
 
     List<SellerProductTag> findBySellerId(UUID sellerId);
 

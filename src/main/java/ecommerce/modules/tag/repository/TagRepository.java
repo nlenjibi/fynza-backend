@@ -14,7 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface TagRepository extends JpaRepository<Tag, Long> {
+public interface TagRepository extends JpaRepository<Tag, UUID> {
 
     Optional<Tag> findByPublicId(UUID publicId);
 
@@ -29,11 +29,11 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
 
     @Modifying
     @Query("UPDATE Tag t SET t.usageCount = t.usageCount + 1 WHERE t.id = :tagId")
-    void incrementUsageCount(@Param("tagId") Long tagId);
+    void incrementUsageCount(@Param("tagId") UUID tagId);
 
     @Modifying
     @Query("UPDATE Tag t SET t.usageCount = t.usageCount - 1 WHERE t.id = :tagId AND t.usageCount > 0")
-    void decrementUsageCount(@Param("tagId") Long tagId);
+    void decrementUsageCount(@Param("tagId") UUID tagId);
 
     List<Tag> findByPublicIdIn(List<UUID> publicIds);
 

@@ -49,10 +49,6 @@ public class NotificationChannelConfig {
     private boolean pushEnabled = false;
 
     @Builder.Default
-    @Column(name = "slack_enabled", nullable = false)
-    private boolean slackEnabled = false;
-
-    @Builder.Default
     @Column(name = "max_retries", nullable = false)
     private int maxRetries = 3;
 

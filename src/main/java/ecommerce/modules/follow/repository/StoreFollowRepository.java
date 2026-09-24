@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface StoreFollowRepository extends JpaRepository<StoreFollow, Long> {
+public interface StoreFollowRepository extends JpaRepository<StoreFollow, UUID> {
 
     Page<StoreFollow> findBySellerId(UUID sellerId, Pageable pageable);
 

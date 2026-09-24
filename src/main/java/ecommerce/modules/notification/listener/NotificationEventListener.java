@@ -13,9 +13,9 @@ import ecommerce.modules.payout.event.PayoutCompletedEvent;
 import ecommerce.modules.payout.event.PayoutFailedEvent;
 import ecommerce.modules.review.event.ReviewCreatedEvent;
 import ecommerce.modules.shipping.event.ShipmentCreatedEvent;
-import ecommerce.modules.user.entity.SellerProfile;
+import ecommerce.modules.seller.entity.Seller;
+import ecommerce.modules.seller.repository.SellerRepository;
 import ecommerce.modules.user.event.UserRegisteredEvent;
-import ecommerce.modules.user.repository.SellerProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,8 +32,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class NotificationEventListener {
 
-    private final NotificationService        notificationService;
-    private final SellerProfileRepository    sellerProfileRepository;
+    private final NotificationService  notificationService;
+    private final SellerRepository     sellerRepository;
 
     @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
@@ -272,11 +272,10 @@ public class NotificationEventListener {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private java.util.Optional<UUID> resolveSellerUserId(Long sellerProfileId) {
-        if (sellerProfileId == null) return java.util.Optional.empty();
-        return sellerProfileRepository.findById(sellerProfileId)
-                .map(SellerProfile::getUser)
-                .map(u -> u.getPublicId());
+    private java.util.Optional<UUID> resolveSellerUserId(Long sellerId) {
+        if (sellerId == null) return java.util.Optional.empty();
+        return sellerRepository.findById(sellerId)
+                .map(Seller::getOwnerUserId);
     }
 
 }

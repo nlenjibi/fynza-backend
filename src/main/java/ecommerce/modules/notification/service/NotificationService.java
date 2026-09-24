@@ -43,15 +43,6 @@ public interface NotificationService {
                                  String recipientEmail,
                                  Map<String, String> variables);
 
-    /**
-     * Sends a broadcast Slack message to the global or seller-specific channel.
-     * A dedup guard makes a second call for the same (type, sourceEntityId) a safe no-op.
-     */
-    void sendBroadcast(NotificationType type,
-                       UUID sourceEntityId,
-                       UUID sellerId,
-                       Map<String, String> variables);
-
     /** Returns a paginated list of in-app notifications for the recipient, newest first. */
     Page<NotificationResponse> getForRecipient(UUID recipientId, Pageable pageable);
 

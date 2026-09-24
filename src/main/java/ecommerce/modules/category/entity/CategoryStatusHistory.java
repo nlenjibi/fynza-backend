@@ -20,14 +20,14 @@ import java.util.UUID;
 public class CategoryStatusHistory {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
 
-    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
+    @Column(name = "id", insertable = false, updatable = false)
     private UUID publicId;
 
     @Column(name = "category_id", nullable = false)
-    private Long categoryId;
+    private UUID categoryId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "previous_status", length = 30)
@@ -48,7 +48,7 @@ public class CategoryStatusHistory {
 
     @PrePersist
     protected void onCreate() {
-        publicId  = UUID.randomUUID();
+        if (id == null) id = UUID.randomUUID();
         createdAt = Instant.now();
     }
 }

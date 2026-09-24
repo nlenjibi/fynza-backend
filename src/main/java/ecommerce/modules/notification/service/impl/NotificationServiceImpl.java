@@ -18,10 +18,8 @@ import ecommerce.modules.notification.enums.NotificationChannel;
 import ecommerce.modules.notification.enums.NotificationStatus;
 import ecommerce.modules.notification.enums.NotificationType;
 import ecommerce.modules.notification.exceptions.EmailDispatchException;
-import ecommerce.modules.notification.exceptions.SlackDispatchException;
 import ecommerce.modules.notification.provider.EmailProvider;
 import ecommerce.modules.notification.provider.PushProvider;
-import ecommerce.modules.notification.provider.SlackClient;
 import ecommerce.modules.notification.provider.SmsProvider;
 import ecommerce.modules.notification.repository.NotificationChannelConfigRepository;
 import ecommerce.modules.notification.repository.NotificationDeviceRepository;
@@ -31,7 +29,6 @@ import ecommerce.modules.notification.repository.NotificationQuietHoursRepositor
 import ecommerce.modules.notification.repository.NotificationRepository;
 import ecommerce.modules.notification.repository.NotificationTemplateRepository;
 import ecommerce.modules.notification.service.NotificationService;
-import ecommerce.modules.notification.service.SlackChannelResolver;
 import ecommerce.modules.notification.service.TemplateInterpolator;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
@@ -69,8 +66,6 @@ public class NotificationServiceImpl implements NotificationService {
     private final SmsProvider                         smsProvider;
     private final PushProvider                        pushProvider;
     private final NotificationDeviceRepository        deviceRepository;
-    private final SlackClient                         slackClient;
-    private final SlackChannelResolver                slackChannelResolver;
     private final TemplateInterpolator                interpolator;
     private final SimpMessagingTemplate               messagingTemplate;
     private final CacheService                        cacheService;
@@ -93,29 +88,25 @@ public class NotificationServiceImpl implements NotificationService {
             SmsProvider smsProvider,
             PushProvider pushProvider,
             NotificationDeviceRepository deviceRepository,
-            SlackClient slackClient,
-            SlackChannelResolver slackChannelResolver,
             TemplateInterpolator interpolator,
             @Lazy SimpMessagingTemplate messagingTemplate,
             CacheService cacheService,
             MeterRegistry meterRegistry,
             NotificationQuietHoursRepository quietHoursRepo) {
-        this.notificationRepo     = notificationRepo;
-        this.dispatchRepo         = dispatchRepo;
-        this.templateRepo         = templateRepo;
-        this.channelConfigRepo    = channelConfigRepo;
-        this.preferenceRepo       = preferenceRepo;
-        this.emailProvider        = emailProvider;
-        this.smsProvider          = smsProvider;
-        this.pushProvider         = pushProvider;
-        this.deviceRepository     = deviceRepository;
-        this.slackClient          = slackClient;
-        this.slackChannelResolver = slackChannelResolver;
-        this.interpolator         = interpolator;
-        this.messagingTemplate    = messagingTemplate;
-        this.cacheService         = cacheService;
-        this.meterRegistry        = meterRegistry;
-        this.quietHoursRepo       = quietHoursRepo;
+        this.notificationRepo  = notificationRepo;
+        this.dispatchRepo      = dispatchRepo;
+        this.templateRepo      = templateRepo;
+        this.channelConfigRepo = channelConfigRepo;
+        this.preferenceRepo    = preferenceRepo;
+        this.emailProvider     = emailProvider;
+        this.smsProvider       = smsProvider;
+        this.pushProvider      = pushProvider;
+        this.deviceRepository  = deviceRepository;
+        this.interpolator      = interpolator;
+        this.messagingTemplate = messagingTemplate;
+        this.cacheService      = cacheService;
+        this.meterRegistry     = meterRegistry;
+        this.quietHoursRepo    = quietHoursRepo;
     }
 
     // ── Send ─────────────────────────────────────────────────────────────────
@@ -212,51 +203,6 @@ public class NotificationServiceImpl implements NotificationService {
                 .build());
 
         sendEmailAttempt(dispatch, emailRequest, type, config);
-    }
-
-    @Override
-    @Async("notificationTaskExecutor")
-    public void sendBroadcast(NotificationType type,
-                              UUID sourceEntityId,
-                              UUID sellerId,
-                              Map<String, String> variables) {
-        if (!notificationsEnabled) return;
-        try {
-            var config = channelConfigRepo.findByNotificationType(type).orElseGet(() -> defaultConfig(type));
-            if (!config.isSlackEnabled()) return;
-
-            var template = templateRepo.findByNotificationTypeAndChannel(type, NotificationChannel.SLACK).orElse(null);
-            if (template == null) {
-                log.warn("[Notification] No SLACK template for type={}", type);
-                return;
-            }
-            if (!slackClient.isConfigured()) return;
-
-            if (dispatchRepo.existsByChannelAndNotificationTypeAndSourceEntityId(
-                    NotificationChannel.SLACK, type, sourceEntityId)) {
-                log.debug("[Notification] SLACK broadcast already dispatched type={} — skipping duplicate", type);
-                return;
-            }
-
-            var channelId = slackChannelResolver.resolve(sellerId);
-            if (channelId.isEmpty()) {
-                log.warn("[Notification] No Slack channel resolved sellerId={} type={}", sellerId, type);
-                return;
-            }
-
-            String text = interpolator.interpolate(template.getBody(), variables);
-
-            NotificationDispatch dispatch = dispatchRepo.save(NotificationDispatch.builder()
-                    .sourceEntityId(sourceEntityId).notificationEventId(UUID.randomUUID())
-                    .notificationType(type).channel(NotificationChannel.SLACK)
-                    .status(NotificationStatus.PENDING).textBody(text)
-                    .providerName("SLACK_BOT").slackChannelId(channelId.get())
-                    .build());
-
-            attemptSlackSend(dispatch, channelId.get(), type);
-        } catch (Exception ex) {
-            log.error("[Notification] SLACK broadcast failed type={}: {}", type, ex.getMessage(), ex);
-        }
     }
 
     // ── Query ────────────────────────────────────────────────────────────────
@@ -465,34 +411,6 @@ public class NotificationServiceImpl implements NotificationService {
             meterRegistry.counter("fynza.notification.failed",
                     "type", type.name(), "channel", "EMAIL").increment();
             log.error("[Notification] EMAIL unexpected error type={}", type, ex);
-        }
-    }
-
-    private void attemptSlackSend(NotificationDispatch dispatch, String channelId, NotificationType type) {
-        try {
-            dispatch.setStatus(NotificationStatus.SENDING);
-            dispatch.setAttemptCount(dispatch.getAttemptCount() + 1);
-            dispatchRepo.save(dispatch);
-
-            slackClient.send(channelId, dispatch.getTextBody());
-
-            dispatch.setStatus(NotificationStatus.SENT);
-            dispatch.setSentAt(Instant.now());
-            dispatchRepo.save(dispatch);
-
-            meterRegistry.counter("fynza.notification.sent", "type", type.name(), "channel", "SLACK").increment();
-            log.info("[Notification] SLACK sent type={}", type);
-
-        } catch (SlackDispatchException ex) {
-            dispatch.setFailureReason(ex.getMessage());
-            dispatch.setStatus(ex.isRetryable() ? NotificationStatus.PENDING : NotificationStatus.FAILED);
-            if (ex.isRetryable()) {
-                dispatch.setScheduledAt(Instant.now().plusSeconds(60));
-            } else {
-                meterRegistry.counter("fynza.notification.failed",
-                        "type", type.name(), "channel", "SLACK").increment();
-            }
-            dispatchRepo.save(dispatch);
         }
     }
 

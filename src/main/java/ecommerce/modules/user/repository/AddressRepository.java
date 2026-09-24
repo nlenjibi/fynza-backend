@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface AddressRepository extends JpaRepository<Address, Long>, JpaSpecificationExecutor<Address> {
+public interface AddressRepository extends JpaRepository<Address, UUID>, JpaSpecificationExecutor<Address> {
 
     List<Address> findByUser_PublicId(UUID userPublicId);
 

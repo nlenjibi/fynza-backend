@@ -9,11 +9,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface ReviewVoteRepository extends JpaRepository<ReviewVote, Long> {
+public interface ReviewVoteRepository extends JpaRepository<ReviewVote, UUID> {
 
-    Optional<ReviewVote> findByReview_IdAndCustomerId(Long reviewId, UUID customerId);
+    Optional<ReviewVote> findByReview_IdAndCustomerId(UUID reviewId, UUID customerId);
 
-    long countByReview_IdAndVoteType(Long reviewId, ReviewVoteType voteType);
+    long countByReview_IdAndVoteType(UUID reviewId, ReviewVoteType voteType);
 
-    void deleteByReview_IdAndCustomerId(Long reviewId, UUID customerId);
+    void deleteByReview_IdAndCustomerId(UUID reviewId, UUID customerId);
 }

@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long> {
+public interface WishlistItemRepository extends JpaRepository<WishlistItem, UUID> {
 
     List<WishlistItem> findByWishlist_PublicId(UUID wishlistId);
 

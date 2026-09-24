@@ -9,8 +9,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface StoreShippingZoneRepository extends JpaRepository<ShippingZone, Long> {
+public interface StoreShippingZoneRepository extends JpaRepository<ShippingZone, UUID> {
     Optional<ShippingZone> findByPublicId(UUID publicId);
-    List<ShippingZone> findBySellerIdAndIsActiveTrue(Long sellerId);
-    List<ShippingZone> findBySellerId(Long sellerId);
+    List<ShippingZone> findBySellerIdAndIsActiveTrue(UUID sellerId);
+    List<ShippingZone> findBySellerId(UUID sellerId);
 }

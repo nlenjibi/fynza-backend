@@ -63,7 +63,7 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Async("reportExecutor")
-    public void generateReportAsync(Long reportId) {
+    public void generateReportAsync(UUID reportId) {
         try {
             Report report = reportRepository.findById(reportId)
                     .orElseThrow(() -> new ResourceNotFoundException("Report not found"));
@@ -85,7 +85,7 @@ public class ReportServiceImpl implements ReportService {
             
         } catch (Exception e) {
             log.error("Failed to generate report: {}", e.getMessage());
-            Report report = reportRepository.findById(reportId).orElse(null); // Long id
+            Report report = reportRepository.findById(reportId).orElse(null);
             if (report != null) {
                 report.setStatus(Report.ReportStatus.FAILED);
                 report.setErrorMessage(e.getMessage());

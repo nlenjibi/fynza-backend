@@ -8,11 +8,11 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface ReviewMediaRepository extends JpaRepository<ReviewMedia, Long> {
+public interface ReviewMediaRepository extends JpaRepository<ReviewMedia, UUID> {
 
-    List<ReviewMedia> findByReview_IdOrderBySortOrderAsc(Long reviewId);
+    List<ReviewMedia> findByReview_IdOrderBySortOrderAsc(UUID reviewId);
 
-    void deleteByReview_IdAndPublicId(Long reviewId, UUID publicId);
+    void deleteByReview_IdAndPublicId(UUID reviewId, UUID publicId);
 
-    long countByReview_Id(Long reviewId);
+    long countByReview_Id(UUID reviewId);
 }

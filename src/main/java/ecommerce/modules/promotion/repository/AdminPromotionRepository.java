@@ -16,7 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface AdminPromotionRepository extends JpaRepository<AdminPromotion, Long> {
+public interface AdminPromotionRepository extends JpaRepository<AdminPromotion, UUID> {
 
     Optional<AdminPromotion> findByPublicId(UUID publicId);
 

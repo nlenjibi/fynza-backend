@@ -8,11 +8,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface SellerReviewResponseRepository extends JpaRepository<SellerReviewResponse, Long> {
+public interface SellerReviewResponseRepository extends JpaRepository<SellerReviewResponse, UUID> {
 
-    Optional<SellerReviewResponse> findByReview_Id(Long reviewId);
+    Optional<SellerReviewResponse> findByReview_Id(UUID reviewId);
 
     Optional<SellerReviewResponse> findByPublicId(UUID publicId);
 
-    boolean existsByReview_Id(Long reviewId);
+    boolean existsByReview_Id(UUID reviewId);
 }

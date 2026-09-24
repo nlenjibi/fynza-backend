@@ -8,9 +8,9 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface CouponUsageRepository extends JpaRepository<CouponUsage, Long> {
+public interface CouponUsageRepository extends JpaRepository<CouponUsage, UUID> {
 
     List<CouponUsage> findByUserId(UUID userId);
 
-    List<CouponUsage> findByCouponId(Long couponId);
+    List<CouponUsage> findByCouponId(UUID couponId);
 }

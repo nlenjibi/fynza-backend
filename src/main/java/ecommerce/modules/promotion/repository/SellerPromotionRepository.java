@@ -15,7 +15,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface SellerPromotionRepository extends JpaRepository<SellerPromotion, Long> {
+public interface SellerPromotionRepository extends JpaRepository<SellerPromotion, UUID> {
 
     Optional<SellerPromotion> findByPublicId(UUID publicId);
 

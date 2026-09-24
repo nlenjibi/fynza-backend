@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface PasswordHistoryRepository extends JpaRepository<PasswordHistory, Long> {
+public interface PasswordHistoryRepository extends JpaRepository<PasswordHistory, UUID> {
 
     List<PasswordHistory> findByUserIdOrderByChangedAtDesc(UUID userId);
 
