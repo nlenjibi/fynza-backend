@@ -132,15 +132,15 @@ class ReviewServiceImplTest {
 
     private Order buildMockOrder(UUID ownerId, OrderStatus status) {
         Order order = org.mockito.Mockito.mock(Order.class);
-        when(order.getPublicId()).thenReturn(orderId);
-        when(order.getCustomerId()).thenReturn(ownerId);
-        when(order.getStatus()).thenReturn(status);
-        when(order.getCreatedAt()).thenReturn(Instant.now().minusSeconds(86400));
+        org.mockito.Mockito.lenient().when(order.getPublicId()).thenReturn(orderId);
+        org.mockito.Mockito.lenient().when(order.getCustomerId()).thenReturn(ownerId);
+        org.mockito.Mockito.lenient().when(order.getStatus()).thenReturn(status);
+        org.mockito.Mockito.lenient().when(order.getCreatedAt()).thenReturn(Instant.now().minusSeconds(86400));
 
         OrderItem item = org.mockito.Mockito.mock(OrderItem.class);
-        when(item.getPublicId()).thenReturn(orderItemId);
-        when(item.getProductId()).thenReturn(productId);
-        when(order.getOrderItems()).thenReturn(List.of(item));
+        org.mockito.Mockito.lenient().when(item.getPublicId()).thenReturn(orderItemId);
+        org.mockito.Mockito.lenient().when(item.getProductId()).thenReturn(productId);
+        org.mockito.Mockito.lenient().when(order.getOrderItems()).thenReturn(List.of(item));
 
         return order;
     }
