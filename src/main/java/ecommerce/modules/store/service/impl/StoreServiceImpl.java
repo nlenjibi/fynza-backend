@@ -6,7 +6,7 @@ import ecommerce.modules.notification.entity.SellerNotificationSettings;
 import ecommerce.modules.notification.repository.SellerNotificationSettingsRepository;
 import ecommerce.modules.store.dto.*;
 import ecommerce.modules.store.entity.ShippingZone;
-import ecommerce.modules.store.repository.ShippingZoneRepository;
+import ecommerce.modules.store.repository.StoreShippingZoneRepository;
 import ecommerce.modules.store.service.StoreService;
 import ecommerce.modules.user.entity.SellerProfile;
 import ecommerce.modules.user.repository.SellerProfileRepository;
@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 public class StoreServiceImpl implements StoreService {
 
     private final SellerProfileRepository sellerProfileRepository;
-    private final ShippingZoneRepository shippingZoneRepository;
+    private final StoreShippingZoneRepository shippingZoneRepository;
     private final SellerNotificationSettingsRepository sellerNotificationSettingsRepository;
 
     @Override
