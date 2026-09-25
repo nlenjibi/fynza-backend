@@ -22,19 +22,20 @@ public class StubPushProvider implements PushProvider {
     @Override
     public String send(String deviceToken, String title, String body, Map<String, String> data) {
         String messageId = "stub-push-" + UUID.randomUUID();
-        log.info("[PUSH-STUB] Would send to deviceToken={}... title='{}' messageId={}",
-                deviceToken.length() > 12 ? deviceToken.substring(0, 12) : deviceToken,
-                title, messageId);
+        log.info("[PUSH-STUB] Would send push: title='{}' body='{}' data={} messageId={}",
+                title, body, data != null ? data.keySet() : "none", messageId);
         return messageId;
     }
 
     @Override
     public boolean isRetryable(String failureCode) {
+        log.trace("[PUSH-STUB] isRetryable: failureCode={}", failureCode);
         return false;
     }
 
     @Override
     public boolean isInvalidToken(String failureCode) {
+        log.trace("[PUSH-STUB] isInvalidToken: failureCode={}", failureCode);
         return false;
     }
 

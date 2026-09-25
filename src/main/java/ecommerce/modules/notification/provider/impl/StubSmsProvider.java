@@ -28,6 +28,7 @@ public class StubSmsProvider implements SmsProvider {
 
     @Override
     public boolean isRetryable(String failureCode) {
+        log.trace("[SMS-STUB] isRetryable: failureCode={}", failureCode);
         return false;
     }
 

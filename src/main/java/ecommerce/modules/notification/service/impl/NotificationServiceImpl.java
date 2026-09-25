@@ -227,7 +227,10 @@ public class NotificationServiceImpl implements NotificationService {
     public long countUnread(UUID recipientId) {
         String key = CacheNames.NOTIFICATION_UNREAD_COUNT + ":" + recipientId;
         return cacheService.get(key, String.class)
-                .map(Long::parseLong)
+                .flatMap(s -> {
+                    try { return Optional.of(Long.parseLong(s)); }
+                    catch (NumberFormatException e) { return Optional.empty(); }
+                })
                 .orElseGet(() -> {
                     long count = notificationRepo.countUnreadByRecipientId(recipientId);
                     cacheService.put(key, String.valueOf(count), UNREAD_COUNT_TTL);
