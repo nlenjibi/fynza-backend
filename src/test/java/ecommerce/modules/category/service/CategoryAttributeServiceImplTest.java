@@ -113,7 +113,7 @@ class CategoryAttributeServiceImplTest {
                     .required(false).filterable(false).searchable(false).variantDefining(false)
                     .sortOrder(0).isActive(true).build();
             setAttrPublicId(saved, savedPublicId);
-            setAttrId(saved, 20L);
+            setAttrId(saved, UUID.randomUUID());
 
             when(attributeDefinitionRepository.save(any(AttributeDefinition.class))).thenReturn(saved);
             AttributeDefinitionResponse expectedResponse = AttributeDefinitionResponse.builder()
