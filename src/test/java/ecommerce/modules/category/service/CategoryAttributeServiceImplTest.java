@@ -74,12 +74,12 @@ class CategoryAttributeServiceImplTest {
                 .required(false).filterable(true).searchable(false).variantDefining(false)
                 .sortOrder(0).isActive(true).build();
         setAttrPublicId(attributeDef, attributePublicId);
-        setAttrId(attributeDef, attributePublicId);
+        setAttrId(attributeDef, 1L);
 
         when(categoryRepository.findByPublicId(categoryPublicId)).thenReturn(Optional.of(category));
         when(attributeDefinitionRepository.findByPublicId(attributePublicId))
                 .thenReturn(Optional.of(attributeDef));
-        when(attributeOptionRepository.findByAttributeDefinitionIdAndIsActiveTrueOrderBySortOrderAsc(any(UUID.class)))
+        when(attributeOptionRepository.findByAttributeDefinitionIdAndIsActiveTrueOrderBySortOrderAsc(anyLong()))
                 .thenReturn(List.of());
     }
 
@@ -113,7 +113,7 @@ class CategoryAttributeServiceImplTest {
                     .required(false).filterable(false).searchable(false).variantDefining(false)
                     .sortOrder(0).isActive(true).build();
             setAttrPublicId(saved, savedPublicId);
-            setAttrId(saved, UUID.randomUUID());
+            setAttrId(saved, 2L);
 
             when(attributeDefinitionRepository.save(any(AttributeDefinition.class))).thenReturn(saved);
             AttributeDefinitionResponse expectedResponse = AttributeDefinitionResponse.builder()
@@ -234,7 +234,7 @@ class CategoryAttributeServiceImplTest {
         @Test
         @DisplayName("Delegates to repo and maps definitions with their options")
         void getAttributesByCategory_delegatesAndMapsWithOptions() {
-            UUID def1Id = UUID.randomUUID();
+            Long def1Id = 1L;
             AttributeDefinition def1 = AttributeDefinition.builder()
                     .categoryId(categoryPublicId).name("Color").code("color")
                     .dataType(AttributeDataType.TEXT).isActive(true).build();
@@ -347,7 +347,7 @@ class CategoryAttributeServiceImplTest {
         void deleteOption_happyPath_softDeletesOption() {
             UUID optionPublicId = UUID.randomUUID();
             AttributeOption option = AttributeOption.builder()
-                    .attributeDefinitionId(UUID.randomUUID()).value("Red").label("Red").isActive(true).build();
+                    .attributeDefinitionId(1L).value("Red").label("Red").isActive(true).build();
 
             when(attributeOptionRepository.findByPublicId(optionPublicId)).thenReturn(Optional.of(option));
             when(attributeOptionRepository.save(option)).thenReturn(option);
@@ -373,7 +373,7 @@ class CategoryAttributeServiceImplTest {
         } catch (Exception e) { throw new RuntimeException(e); }
     }
 
-    private static void setAttrId(AttributeDefinition def, UUID id) {
+    private static void setAttrId(AttributeDefinition def, Long id) {
         try {
             java.lang.reflect.Field f = AttributeDefinition.class.getDeclaredField("id");
             f.setAccessible(true); f.set(def, id);
