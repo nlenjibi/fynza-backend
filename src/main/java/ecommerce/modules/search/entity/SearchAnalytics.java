@@ -26,9 +26,6 @@ public class SearchAnalytics {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "id", insertable = false, updatable = false)
-    private UUID publicId;
-
     @Column(nullable = false)
     @Builder.Default
     private Boolean isActive = true;
