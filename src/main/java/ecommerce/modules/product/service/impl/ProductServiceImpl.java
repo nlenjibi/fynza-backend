@@ -3,9 +3,13 @@ package ecommerce.modules.product.service.impl;
 import ecommerce.common.enums.ProductStatus;
 import ecommerce.common.enums.ProductType;
 import ecommerce.common.enums.ProductVisibility;
+import ecommerce.common.event.FynzaEventPublisher;
 import ecommerce.modules.audit.constant.AuditAction;
 import ecommerce.modules.audit.dto.AuditLogEntry;
 import ecommerce.modules.audit.service.AuditLogService;
+import ecommerce.modules.product.event.ProductCreatedEvent;
+import ecommerce.modules.product.event.ProductDeletedEvent;
+import ecommerce.modules.product.event.ProductUpdatedEvent;
 import ecommerce.modules.product.dto.request.CreateProductRequest;
 import ecommerce.modules.product.dto.request.UpdateProductRequest;
 import ecommerce.modules.product.dto.response.ProductResponse;
@@ -55,6 +59,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductStatusTransitionValidator transitionValidator;
     private final ProductMapper                  mapper;
     private final AuditLogService                auditLogService;
+    private final FynzaEventPublisher            eventPublisher;
 
     @Override
     @Transactional
@@ -100,6 +105,7 @@ public class ProductServiceImpl implements ProductService {
                 .reason("Product created: " + product.getName())
                 .build());
 
+        eventPublisher.publish(new ProductCreatedEvent(product.getId(), store.getSellerId()));
         log.info("Product created: {} ({})", product.getProductNumber(), product.getId());
         return mapper.toResponse(product);
     }
@@ -127,6 +133,7 @@ public class ProductServiceImpl implements ProductService {
                 .reason("Product updated: " + product.getName())
                 .build());
 
+        eventPublisher.publish(new ProductUpdatedEvent(productId));
         return mapper.toResponse(product);
     }
 
@@ -160,6 +167,7 @@ public class ProductServiceImpl implements ProductService {
         product.setIsActive(false);
         product.setStatus(ProductStatus.DELETED);
         productRepository.save(product);
+        eventPublisher.publish(new ProductDeletedEvent(productId));
         log.info("Product soft-deleted: {}", productId);
     }
 

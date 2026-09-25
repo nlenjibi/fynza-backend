@@ -81,5 +81,13 @@
     <include file="changes/074-notification-quiet-hours-schema.sql"      relativeToChangelogFile="true"/>
     <include file="changes/075-drop-slack-schema.sql"                    relativeToChangelogFile="true"/>
     <include file="changes/076-category-bigserial-id.sql"               relativeToChangelogFile="true"/>
+    <include file="changes/077-audit-log-schema.sql"                    relativeToChangelogFile="true"/>
+    <include file="changes/078-search-analytics-schema.sql"             relativeToChangelogFile="true"/>
+    <include file="changes/079-search-history-schema.sql"               relativeToChangelogFile="true"/>
+    <include file="changes/080-search-synonym-schema.sql"               relativeToChangelogFile="true"/>
+    <include file="changes/081-search-event-schema.sql"                 relativeToChangelogFile="true"/>
+    <include file="changes/082-product-search-gin-index.sql"            relativeToChangelogFile="true"/>
+    <include file="changes/083-product-search-source-view.sql"          relativeToChangelogFile="true"/>
+    <include file="changes/084-search-permissions.sql"                  relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

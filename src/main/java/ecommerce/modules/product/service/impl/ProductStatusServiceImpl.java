@@ -1,9 +1,12 @@
 package ecommerce.modules.product.service.impl;
 
 import ecommerce.common.enums.ProductStatus;
+import ecommerce.common.event.FynzaEventPublisher;
 import ecommerce.modules.audit.constant.AuditAction;
 import ecommerce.modules.audit.dto.AuditLogEntry;
 import ecommerce.modules.audit.service.AuditLogService;
+import ecommerce.modules.product.event.ProductPublishedEvent;
+import ecommerce.modules.product.event.ProductUnpublishedEvent;
 import ecommerce.modules.product.dto.response.ProductResponse;
 import ecommerce.modules.product.entity.Product;
 import ecommerce.modules.product.entity.ProductStatusHistory;
@@ -31,6 +34,7 @@ public class ProductStatusServiceImpl implements ProductStatusService {
     private final ProductStatusTransitionValidator transitionValidator;
     private final ProductMapper                  mapper;
     private final AuditLogService                auditLogService;
+    private final FynzaEventPublisher            eventPublisher;
 
     @Override
     @Transactional
@@ -60,24 +64,30 @@ public class ProductStatusServiceImpl implements ProductStatusService {
     @Transactional
     public ProductResponse publishProduct(UUID actorUserId, UUID productId) {
         Product product = ownershipPolicy.assertOwns(productId, actorUserId);
-        return transition(product, ProductStatus.ACTIVE, "Published by seller", actorUserId,
+        ProductResponse response = transition(product, ProductStatus.ACTIVE, "Published by seller", actorUserId,
                 AuditAction.PRODUCT_ACTIVATED);
+        eventPublisher.publish(new ProductPublishedEvent(productId));
+        return response;
     }
 
     @Override
     @Transactional
     public ProductResponse deactivateProduct(UUID actorUserId, UUID productId) {
         Product product = ownershipPolicy.assertOwns(productId, actorUserId);
-        return transition(product, ProductStatus.INACTIVE, "Deactivated by seller", actorUserId,
+        ProductResponse response = transition(product, ProductStatus.INACTIVE, "Deactivated by seller", actorUserId,
                 AuditAction.PRODUCT_DEACTIVATED);
+        eventPublisher.publish(new ProductUnpublishedEvent(productId));
+        return response;
     }
 
     @Override
     @Transactional
     public ProductResponse suspendProduct(UUID adminUserId, UUID productId, String reason) {
         Product product = requireProduct(productId);
-        return transition(product, ProductStatus.SUSPENDED, reason, adminUserId,
+        ProductResponse response = transition(product, ProductStatus.SUSPENDED, reason, adminUserId,
                 AuditAction.PRODUCT_DEACTIVATED);
+        eventPublisher.publish(new ProductUnpublishedEvent(productId));
+        return response;
     }
 
     @Override

@@ -1,0 +1,81 @@
+extend type Query {
+    productSearch(input: ProductSearchInput!): ProductSearchPage!
+    searchSuggestions(query: String!, limit: Int): [SearchSuggestion!]!
+    searchHistory(limit: Int): [SearchHistoryItem!]!
+
+    searchIndexStatus: SearchIndexStatus!
+    searchAnalyticsSummary(days: Int): SearchAnalyticsSummary!
+}
+
+extend type Mutation {
+    clearSearchHistory: Boolean!
+    rebuildSearchIndex: Boolean!
+    retrySearchIndexFailures: Boolean!
+}
+
+input ProductSearchInput {
+    query: String
+    categoryId: ID
+    brand: String
+    minPrice: Float
+    maxPrice: Float
+    minRating: Int
+    availability: String
+    sort: String
+    page: Int
+    size: Int
+}
+
+type ProductSearchPage {
+    query: String
+    total: Int!
+    items: [ProductSearchItem!]!
+    currentPage: Int!
+    totalPages: Int!
+    hasNextPage: Boolean!
+}
+
+type ProductSearchItem {
+    productId: ID!
+    name: String!
+    brand: String
+    slug: String!
+    price: Float
+    currency: String
+    availability: String
+    averageRating: Float
+    reviewCount: Int
+    categoryName: String
+    createdAt: String
+}
+
+type SearchSuggestion {
+    text: String!
+    type: String!
+}
+
+type SearchHistoryItem {
+    id: ID!
+    query: String!
+    createdAt: String!
+}
+
+type SearchIndexStatus {
+    totalProducts: Int!
+    indexedCount: Int!
+    lastRebuiltAt: String
+    status: String!
+}
+
+type SearchAnalyticsSummary {
+    topSearches: [TopSearch!]!
+    zeroResultRate: Float!
+    totalSearches: Int!
+}
+
+type TopSearch {
+    query: String!
+    searchCount: Int!
+    clickCount: Int!
+    isZeroResults: Boolean!
+}
