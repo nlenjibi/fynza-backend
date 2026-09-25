@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface AttributeDefinitionRepository extends JpaRepository<AttributeDefinition, UUID> {
+public interface AttributeDefinitionRepository extends JpaRepository<AttributeDefinition, Long> {
 
     Optional<AttributeDefinition> findByPublicId(UUID publicId);
 

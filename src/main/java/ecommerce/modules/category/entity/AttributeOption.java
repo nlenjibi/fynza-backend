@@ -18,14 +18,15 @@ import java.util.UUID;
 public class AttributeOption {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
+    private Long id;
 
-    @Column(name = "id", insertable = false, updatable = false)
+    @Column(name = "public_id", updatable = false, nullable = false, unique = true)
     private UUID publicId;
 
     @Column(name = "attribute_definition_id", nullable = false)
-    private UUID attributeDefinitionId;
+    private Long attributeDefinitionId;
 
     @Column(name = "value", nullable = false, length = 255)
     private String value;
@@ -49,7 +50,7 @@ public class AttributeOption {
 
     @PrePersist
     protected void onCreate() {
-        if (id == null) id = UUID.randomUUID();
+        if (publicId == null) publicId = UUID.randomUUID();
         createdAt = Instant.now();
         updatedAt = Instant.now();
     }

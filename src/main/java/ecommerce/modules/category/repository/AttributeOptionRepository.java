@@ -9,9 +9,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface AttributeOptionRepository extends JpaRepository<AttributeOption, UUID> {
+public interface AttributeOptionRepository extends JpaRepository<AttributeOption, Long> {
 
     Optional<AttributeOption> findByPublicId(UUID publicId);
 
-    List<AttributeOption> findByAttributeDefinitionIdAndIsActiveTrueOrderBySortOrderAsc(UUID attributeDefinitionId);
+    List<AttributeOption> findByAttributeDefinitionIdAndIsActiveTrueOrderBySortOrderAsc(Long attributeDefinitionId);
 }
