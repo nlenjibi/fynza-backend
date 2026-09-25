@@ -3,7 +3,9 @@
 --changeset fynza:076-category-bigserial-id splitStatements:false
 ALTER TABLE categories ADD COLUMN IF NOT EXISTS internal_id BIGSERIAL;
 
-CREATE OR REPLACE VIEW v_category_summary AS
+DROP VIEW IF EXISTS v_category_summary;
+
+CREATE VIEW v_category_summary AS
 SELECT
     c.internal_id                AS id,
     c.id                         AS category_uuid,
