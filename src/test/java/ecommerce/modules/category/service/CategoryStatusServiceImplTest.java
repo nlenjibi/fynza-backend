@@ -168,13 +168,13 @@ class CategoryStatusServiceImplTest {
         @DisplayName("Returns mapped list of history responses")
         void getStatusHistory_returnsMappedList() {
             CategoryStatusHistory h1 = CategoryStatusHistory.builder()
-                    .categoryId(1L).previousStatus(CategoryStatus.DRAFT)
+                    .categoryId(categoryPublicId).previousStatus(CategoryStatus.DRAFT)
                     .newStatus(CategoryStatus.ACTIVE).changedBy(actorId).build();
             CategoryStatusHistory h2 = CategoryStatusHistory.builder()
-                    .categoryId(1L).previousStatus(CategoryStatus.ACTIVE)
+                    .categoryId(categoryPublicId).previousStatus(CategoryStatus.ACTIVE)
                     .newStatus(CategoryStatus.INACTIVE).changedBy(actorId).build();
 
-            when(historyRepository.findByCategoryIdOrderByCreatedAtDesc(1L)).thenReturn(List.of(h1, h2));
+            when(historyRepository.findByCategoryIdOrderByCreatedAtDesc(categoryPublicId)).thenReturn(List.of(h1, h2));
 
             CategoryStatusHistoryResponse r1 = CategoryStatusHistoryResponse.builder()
                     .previousStatus(CategoryStatus.DRAFT).newStatus(CategoryStatus.ACTIVE).build();
@@ -193,7 +193,7 @@ class CategoryStatusServiceImplTest {
         @Test
         @DisplayName("Returns empty list when no history exists")
         void getStatusHistory_noHistory_returnsEmptyList() {
-            when(historyRepository.findByCategoryIdOrderByCreatedAtDesc(1L)).thenReturn(List.of());
+            when(historyRepository.findByCategoryIdOrderByCreatedAtDesc(categoryPublicId)).thenReturn(List.of());
 
             assertThat(service.getStatusHistory(categoryPublicId)).isEmpty();
         }

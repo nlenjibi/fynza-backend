@@ -87,7 +87,7 @@ class CategoryServiceImplTest {
         setId(category, 1L);
         setPublicId(category, categoryPublicId);
 
-        when(attributeDefinitionRepository.findByCategoryIdAndIsActiveTrueOrderBySortOrderAsc(anyLong()))
+        when(attributeDefinitionRepository.findByCategoryIdAndIsActiveTrueOrderBySortOrderAsc(any(UUID.class)))
                 .thenReturn(List.of());
         when(summaryViewRepository.findByParentIdOrderBySortOrderAsc(anyLong()))
                 .thenReturn(List.of());
@@ -488,7 +488,7 @@ class CategoryServiceImplTest {
 
             when(categoryRepository.findByTaxonomyIdAndParentCategoryIsNullOrderBySortOrderAsc(3L))
                     .thenReturn(List.of(root));
-            when(categoryRepository.findByParentCategory_IdOrderBySortOrderAsc(10L)).thenReturn(List.of());
+            when(categoryRepository.findByParentCategory_IdOrderBySortOrderAsc(any(UUID.class))).thenReturn(List.of());
             CategoryTreeResponse treeResp = CategoryTreeResponse.builder()
                     .name("Tech").slug("tech").children(List.of()).build();
             when(mapper.toTreeResponse(eq(root), any())).thenReturn(treeResp);
@@ -509,7 +509,7 @@ class CategoryServiceImplTest {
             setPublicId(root, UUID.randomUUID());
 
             when(categoryRepository.findByParentCategoryIsNullOrderBySortOrderAsc()).thenReturn(List.of(root));
-            when(categoryRepository.findByParentCategory_IdOrderBySortOrderAsc(11L)).thenReturn(List.of());
+            when(categoryRepository.findByParentCategory_IdOrderBySortOrderAsc(any(UUID.class))).thenReturn(List.of());
             CategoryTreeResponse treeResp = CategoryTreeResponse.builder()
                     .name("All").slug("all").children(List.of()).build();
             when(mapper.toTreeResponse(eq(root), any())).thenReturn(treeResp);
