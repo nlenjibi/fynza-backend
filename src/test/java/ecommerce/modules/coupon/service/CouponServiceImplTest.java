@@ -45,7 +45,7 @@ class CouponServiceImplTest {
         couponId = UUID.randomUUID();
         
         testCoupon = Coupon.builder()
-                .id(1L)
+                .id(UUID.randomUUID())
                 .publicId(couponId)
                 .code("SAVE20")
                 .description("Get 20% off your order")

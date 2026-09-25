@@ -1,0 +1,56 @@
+extend type Query {
+    notifications(page: Int = 0, size: Int = 20): NotificationPage!
+    notification(id: ID!): NotificationResponse
+    unreadNotificationCount: Int!
+    notificationPreferences: [NotificationPreferenceResponse!]!
+    quietHours: QuietHoursResponse
+}
+
+extend type Mutation {
+    markNotificationRead(id: ID!): Boolean!
+    markAllNotificationsRead: Boolean!
+    deleteNotification(id: ID!): Boolean!
+    deleteAllNotifications: Boolean!
+    updateNotificationPreference(
+        notificationType: String!
+        channel: String!
+        enabled: Boolean!
+    ): NotificationPreferenceResponse!
+    updateQuietHours(startTime: String!, endTime: String!, timezone: String!): QuietHoursResponse!
+    deleteQuietHours: Boolean!
+}
+
+type NotificationPage {
+    content: [NotificationResponse!]!
+    totalElements: Int!
+    totalPages: Int!
+    currentPage: Int!
+    hasNextPage: Boolean!
+}
+
+type NotificationResponse {
+    publicId: ID!
+    notificationType: String!
+    title: String!
+    body: String!
+    deepLink: String
+    entityType: String
+    entityId: ID
+    isRead: Boolean!
+    readAt: String
+    createdAt: String!
+}
+
+type NotificationPreferenceResponse {
+    publicId: ID!
+    notificationType: String!
+    channel: String!
+    enabled: Boolean!
+    updatedAt: String!
+}
+
+type QuietHoursResponse {
+    startTime: String!
+    endTime: String!
+    timezone: String!
+}

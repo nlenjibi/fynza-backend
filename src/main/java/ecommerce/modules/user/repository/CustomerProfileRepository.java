@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface CustomerProfileRepository extends JpaRepository<CustomerProfile, Long> {
+public interface CustomerProfileRepository extends JpaRepository<CustomerProfile, UUID> {
 
     Optional<CustomerProfile> findByUserId(UUID userId);
 

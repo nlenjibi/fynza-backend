@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface PromotionSellerRepository extends JpaRepository<PromotionSeller, Long> {
+public interface PromotionSellerRepository extends JpaRepository<PromotionSeller, UUID> {
 
     List<PromotionSeller> findBySellerId(UUID sellerId);
 

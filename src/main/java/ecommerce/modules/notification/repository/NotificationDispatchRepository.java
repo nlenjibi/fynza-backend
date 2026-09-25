@@ -1,7 +1,6 @@
 package ecommerce.modules.notification.repository;
 
 import ecommerce.modules.notification.entity.NotificationDispatch;
-import ecommerce.modules.notification.enums.NotificationChannel;
 import ecommerce.modules.notification.enums.NotificationStatus;
 import ecommerce.modules.notification.enums.NotificationType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,6 +25,8 @@ public interface NotificationDispatchRepository extends JpaRepository<Notificati
     boolean existsByRecipientIdAndNotificationTypeAndScheduledAtAfter(
             UUID recipientId, NotificationType notificationType, Instant cutoff);
 
-    boolean existsByChannelAndNotificationTypeAndSourceEntityId(
-            NotificationChannel channel, NotificationType notificationType, UUID sourceEntityId);
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE NotificationDispatch d SET d.status = 'FAILED', d.failureReason = 'EXPIRED' " +
+           "WHERE d.status = 'PENDING' AND d.scheduledAt IS NOT NULL AND d.scheduledAt < :now")
+    int cancelExpiredPendingDispatches(@Param("now") Instant now);
 }

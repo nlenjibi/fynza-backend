@@ -15,7 +15,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface SellerProfileRepository extends JpaRepository<SellerProfile, Long> {
+public interface SellerProfileRepository extends JpaRepository<SellerProfile, UUID> {
 
     Optional<SellerProfile> findByPublicId(UUID publicId);
 

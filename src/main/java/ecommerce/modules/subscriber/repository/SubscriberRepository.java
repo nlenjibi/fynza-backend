@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface SubscriberRepository extends JpaRepository<Subscriber, Long> {
+public interface SubscriberRepository extends JpaRepository<Subscriber, UUID> {
 
     Optional<Subscriber> findByPublicId(UUID publicId);
 

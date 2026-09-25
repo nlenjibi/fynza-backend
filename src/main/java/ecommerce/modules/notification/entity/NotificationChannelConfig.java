@@ -41,8 +41,12 @@ public class NotificationChannelConfig {
     private boolean inAppEnabled = true;
 
     @Builder.Default
-    @Column(name = "slack_enabled", nullable = false)
-    private boolean slackEnabled = false;
+    @Column(name = "sms_enabled", nullable = false)
+    private boolean smsEnabled = false;
+
+    @Builder.Default
+    @Column(name = "push_enabled", nullable = false)
+    private boolean pushEnabled = false;
 
     @Builder.Default
     @Column(name = "max_retries", nullable = false)

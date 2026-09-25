@@ -14,20 +14,20 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface StockReservationRepository extends JpaRepository<StockReservation, Long> {
+public interface StockReservationRepository extends JpaRepository<StockReservation, UUID> {
 
     List<StockReservation> findByExpiresAtLessThan(Instant now);
 
-    Optional<StockReservation> findByCartItemId(Long cartItemId);
+    Optional<StockReservation> findByCartItemId(UUID cartItemId);
 
     Optional<StockReservation> findByPublicId(UUID publicId);
 
     @Query("SELECT sr FROM StockReservation sr WHERE sr.cartId = :cartId")
-    List<StockReservation> findByCartId(@Param("cartId") Long cartId);
+    List<StockReservation> findByCartId(@Param("cartId") UUID cartId);
 
     @Modifying
     @Query("DELETE FROM StockReservation sr WHERE sr.cartId = :cartId")
-    void deleteByCartId(@Param("cartId") Long cartId);
+    void deleteByCartId(@Param("cartId") UUID cartId);
 
     @Query("SELECT sr FROM StockReservation sr WHERE sr.status = :status AND sr.expiresAt < :now")
     List<StockReservation> findByStatusAndExpiresAtBefore(@Param("status") ReservationStatus status, @Param("now") Instant now);

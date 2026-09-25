@@ -15,7 +15,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface AdminFlashSaleRepository extends JpaRepository<AdminFlashSale, Long> {
+public interface AdminFlashSaleRepository extends JpaRepository<AdminFlashSale, UUID> {
 
     Optional<AdminFlashSale> findByPublicId(UUID publicId);
 
@@ -36,11 +36,11 @@ public interface AdminFlashSaleRepository extends JpaRepository<AdminFlashSale, 
     long countActive();
 
     @Query("UPDATE AdminFlashSale f SET f.currentProductsCount = f.currentProductsCount + :count WHERE f.id = :id")
-    void incrementProductCount(@Param("id") Long id, @Param("count") int count);
+    void incrementProductCount(@Param("id") UUID id, @Param("count") int count);
 
     @Query("UPDATE AdminFlashSale f SET f.currentProductsCount = f.currentProductsCount + :count WHERE f.publicId = :publicId")
     void incrementProductCountByPublicId(@Param("publicId") UUID publicId, @Param("count") int count);
 
     @Query("UPDATE AdminFlashSale f SET f.currentProductsCount = f.currentProductsCount - :count WHERE f.id = :id AND f.currentProductsCount >= :count")
-    void decrementProductCount(@Param("id") Long id, @Param("count") int count);
+    void decrementProductCount(@Param("id") UUID id, @Param("count") int count);
 }

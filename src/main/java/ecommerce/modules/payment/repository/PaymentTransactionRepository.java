@@ -8,7 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface PaymentTransactionRepository extends JpaRepository<PaymentTransaction, Long> {
+public interface PaymentTransactionRepository extends JpaRepository<PaymentTransaction, UUID> {
     Optional<PaymentTransaction> findByTransactionId(String transactionId);
     Optional<PaymentTransaction> findByPublicId(UUID publicId);
     Optional<PaymentTransaction> findTopByOrder_PublicIdAndStatusOrderByCreatedAtDesc(UUID publicId, ecommerce.common.enums.PaymentStatus status);

@@ -80,7 +80,7 @@ class CartServiceImplTest {
 
     private Cart buildCart(UUID ownerId) {
         return Cart.builder()
-                .id(1L)
+                .id(UUID.randomUUID())
                 .publicId(UUID.randomUUID())
                 .userId(ownerId)
                 .isGuest(false)
@@ -96,7 +96,7 @@ class CartServiceImplTest {
 
     private CartItem buildCartItem(Cart cart, UUID pid, int qty, BigDecimal price) {
         return CartItem.builder()
-                .id(1L)
+                .id(UUID.randomUUID())
                 .publicId(UUID.randomUUID())
                 .cart(cart)
                 .productId(pid)
@@ -150,7 +150,7 @@ class CartServiceImplTest {
         when(cartItemRepository.save(any(CartItem.class))).thenAnswer(i -> i.getArgument(0));
     }
 
-    private void stubFindByCartId(Long cartId, List<CartItem> items) {
+    private void stubFindByCartId(UUID cartId, List<CartItem> items) {
         when(cartItemRepository.findByCartId(cartId)).thenReturn(items);
     }
 
@@ -234,7 +234,7 @@ class CartServiceImplTest {
         @DisplayName("getGuestCart_success")
         void getGuestCart_success() {
             Cart cart = Cart.builder()
-                    .id(2L)
+                    .id(UUID.randomUUID())
                     .publicId(UUID.randomUUID())
                     .isGuest(true)
                     .cartToken("abc-token")
@@ -272,7 +272,7 @@ class CartServiceImplTest {
         @DisplayName("getGuestCart_expiredCart_throwsCartExpired")
         void getGuestCart_expiredCart_throwsCartExpired() {
             Cart expired = Cart.builder()
-                    .id(3L)
+                    .id(UUID.randomUUID())
                     .publicId(UUID.randomUUID())
                     .isGuest(true)
                     .cartToken("expired-token")
@@ -538,7 +538,7 @@ class CartServiceImplTest {
 
         private Coupon buildActiveCoupon(String code) {
             return Coupon.builder()
-                    .id(1L)
+                    .id(UUID.randomUUID())
                     .publicId(UUID.randomUUID())
                     .code(code)
                     .status(CouponStatus.ACTIVE)
@@ -719,7 +719,7 @@ class CartServiceImplTest {
         void mergeCart_success() {
             Cart userCart = buildCart(userId);
             Cart guestCart = Cart.builder()
-                    .id(2L)
+                    .id(UUID.randomUUID())
                     .publicId(UUID.randomUUID())
                     .isGuest(true)
                     .cartToken("guest-token")

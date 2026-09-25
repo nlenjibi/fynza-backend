@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface SellerFlashSaleApplicationRepository extends JpaRepository<SellerFlashSaleApplication, Long> {
+public interface SellerFlashSaleApplicationRepository extends JpaRepository<SellerFlashSaleApplication, UUID> {
 
     Optional<SellerFlashSaleApplication> findByPublicId(UUID publicId);
 

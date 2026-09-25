@@ -20,6 +20,9 @@ public class CategorySummaryView {
     @Id
     private Long id;
 
+    @Column(name = "category_uuid")
+    private UUID categoryUuid;
+
     @Column(name = "public_id")
     private UUID publicId;
 

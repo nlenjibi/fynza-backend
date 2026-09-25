@@ -14,7 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface ConversationRepository extends JpaRepository<Conversation, Long> {
+public interface ConversationRepository extends JpaRepository<Conversation, UUID> {
 
     Optional<Conversation> findByPublicId(UUID publicId);
 
@@ -42,7 +42,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
 
     long countByStatus(MessageStatus status);
 
-    Optional<Conversation> findByIdAndParticipantId(Long id, UUID participantId);
+    Optional<Conversation> findByIdAndParticipantId(UUID id, UUID participantId);
 
     @Query("SELECT c FROM Conversation c WHERE " +
            "(:status IS NULL OR c.status = :status) AND " +

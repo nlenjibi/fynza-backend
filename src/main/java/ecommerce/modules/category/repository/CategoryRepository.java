@@ -14,7 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface CategoryRepository extends JpaRepository<Category, Long>, JpaSpecificationExecutor<Category> {
+public interface CategoryRepository extends JpaRepository<Category, UUID>, JpaSpecificationExecutor<Category> {
 
     Optional<Category> findByPublicId(UUID publicId);
 
@@ -29,11 +29,11 @@ public interface CategoryRepository extends JpaRepository<Category, Long>, JpaSp
 
     List<Category> findByParentCategoryIsNullOrderBySortOrderAsc();
 
-    List<Category> findByParentCategory_IdOrderBySortOrderAsc(Long parentId);
+    List<Category> findByParentCategory_IdOrderBySortOrderAsc(UUID parentId);
 
     List<Category> findByTaxonomyIdAndParentCategoryIsNullOrderBySortOrderAsc(Long taxonomyId);
 
-    long countByParentCategory_Id(Long parentId);
+    long countByParentCategory_Id(UUID parentId);
 
     @Query("SELECT COUNT(c) FROM Category c WHERE c.isActive = true")
     long countActiveCategories();

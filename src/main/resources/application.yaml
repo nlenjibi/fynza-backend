@@ -64,9 +64,6 @@ fynza:
     email:
       from: ${MAIL_FROM:${GMAIL_USERNAME:}}
       from-name: ${NOTIFICATION_FROM_NAME:Fynza}
-    slack:
-      bot-token: ${SLACK_BOT_TOKEN:}
-      api-base-url: ${SLACK_API_BASE_URL:https://slack.com/api}
     retry-job:
       cron: ${NOTIFICATION_RETRY_CRON:0 */2 * * * *}
   media:

@@ -9,7 +9,12 @@ import ecommerce.modules.order.event.OrderPlacedEvent;
 import ecommerce.modules.order.event.OrderStatusChangedEvent;
 import ecommerce.modules.payment.event.PaymentConfirmedEvent;
 import ecommerce.modules.payment.event.PaymentFailedEvent;
+import ecommerce.modules.payout.event.PayoutCompletedEvent;
+import ecommerce.modules.payout.event.PayoutFailedEvent;
 import ecommerce.modules.review.event.ReviewCreatedEvent;
+import ecommerce.modules.shipping.event.ShipmentCreatedEvent;
+import ecommerce.modules.seller.entity.Seller;
+import ecommerce.modules.seller.repository.SellerRepository;
 import ecommerce.modules.user.event.UserRegisteredEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,13 +25,15 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class NotificationEventListener {
 
-    private final NotificationService notificationService;
+    private final NotificationService  notificationService;
+    private final SellerRepository     sellerRepository;
 
     @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
@@ -200,6 +207,75 @@ public class NotificationEventListener {
                 "expiryMinutes", String.valueOf(event.expiryMinutes())
             )
         );
+    }
+
+    // ── Payout events ─────────────────────────────────────────────────────────
+
+    @Async("notificationTaskExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onPayoutCompleted(PayoutCompletedEvent event) {
+        log.debug("[NotificationEvent] PAYOUT_COMPLETED payoutId={}", event.payoutId());
+        resolveSellerUserId(event.sellerId()).ifPresent(userId ->
+            notificationService.send(
+                NotificationType.SELLER_PAYOUT_PROCESSED,
+                userId,
+                userId,
+                Map.of(
+                    "payoutNumber", event.payoutNumber(),
+                    "amount", event.amount().toPlainString(),
+                    "currency", event.currency()
+                ),
+                "/seller/payouts/" + event.payoutPublicId(),
+                new EntityRef("PAYOUT", event.payoutPublicId())
+            )
+        );
+    }
+
+    @Async("notificationTaskExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onPayoutFailed(PayoutFailedEvent event) {
+        log.debug("[NotificationEvent] PAYOUT_FAILED payoutId={}", event.payoutId());
+        resolveSellerUserId(event.sellerId()).ifPresent(userId ->
+            notificationService.send(
+                NotificationType.PAYMENT_FAILED,
+                userId,
+                userId,
+                Map.of(
+                    "payoutNumber", event.payoutNumber(),
+                    "amount", event.amount().toPlainString(),
+                    "currency", event.currency(),
+                    "failureReason", event.reason() != null ? event.reason() : ""
+                ),
+                "/seller/payouts/" + event.payoutPublicId(),
+                new EntityRef("PAYOUT", event.payoutPublicId())
+            )
+        );
+    }
+
+    // ── Shipping events ───────────────────────────────────────────────────────
+
+    @Async("notificationTaskExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onShipmentCreated(ShipmentCreatedEvent event) {
+        log.debug("[NotificationEvent] SHIPMENT_CREATED shipmentId={}", event.shipmentId());
+        resolveSellerUserId(event.sellerId()).ifPresent(userId ->
+            notificationService.send(
+                NotificationType.ORDER_SHIPPED,
+                userId,
+                userId,
+                Map.of("shipmentNumber", event.shipmentNumber()),
+                "/seller/shipments/" + event.shipmentId(),
+                new EntityRef("SHIPMENT", event.shipmentId())
+            )
+        );
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private java.util.Optional<UUID> resolveSellerUserId(Long sellerId) {
+        if (sellerId == null) return java.util.Optional.empty();
+        return sellerRepository.findById(sellerId)
+                .map(Seller::getOwnerUserId);
     }
 
 }

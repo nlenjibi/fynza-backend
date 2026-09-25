@@ -2,11 +2,13 @@ package ecommerce.modules.notification.service;
 
 import ecommerce.modules.notification.dto.EntityRef;
 import ecommerce.modules.notification.dto.NotificationResponse;
+import ecommerce.modules.notification.dto.QuietHoursResponse;
 import ecommerce.modules.notification.enums.NotificationType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -41,15 +43,6 @@ public interface NotificationService {
                                  String recipientEmail,
                                  Map<String, String> variables);
 
-    /**
-     * Sends a broadcast Slack message to the global or seller-specific channel.
-     * A dedup guard makes a second call for the same (type, sourceEntityId) a safe no-op.
-     */
-    void sendBroadcast(NotificationType type,
-                       UUID sourceEntityId,
-                       UUID sellerId,
-                       Map<String, String> variables);
-
     /** Returns a paginated list of in-app notifications for the recipient, newest first. */
     Page<NotificationResponse> getForRecipient(UUID recipientId, Pageable pageable);
 
@@ -70,4 +63,13 @@ public interface NotificationService {
 
     /** Returns a single notification by its public UUID, scoped to the recipient. */
     NotificationResponse getById(UUID publicId, UUID recipientId);
+
+    /** Returns the user's quiet-hours config, or empty if none is set. */
+    Optional<QuietHoursResponse> getQuietHours(UUID userId);
+
+    /** Upserts quiet-hours for the user. startTime/endTime must be HH:mm, timezone a valid IANA zone ID. */
+    QuietHoursResponse updateQuietHours(UUID userId, String startTime, String endTime, String timezone);
+
+    /** Removes the user's quiet-hours config. No-op if none exists. */
+    void deleteQuietHours(UUID userId);
 }

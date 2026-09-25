@@ -178,8 +178,10 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public List<CategorySummaryResponse> getChildren(UUID parentPublicId) {
-        Category parent = resolveCategory(parentPublicId);
-        return summaryViewRepository.findByParentIdOrderBySortOrderAsc(parent.getId())
+        Long parentId = summaryViewRepository.findByCategoryUuid(parentPublicId)
+                .map(CategorySummaryView::getId)
+                .orElseThrow(() -> new CategoryNotFoundException(parentPublicId));
+        return summaryViewRepository.findByParentIdOrderBySortOrderAsc(parentId)
                 .stream().map(mapper::toSummaryResponse).toList();
     }
 
@@ -223,7 +225,9 @@ public class CategoryServiceImpl implements CategoryService {
                 .toList();
 
         List<CategorySummaryResponse> children = summaryViewRepository
-                .findByParentIdOrderBySortOrderAsc(category.getId())
+                .findByCategoryUuid(category.getId())
+                .map(v -> summaryViewRepository.findByParentIdOrderBySortOrderAsc(v.getId()))
+                .orElse(List.of())
                 .stream().map(mapper::toSummaryResponse).toList();
 
         return mapper.toDetailResponse(category, attributes, children);

@@ -12,7 +12,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface NotificationRepository extends JpaRepository<Notification, Long> {
+public interface NotificationRepository extends JpaRepository<Notification, UUID> {
 
     @Query("SELECT n FROM Notification n WHERE n.recipientId = :recipientId AND n.deletedAt IS NULL " +
            "ORDER BY n.createdAt DESC")
@@ -50,4 +50,6 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Query("SELECT n FROM Notification n WHERE n.publicId = :publicId AND n.recipientId = :recipientId AND n.deletedAt IS NULL")
     Optional<Notification> findByPublicIdAndRecipientId(@Param("publicId") UUID publicId,
                                                         @Param("recipientId") UUID recipientId);
+
+    Optional<Notification> findByIdempotencyKey(String idempotencyKey);
 }

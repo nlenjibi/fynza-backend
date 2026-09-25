@@ -38,7 +38,7 @@ public class CategorySuggestionServiceImpl implements CategorySuggestionService 
     @Override
     @Transactional
     public CategorySuggestionResponse submitSuggestion(CategorySuggestionRequest request, UUID requestedBy) {
-        Long parentCategoryId = null;
+        UUID parentCategoryId = null;
         if (request.getParentCategoryPublicId() != null) {
             Category parent = categoryRepository.findByPublicId(request.getParentCategoryPublicId())
                     .orElseThrow(() -> new CategoryNotFoundException(request.getParentCategoryPublicId()));

@@ -23,10 +23,10 @@ import java.util.UUID;
 public class SearchAnalytics {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
 
-    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
+    @Column(name = "id", insertable = false, updatable = false)
     private UUID publicId;
 
     @Column(nullable = false)
@@ -78,7 +78,7 @@ public class SearchAnalytics {
 
     @PrePersist
     protected void onCreate() {
-        publicId  = UUID.randomUUID();
+        if (id == null) id = UUID.randomUUID();
         createdAt = Instant.now();
         updatedAt = Instant.now();
     }

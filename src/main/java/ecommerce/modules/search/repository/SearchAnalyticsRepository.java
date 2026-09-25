@@ -10,9 +10,10 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface SearchAnalyticsRepository extends JpaRepository<SearchAnalytics, Long> {
+public interface SearchAnalyticsRepository extends JpaRepository<SearchAnalytics, UUID> {
 
     Optional<SearchAnalytics> findBySearchQueryAndSearchDate(String query, LocalDate date);
 

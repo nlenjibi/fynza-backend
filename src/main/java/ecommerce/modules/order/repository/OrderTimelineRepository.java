@@ -5,9 +5,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface OrderTimelineRepository extends JpaRepository<OrderTimeline, Long> {
+public interface OrderTimelineRepository extends JpaRepository<OrderTimeline, UUID> {
 
-    List<OrderTimeline> findByOrder_IdOrderByCreatedAtDesc(Long orderId);
+    List<OrderTimeline> findByOrder_IdOrderByCreatedAtDesc(UUID orderId);
 }

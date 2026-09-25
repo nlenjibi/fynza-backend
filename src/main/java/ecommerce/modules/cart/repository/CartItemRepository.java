@@ -12,25 +12,25 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface CartItemRepository extends JpaRepository<CartItem, Long> {
+public interface CartItemRepository extends JpaRepository<CartItem, UUID> {
 
-    List<CartItem> findByCartId(Long cartId);
+    List<CartItem> findByCartId(UUID cartId);
 
     @Modifying
     @Query("DELETE FROM CartItem ci WHERE ci.cart.id = :cartId")
-    void deleteByCartId(@Param("cartId") Long cartId);
+    void deleteByCartId(@Param("cartId") UUID cartId);
 
     Optional<CartItem> findByPublicId(UUID publicId);
 
-    Optional<CartItem> findByCartIdAndPublicId(Long cartId, UUID publicId);
+    Optional<CartItem> findByCartIdAndPublicId(UUID cartId, UUID publicId);
 
     @Query("SELECT ci FROM CartItem ci WHERE ci.cart.id = :cartId AND ci.productId = :productId AND ci.variantId IS NULL")
-    Optional<CartItem> findByCartIdAndProductIdNoVariant(@Param("cartId") Long cartId, @Param("productId") UUID productId);
+    Optional<CartItem> findByCartIdAndProductIdNoVariant(@Param("cartId") UUID cartId, @Param("productId") UUID productId);
 
     @Query("SELECT ci FROM CartItem ci WHERE ci.cart.id = :cartId AND ci.productId = :productId AND ci.variantId = :variantId")
-    Optional<CartItem> findByCartIdAndProductIdAndVariantId(@Param("cartId") Long cartId, @Param("productId") UUID productId, @Param("variantId") UUID variantId);
+    Optional<CartItem> findByCartIdAndProductIdAndVariantId(@Param("cartId") UUID cartId, @Param("productId") UUID productId, @Param("variantId") UUID variantId);
 
-    default Optional<CartItem> findByCartIdAndProductAndVariant(Long cartId, UUID productId, UUID variantId) {
+    default Optional<CartItem> findByCartIdAndProductAndVariant(UUID cartId, UUID productId, UUID variantId) {
         if (variantId == null) {
             return findByCartIdAndProductIdNoVariant(cartId, productId);
         }
@@ -38,8 +38,8 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     }
 
     @Query("SELECT ci FROM CartItem ci WHERE ci.cart.id = :cartId AND ci.priceChanged = true")
-    List<CartItem> findPriceChangedItems(@Param("cartId") Long cartId);
+    List<CartItem> findPriceChangedItems(@Param("cartId") UUID cartId);
 
     @Query("SELECT ci FROM CartItem ci WHERE ci.cart.id = :cartId ORDER BY ci.storeId ASC, ci.createdAt ASC")
-    List<CartItem> findByCartIdOrderByStore(@Param("cartId") Long cartId);
+    List<CartItem> findByCartIdOrderByStore(@Param("cartId") UUID cartId);
 }

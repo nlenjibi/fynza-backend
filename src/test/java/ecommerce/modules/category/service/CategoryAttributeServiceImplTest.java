@@ -37,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -69,16 +70,16 @@ class CategoryAttributeServiceImplTest {
         setPublicId(category, categoryPublicId);
 
         attributeDef = AttributeDefinition.builder()
-                .categoryId(1L).name("Color").code("color").dataType(AttributeDataType.TEXT)
+                .categoryId(categoryPublicId).name("Color").code("color").dataType(AttributeDataType.TEXT)
                 .required(false).filterable(true).searchable(false).variantDefining(false)
                 .sortOrder(0).isActive(true).build();
         setAttrPublicId(attributeDef, attributePublicId);
-        setAttrId(attributeDef, 10L);
+        setAttrId(attributeDef, attributePublicId);
 
         when(categoryRepository.findByPublicId(categoryPublicId)).thenReturn(Optional.of(category));
         when(attributeDefinitionRepository.findByPublicId(attributePublicId))
                 .thenReturn(Optional.of(attributeDef));
-        when(attributeOptionRepository.findByAttributeDefinitionIdAndIsActiveTrueOrderBySortOrderAsc(anyLong()))
+        when(attributeOptionRepository.findByAttributeDefinitionIdAndIsActiveTrueOrderBySortOrderAsc(any(UUID.class)))
                 .thenReturn(List.of());
     }
 
@@ -89,7 +90,7 @@ class CategoryAttributeServiceImplTest {
         @Test
         @DisplayName("Duplicate code — throws BadRequestException before saving")
         void createAttribute_duplicateCode_throwsBadRequestException() {
-            when(attributeDefinitionRepository.existsByCategoryIdAndCode(1L, "color")).thenReturn(true);
+            when(attributeDefinitionRepository.existsByCategoryIdAndCode(categoryPublicId, "color")).thenReturn(true);
 
             assertThatThrownBy(() -> service.createAttribute(categoryPublicId,
                     CreateAttributeDefinitionRequest.builder()
@@ -105,14 +106,14 @@ class CategoryAttributeServiceImplTest {
         @DisplayName("Happy path — saved entity publicId used in audit (not pre-save null)")
         void createAttribute_happyPath_returnsSavedPublicId() {
             UUID savedPublicId = UUID.randomUUID();
-            when(attributeDefinitionRepository.existsByCategoryIdAndCode(1L, "color")).thenReturn(false);
+            when(attributeDefinitionRepository.existsByCategoryIdAndCode(categoryPublicId, "color")).thenReturn(false);
 
             AttributeDefinition saved = AttributeDefinition.builder()
-                    .categoryId(1L).name("Color").code("color").dataType(AttributeDataType.TEXT)
+                    .categoryId(categoryPublicId).name("Color").code("color").dataType(AttributeDataType.TEXT)
                     .required(false).filterable(false).searchable(false).variantDefining(false)
                     .sortOrder(0).isActive(true).build();
             setAttrPublicId(saved, savedPublicId);
-            setAttrId(saved, 20L);
+            setAttrId(saved, UUID.randomUUID());
 
             when(attributeDefinitionRepository.save(any(AttributeDefinition.class))).thenReturn(saved);
             AttributeDefinitionResponse expectedResponse = AttributeDefinitionResponse.builder()
@@ -233,18 +234,19 @@ class CategoryAttributeServiceImplTest {
         @Test
         @DisplayName("Delegates to repo and maps definitions with their options")
         void getAttributesByCategory_delegatesAndMapsWithOptions() {
+            UUID def1Id = UUID.randomUUID();
             AttributeDefinition def1 = AttributeDefinition.builder()
-                    .categoryId(1L).name("Color").code("color")
+                    .categoryId(categoryPublicId).name("Color").code("color")
                     .dataType(AttributeDataType.TEXT).isActive(true).build();
-            setAttrId(def1, 20L);
+            setAttrId(def1, def1Id);
             setAttrPublicId(def1, UUID.randomUUID());
 
-            when(attributeDefinitionRepository.findByCategoryIdAndIsActiveTrueOrderBySortOrderAsc(1L))
+            when(attributeDefinitionRepository.findByCategoryIdAndIsActiveTrueOrderBySortOrderAsc(categoryPublicId))
                     .thenReturn(List.of(def1));
 
             AttributeOption opt = AttributeOption.builder()
-                    .attributeDefinitionId(20L).value("Red").label("Red").build();
-            when(attributeOptionRepository.findByAttributeDefinitionIdAndIsActiveTrueOrderBySortOrderAsc(20L))
+                    .attributeDefinitionId(def1Id).value("Red").label("Red").build();
+            when(attributeOptionRepository.findByAttributeDefinitionIdAndIsActiveTrueOrderBySortOrderAsc(def1Id))
                     .thenReturn(List.of(opt));
 
             AttributeOptionResponse optResp = AttributeOptionResponse.builder()
@@ -345,7 +347,7 @@ class CategoryAttributeServiceImplTest {
         void deleteOption_happyPath_softDeletesOption() {
             UUID optionPublicId = UUID.randomUUID();
             AttributeOption option = AttributeOption.builder()
-                    .attributeDefinitionId(10L).value("Red").label("Red").isActive(true).build();
+                    .attributeDefinitionId(UUID.randomUUID()).value("Red").label("Red").isActive(true).build();
 
             when(attributeOptionRepository.findByPublicId(optionPublicId)).thenReturn(Optional.of(option));
             when(attributeOptionRepository.save(option)).thenReturn(option);
@@ -371,7 +373,7 @@ class CategoryAttributeServiceImplTest {
         } catch (Exception e) { throw new RuntimeException(e); }
     }
 
-    private static void setAttrId(AttributeDefinition def, Long id) {
+    private static void setAttrId(AttributeDefinition def, UUID id) {
         try {
             java.lang.reflect.Field f = AttributeDefinition.class.getDeclaredField("id");
             f.setAccessible(true); f.set(def, id);

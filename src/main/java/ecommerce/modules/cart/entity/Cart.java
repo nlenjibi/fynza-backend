@@ -20,10 +20,10 @@ import java.util.UUID;
 public class Cart {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
 
-    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
+    @Column(name = "id", insertable = false, updatable = false)
     private UUID publicId;
 
     @Column(name = "user_id")
@@ -68,7 +68,7 @@ public class Cart {
     private Instant expiresAt;
 
     @Column(name = "merged_into_cart_id")
-    private Long mergedIntoCartId;
+    private UUID mergedIntoCartId;
 
     @Version
     private Long version;
@@ -94,7 +94,7 @@ public class Cart {
 
     @PrePersist
     protected void onCreate() {
-        publicId  = UUID.randomUUID();
+        if (id == null) id = UUID.randomUUID();
         createdAt = Instant.now();
         updatedAt = Instant.now();
     }

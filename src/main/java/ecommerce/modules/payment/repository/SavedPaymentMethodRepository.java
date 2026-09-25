@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface SavedPaymentMethodRepository extends JpaRepository<SavedPaymentMethod, Long> {
+public interface SavedPaymentMethodRepository extends JpaRepository<SavedPaymentMethod, UUID> {
 
     List<SavedPaymentMethod> findByUserIdOrderByIsDefaultDesc(UUID userId);
 

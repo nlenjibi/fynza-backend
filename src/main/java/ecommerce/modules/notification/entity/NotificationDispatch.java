@@ -82,14 +82,6 @@ public class NotificationDispatch {
     @Column(name = "failure_reason", columnDefinition = "TEXT")
     private String failureReason;
 
-    /** Dedup key for Slack broadcast dispatches — the source entity's public UUID. */
-    @Column(name = "source_entity_id")
-    private UUID sourceEntityId;
-
-    /** Slack channel ID stored at dispatch time so retries use the originally resolved channel. */
-    @Column(name = "slack_channel_id", length = 32)
-    private String slackChannelId;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
